@@ -54,6 +54,15 @@ export interface AnalyzeOptions {
   readonly signal?: AbortSignal;
 }
 
+export interface DeployOptions {
+  /**
+   * Values the plan asked for that are settings rather than secrets, by name, such as the email
+   * address for spending alerts. Secret values never travel through here.
+   */
+  readonly inputs?: Readonly<Record<string, string>>;
+  readonly signal?: AbortSignal;
+}
+
 export interface PlanOptions {
   readonly region?: string;
   /**
@@ -93,7 +102,7 @@ export interface Hero {
    * it did not produce is refused, and the approval must match the plan's digest, account, and
    * region and be unexpired and unused.
    */
-  deploy(plan: PlanRef, approval: Approval): Promise<DeploymentResult>;
+  deploy(plan: PlanRef, approval: Approval, options?: DeployOptions): Promise<DeploymentResult>;
   /** A plan whose changes are all deletions. It needs approval like any other plan. */
   planDestroy(deploymentId: string): Promise<DeploymentPlan>;
   /** The result of an existing deployment: endpoints, links, cost, and the latest health. */

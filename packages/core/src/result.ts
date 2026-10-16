@@ -23,6 +23,42 @@ export interface SensitiveOutput {
   readonly location: string;
 }
 
+/** What a person can be told to do next after a deployment. Words live in `presentation`. */
+export const nextStepCodes = [
+  'next.open-site',
+  'next.check-health',
+  'next.set-secrets',
+  'next.watch-cost',
+  'next.destroy',
+  'next.review-kept-data',
+] as const;
+
+const REACHABILITY_FAILURES = [
+  'timeout',
+  'unreachable',
+  'redirect-off-host',
+  'redirect',
+  'too-many-redirects',
+  'server-error',
+] as const;
+const SMOKE_FAILURES = [
+  'timeout',
+  'unreachable',
+  'redirect-off-host',
+  'redirect',
+  'too-many-redirects',
+  'bad-status',
+] as const;
+
+/** Every code a health check can carry, including why a check failed. */
+export const healthCheckCodes = [
+  'health.resource-state',
+  'health.reachability',
+  ...REACHABILITY_FAILURES.map((reason) => `health.reachability.${reason}`),
+  'health.smoke',
+  ...SMOKE_FAILURES.map((reason) => `health.smoke.${reason}`),
+] as const;
+
 export type HealthStatus = 'healthy' | 'degraded' | 'down' | 'unknown';
 
 /**

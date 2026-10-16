@@ -16,6 +16,9 @@ importers:
       '@hero-cloud/analyzer':
         specifier: workspace:*
         version: link:packages/analyzer
+      '@hero-cloud/cli':
+        specifier: workspace:*
+        version: link:apps/cli
       '@hero-cloud/core':
         specifier: workspace:*
         version: link:packages/core
@@ -76,6 +79,9 @@ importers:
       '@aws-cdk/toolkit-lib':
         specifier: ^1.43.0
         version: 1.43.0(@aws-cdk/cli-plugin-contract@2.182.2)
+      '@hero-cloud/local':
+        specifier: workspace:*
+        version: link:../../packages/local
       '@hero-cloud/presentation':
         specifier: workspace:*
         version: link:../../packages/presentation

@@ -4,6 +4,7 @@
  * dependency on any interface, prompt, or presentation code.
  */
 export { createHero } from './engine.js';
+export { BUDGET_EMAIL_INPUT } from '@hero-cloud/planner';
 export type { CreateHeroOptions } from './engine.js';
 export {
   ApprovalService,
@@ -29,6 +30,7 @@ export type {
   SkippedEntry,
   SourceLoader,
   DeploymentPlan,
+  DeployOptions,
   DeploymentResult,
   Health,
   Hero,

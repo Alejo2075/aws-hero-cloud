@@ -66,7 +66,7 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
   const summary: Block[] = [
     {
       type: 'paragraph',
-      text: t('view.plan.summary', {
+      text: t(plan.intent === 'destroy' ? 'view.destroy.summary' : 'view.plan.summary', {
         name: plan.application,
         strategy: strategyName,
         account: plan.target.accountId,
@@ -108,7 +108,9 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
         .sort();
       sections.push({
         id: 'creates',
-        heading: t('view.section.plan-creates'),
+        heading: t(
+          plan.intent === 'destroy' ? 'view.section.plan-removes' : 'view.section.plan-creates',
+        ),
         blocks: [
           { type: 'list', items: capabilities.map((c) => capitalize(t(`capability.${c}`))) },
         ],
@@ -116,7 +118,9 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
     } else if (level === 'guided') {
       sections.push({
         id: 'creates',
-        heading: t('view.section.plan-creates'),
+        heading: t(
+          plan.intent === 'destroy' ? 'view.section.plan-removes' : 'view.section.plan-creates',
+        ),
         blocks: [
           {
             type: 'list',
@@ -330,7 +334,9 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
   return {
     audience: level,
     locale,
-    title: t('view.plan.title', { name: plan.application }),
+    title: t(plan.intent === 'destroy' ? 'view.destroy.title' : 'view.plan.title', {
+      name: plan.application,
+    }),
     sections,
   };
 }

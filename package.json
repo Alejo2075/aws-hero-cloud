@@ -22,6 +22,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@hero-cloud/analyzer": "workspace:*",
+    "@hero-cloud/cli": "workspace:*",
     "@hero-cloud/core": "workspace:*",
     "@hero-cloud/planner": "workspace:*",
     "@hero-cloud/plugin-node": "workspace:*",

@@ -3,6 +3,8 @@ import { analyzeSnapshot, toApplicationName } from '@hero-cloud/analyzer';
 import {
   ApprovalService,
   InMemoryPlanStore,
+  InMemoryStateStore,
+  destroyArtifactHash,
   heroError,
   isSealIntact,
   sealPlan,
@@ -16,7 +18,9 @@ import type {
   ChallengeStore,
   CloudProvider,
   DeploymentPlan,
+  DeployOptions,
   DeploymentResult,
+  Endpoint,
   Health,
   Hero,
   HeroEvent,
@@ -27,7 +31,10 @@ import type {
   PlanOptions,
   PlanRef,
   PlanWarning,
+  ProjectSnapshot,
+  Rationale,
   SourceLoader,
+  StateStore,
   SourceRef,
 } from '@hero-cloud/core';
 import { nodePlugin } from '@hero-cloud/plugin-node';
@@ -46,6 +53,8 @@ export interface CreateHeroOptions extends HeroPorts {
   readonly challenges?: ChallengeStore;
   /** Where downloaded public prices are cached. Without one, prices are fetched each time. */
   readonly cacheDirectory?: string;
+  /** Where approved assemblies are kept so deploying later applies exactly what was approved. */
+  readonly assemblyDirectory?: string;
   /** A named AWS profile for credentials. Without one the standard AWS chain is used. */
   readonly awsProfile?: string;
   /** How long an approval challenge stays valid, in milliseconds. */
@@ -81,12 +90,34 @@ function sortWarnings(warnings: readonly PlanWarning[]): PlanWarning[] {
   });
 }
 
+/** What the engine remembers about a plan so it can deploy it later: where the source came from. */
+interface PlanContext {
+  readonly source: { readonly source: SourceRef; readonly root: string | undefined } | undefined;
+  readonly deploymentId: string;
+  readonly components: readonly { id: string; kind: string; healthPath?: string }[];
+}
+
+/** What is stored for a deployment under `.hero/`. The AWS stack stays the source of truth. */
+interface DeploymentRecord {
+  readonly schema: 1;
+  readonly status: 'deployed' | 'destroyed';
+  readonly deploymentId: string;
+  readonly plan: DeploymentPlan;
+  readonly result: DeploymentResult;
+  readonly source: PlanContext['source'];
+  readonly components: PlanContext['components'];
+}
+
 /** The engine behind the `Hero` interface. Create it with `createHero`. */
 class HeroEngine implements Hero {
   readonly #loaders: ReadonlyMap<string, SourceLoader>;
   readonly #detectors: readonly DetectorPlugin[];
   readonly #plans;
   readonly #cloud: CloudProvider;
+  readonly #state: StateStore;
+  readonly #sourceRefs = new Map<string, { source: SourceRef; root: string | undefined }>();
+  readonly #contexts = new Map<string, PlanContext>();
+  readonly #running = new Set<string>();
   readonly #approvals: ApprovalService;
   readonly #listeners = new Set<HeroEventListener>();
   readonly #clock: { now(): Date };
@@ -107,7 +138,11 @@ class HeroEngine implements Hero {
       createAwsProvider({
         ...(options.cacheDirectory === undefined ? {} : { cacheDirectory: options.cacheDirectory }),
         ...(options.awsProfile === undefined ? {} : { profile: options.awsProfile }),
+        ...(options.assemblyDirectory === undefined
+          ? {}
+          : { assemblyDirectory: options.assemblyDirectory }),
       });
+    this.#state = options.state ?? new InMemoryStateStore();
     this.#clock = options.clock ?? { now: () => new Date() };
     this.#approvals = new ApprovalService({
       ...(options.challenges === undefined ? {} : { store: options.challenges }),
@@ -175,12 +210,14 @@ class HeroEngine implements Hero {
             aiAssisted: false,
           };
         }
-        return analyzeSnapshot(snapshot, {
+        const analysis = await analyzeSnapshot(snapshot, {
           detectors: this.#detectors,
           name,
           ...(options.root === undefined ? {} : { root: options.root }),
           ...(options.signal === undefined ? {} : { signal: options.signal }),
         });
+        this.#sourceRefs.set(analysis.sourceHash, { source, root: options.root });
+        return analysis;
       });
     } finally {
       await snapshot.dispose();
@@ -243,6 +280,17 @@ class HeroEngine implements Hero {
       };
       const plan = sealPlan(body);
       await this.#plans.put(plan);
+      this.#contexts.set(plan.id, {
+        source: this.#sourceRefs.get(analysis.sourceHash),
+        deploymentId,
+        components: planned.components.map((component) => ({
+          id: component.id,
+          kind: component.kind,
+          ...(typeof component.settings.healthPath === 'string'
+            ? { healthPath: component.settings.healthPath }
+            : {}),
+        })),
+      });
       return plan;
     });
   }
@@ -271,21 +319,293 @@ class HeroEngine implements Hero {
     return this.#approvals.issue(resolved);
   }
 
-  deploy(_plan: PlanRef, _approval: Approval): Promise<DeploymentResult> {
-    return Promise.reject(heroError('internal.not-implemented', { operation: 'deploy' }));
+  async deploy(
+    ref: PlanRef,
+    approval: Approval,
+    options: DeployOptions = {},
+  ): Promise<DeploymentResult> {
+    const plan = await this.#resolvePlan(ref);
+    const blocking = plan.warnings.filter((warning) => warning.severity === 'blocking');
+    if (blocking.length > 0) throw heroError('plan.blocking-warning', { count: blocking.length });
+    // Consumes the challenge: an approval works once, for exactly this plan, account, and region.
+    await this.#approvals.consume(plan, approval);
+
+    if (plan.intent === 'destroy') return this.#destroy(plan);
+
+    const cloud = this.#cloud;
+    const apply = cloud.apply?.bind(cloud);
+    if (apply === undefined) throw heroError('provider.unavailable', { reason: 'no-apply' });
+    const context = this.#contexts.get(plan.id);
+    if (context === undefined) throw heroError('plan.unknown');
+    await this.#assertAccount(plan);
+
+    const parameters: Record<string, string> = {};
+    const email = options.inputs?.[BUDGET_EMAIL_INPUT];
+    if (email !== undefined) parameters.BudgetEmail = email;
+    if (
+      plan.requiredInputs.some((input) => input.name === BUDGET_EMAIL_INPUT) &&
+      email === undefined &&
+      plan.changes.some((change) => change.resource.type === 'budgets-budget')
+    ) {
+      throw heroError('plan.missing-input', { name: BUDGET_EMAIL_INPUT });
+    }
+
+    return this.#locked(context.deploymentId, async () => {
+      const snapshot = await this.#reloadSource(plan, context);
+      try {
+        const outputs = await this.#phase('deploy', () =>
+          apply({
+            plan,
+            snapshot: snapshot.view,
+            parameters,
+            deploymentId: context.deploymentId,
+            emit: (event) => {
+              this.#emit(event);
+            },
+          }),
+        );
+        const health = await this.#phase('verify', () =>
+          this.#observe(context.deploymentId, plan, outputs.endpoints, context.components),
+        );
+        const result: DeploymentResult = {
+          deploymentId: context.deploymentId,
+          planId: plan.id,
+          status: health.status === 'healthy' ? 'succeeded' : 'partial',
+          endpoints: outputs.endpoints,
+          health,
+          resources: outputs.resources,
+          sensitiveOutputs: outputs.sensitiveOutputs,
+          links: outputs.links,
+          ...(plan.cost === undefined ? {} : { cost: plan.cost }),
+          nextSteps: nextStepsFor(plan, outputs.endpoints, health),
+          completedAt: this.#clock.now().toISOString(),
+        };
+        const record: DeploymentRecord = {
+          schema: 1,
+          status: 'deployed',
+          deploymentId: context.deploymentId,
+          plan,
+          result,
+          source: context.source,
+          components: context.components,
+        };
+        await this.#state.write(context.deploymentId, record);
+        return result;
+      } finally {
+        await snapshot.dispose();
+      }
+    });
   }
 
-  planDestroy(_deploymentId: string): Promise<DeploymentPlan> {
-    return Promise.reject(heroError('internal.not-implemented', { operation: 'planDestroy' }));
+  async planDestroy(deploymentId: string): Promise<DeploymentPlan> {
+    const record = await this.#record(deploymentId);
+    const deployed = record.plan;
+    const kept = deployed.changes.filter(
+      (change) => (change.details as { onDestroy?: string } | undefined)?.onDestroy === 'keep',
+    );
+    const warnings: PlanWarning[] = [];
+    if (kept.length > 0) {
+      warnings.push({
+        code: 'plan.destroy-keeps-data',
+        severity: 'warning',
+        params: { count: kept.length },
+      });
+    }
+    const body: PlanBody = {
+      application: deployed.application,
+      specVersion: deployed.specVersion,
+      sourceHash: deployed.sourceHash,
+      strategy: deployed.strategy,
+      strategyRationale: deployed.strategyRationale,
+      target: deployed.target,
+      changes: deployed.changes.map((change) => ({
+        ...change,
+        action: 'delete' as const,
+        destructive: true,
+      })),
+      warnings: sortWarnings(warnings),
+      requiredInputs: [],
+      artifactHash: destroyArtifactHash(deploymentId, deployed.artifactHash),
+      intent: 'destroy',
+      deploymentId,
+    };
+    const plan = sealPlan(body);
+    await this.#plans.put(plan);
+    return plan;
   }
 
-  outputs(_deploymentId: string): Promise<DeploymentResult> {
-    return Promise.reject(heroError('internal.not-implemented', { operation: 'outputs' }));
+  async outputs(deploymentId: string): Promise<DeploymentResult> {
+    return (await this.#record(deploymentId)).result;
   }
 
-  health(_deploymentId: string): Promise<Health> {
-    return Promise.reject(heroError('internal.not-implemented', { operation: 'health' }));
+  async health(deploymentId: string): Promise<Health> {
+    const record = await this.#record(deploymentId);
+    if (record.status === 'destroyed') throw heroError('plan.unknown');
+    const health = await this.#observe(
+      deploymentId,
+      record.plan,
+      record.result.endpoints,
+      record.components,
+    );
+    await this.#state.write(deploymentId, {
+      ...record,
+      result: { ...record.result, health },
+    } satisfies DeploymentRecord);
+    return health;
   }
+
+  async #destroy(plan: DeploymentPlan): Promise<DeploymentResult> {
+    const cloud = this.#cloud;
+    const deploymentId = plan.deploymentId;
+    const destroy = cloud.destroy?.bind(cloud);
+    if (destroy === undefined || deploymentId === undefined) {
+      throw heroError('provider.unavailable', { reason: 'no-destroy' });
+    }
+    const record = await this.#record(deploymentId);
+    await this.#assertAccount(plan);
+    return this.#locked(deploymentId, async () => {
+      const outputs = await this.#phase('destroy', () =>
+        destroy({
+          plan,
+          snapshot: undefined,
+          parameters: {},
+          deploymentId,
+          deployedArtifactHash: record.plan.artifactHash,
+          emit: (event) => {
+            this.#emit(event);
+          },
+        }),
+      );
+      const result: DeploymentResult = {
+        deploymentId,
+        planId: plan.id,
+        status: 'succeeded',
+        endpoints: [],
+        health: {
+          status: 'unknown',
+          checkedAt: this.#clock.now().toISOString(),
+          components: [],
+          checks: [],
+        },
+        resources: outputs.kept ?? [],
+        sensitiveOutputs: record.result.sensitiveOutputs,
+        links: [],
+        nextSteps: (outputs.kept ?? []).length > 0 ? [{ code: 'next.review-kept-data' }] : [],
+        completedAt: this.#clock.now().toISOString(),
+      };
+      await this.#state.write(deploymentId, {
+        ...record,
+        status: 'destroyed',
+        result,
+      } satisfies DeploymentRecord);
+      return result;
+    });
+  }
+
+  async #record(deploymentId: string): Promise<DeploymentRecord> {
+    const stored = await this.#state.read(deploymentId);
+    if (
+      typeof stored !== 'object' ||
+      stored === null ||
+      (stored as { schema?: unknown }).schema !== 1
+    ) {
+      throw heroError('plan.unknown');
+    }
+    return stored as DeploymentRecord;
+  }
+
+  async #observe(
+    deploymentId: string,
+    plan: DeploymentPlan,
+    endpoints: readonly Endpoint[],
+    components: PlanContext['components'],
+  ): Promise<Health> {
+    if (this.#cloud.health === undefined) {
+      return {
+        status: 'unknown',
+        checkedAt: this.#clock.now().toISOString(),
+        components: [],
+        checks: [],
+      };
+    }
+    return this.#cloud.health({
+      deploymentId,
+      region: plan.target.region,
+      accountId: plan.target.accountId,
+      endpoints,
+      components,
+      now: () => this.#clock.now(),
+    });
+  }
+
+  /** The credentials in use must belong to the account the plan was approved for. */
+  async #assertAccount(plan: DeploymentPlan): Promise<void> {
+    if (this.#cloud.identity === undefined) return;
+    const who = await this.#cloud.identity({ region: plan.target.region });
+    if (who.account !== plan.target.accountId) throw heroError('approval.account-mismatch');
+  }
+
+  async #locked<T>(deploymentId: string, work: () => Promise<T>): Promise<T> {
+    if (this.#running.has(deploymentId)) throw heroError('deployment.locked');
+    this.#running.add(deploymentId);
+    try {
+      return await work();
+    } finally {
+      this.#running.delete(deploymentId);
+    }
+  }
+
+  /** Loads the source again and proves it is the one that was reviewed. */
+  async #reloadSource(
+    plan: DeploymentPlan,
+    context: PlanContext,
+  ): Promise<{ view: ProjectSnapshot | undefined; dispose(): Promise<void> }> {
+    if (context.source === undefined) return { view: undefined, dispose: () => Promise.resolve() };
+    const loader = this.#loaders.get(context.source.source.kind);
+    if (loader === undefined) {
+      throw heroError('source.unsupported', { kind: context.source.source.kind });
+    }
+    const snapshot = await loader.load(context.source.source);
+    if (snapshot.hash !== plan.sourceHash) {
+      await snapshot.dispose();
+      throw heroError('approval.plan-mismatch', { reason: 'source-changed' });
+    }
+    return {
+      view: rooted(snapshot, context.source.root),
+      dispose: () => snapshot.dispose(),
+    };
+  }
+}
+
+/** Shows a monorepo's folder as if it were the whole project. */
+function rooted(snapshot: ProjectSnapshot, root: string | undefined): ProjectSnapshot {
+  if (root === undefined || root === '' || root === '.') return snapshot;
+  const prefix = `${root.replace(/\/+$/, '')}/`;
+  return {
+    hash: snapshot.hash,
+    skipped: snapshot.skipped,
+    files: snapshot.files
+      .filter((file) => file.path.startsWith(prefix))
+      .map((file) => ({ ...file, path: file.path.slice(prefix.length) })),
+    read: (path) => snapshot.read(`${prefix}${path}`),
+    dispose: () => snapshot.dispose(),
+  };
+}
+
+/** What a person can do next, as codes the interfaces word for their reader. */
+function nextStepsFor(
+  plan: DeploymentPlan,
+  endpoints: readonly Endpoint[],
+  health: Health,
+): Rationale[] {
+  const steps: Rationale[] = [];
+  if (health.status === 'healthy' && endpoints.length > 0) steps.push({ code: 'next.open-site' });
+  if (health.status !== 'healthy') steps.push({ code: 'next.check-health' });
+  if (plan.requiredInputs.some((input) => input.kind === 'secret')) {
+    steps.push({ code: 'next.set-secrets' });
+  }
+  steps.push({ code: 'next.watch-cost' }, { code: 'next.destroy' });
+  return steps;
 }
 
 /**

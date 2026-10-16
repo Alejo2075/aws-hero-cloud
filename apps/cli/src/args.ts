@@ -3,7 +3,8 @@ import { audienceLevels } from '@hero-cloud/presentation';
 import { HeroError } from '@hero-cloud/sdk';
 import type { AudienceLevel } from '@hero-cloud/presentation';
 
-export type Command = 'analyze' | 'plan' | 'help' | 'version';
+export type Command =
+  'analyze' | 'plan' | 'deploy' | 'destroy' | 'health' | 'outputs' | 'help' | 'version';
 
 export interface ParsedArguments {
   readonly command: Command;
@@ -20,6 +21,14 @@ export interface ParsedArguments {
   readonly region: string | undefined;
   readonly accountId: string | undefined;
   readonly offline: boolean;
+  /** The plan digest a script approves instead of answering a prompt. */
+  readonly approve: string | undefined;
+  /** Email address for spending alerts. */
+  readonly budgetEmail: string | undefined;
+  /** A named AWS profile. */
+  readonly profile: string | undefined;
+  /** Where Hero keeps what it needs to find a deployment again. */
+  readonly stateDir: string | undefined;
   /** Answers to open questions, keyed by question id. */
   readonly answers: Readonly<Record<string, string>>;
 }
@@ -111,6 +120,10 @@ export function parseArguments(
         region: { type: 'string' },
         'account-id': { type: 'string' },
         offline: { type: 'boolean' },
+        approve: { type: 'string' },
+        'budget-email': { type: 'string' },
+        profile: { type: 'string' },
+        'state-dir': { type: 'string' },
         answer: { type: 'string', multiple: true },
         help: { type: 'boolean', short: 'h' },
         version: { type: 'boolean', short: 'v' },
@@ -136,6 +149,9 @@ export function parseArguments(
     throw usageError('--locale is not a valid language tag');
 
   const [first, ...rest] = positionals;
+  if (values.approve !== undefined && !/^[0-9a-f]{64}$/.test(values.approve)) {
+    throw usageError('--approve must be the 64-character digest of the plan');
+  }
   const base = {
     source: undefined,
     kind: undefined,
@@ -150,6 +166,10 @@ export function parseArguments(
     region: values.region,
     accountId: values['account-id'],
     offline: values.offline === true,
+    approve: values.approve,
+    budgetEmail: values['budget-email'],
+    profile: values.profile,
+    stateDir: values['state-dir'],
     answers: parseAnswers(values.answer ?? []),
   } as const;
 
@@ -157,7 +177,16 @@ export function parseArguments(
   if (values.help === true || first === 'help' || first === undefined) {
     return { ...base, command: 'help' };
   }
-  if (first !== 'analyze' && first !== 'plan') throw usageError(`unknown command "${first}"`);
+  if (first === 'health' || first === 'outputs' || first === 'destroy') {
+    const id = rest[0];
+    if (rest.length !== 1 || id === undefined || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(id)) {
+      throw usageError(`${first} needs exactly one deployment name, such as hero-my-app`);
+    }
+    return { ...base, command: first, source: id, kind: undefined };
+  }
+  if (first !== 'analyze' && first !== 'plan' && first !== 'deploy') {
+    throw usageError(`unknown command "${first}"`);
+  }
   if (rest.length !== 1)
     throw usageError(
       `${first} needs exactly one source: a folder, a .zip file, or an https:// repository`,

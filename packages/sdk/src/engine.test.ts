@@ -219,11 +219,11 @@ describe('createHero().requestApproval', () => {
   });
 });
 
-describe('operations that arrive in later phases', () => {
-  it('fail with an explicit coded error instead of pretending', async () => {
+describe('deployments the engine does not know', () => {
+  it('are refused with a coded error instead of guessing', async () => {
     const hero = createHero();
-    await expect(hero.planDestroy('d')).rejects.toMatchObject({ code: 'internal.not-implemented' });
-    await expect(hero.outputs('d')).rejects.toMatchObject({ code: 'internal.not-implemented' });
-    await expect(hero.health('d')).rejects.toMatchObject({ code: 'internal.not-implemented' });
+    await expect(hero.planDestroy('d')).rejects.toMatchObject({ code: 'plan.unknown' });
+    await expect(hero.outputs('d')).rejects.toMatchObject({ code: 'plan.unknown' });
+    await expect(hero.health('d')).rejects.toMatchObject({ code: 'plan.unknown' });
   });
 });

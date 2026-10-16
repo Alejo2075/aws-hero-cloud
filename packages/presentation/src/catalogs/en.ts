@@ -1,5 +1,6 @@
 import type { MessageCatalog } from '../types.js';
 import { enPlan } from './en-plan.js';
+import { enResult } from './en-result.js';
 
 const tri = (simple: string, guided: string, expert: string) => ({ simple, guided, expert });
 
@@ -7,6 +8,7 @@ export const en: MessageCatalog = {
   locale: 'en',
   messages: {
     ...enPlan,
+    ...enResult,
     // ---- view labels -----------------------------------------------------------------------
     'view.analysis.title': 'What Hero understood about {name}',
     'view.section.summary': 'Summary',
@@ -403,6 +405,10 @@ export const en: MessageCatalog = {
 Usage:
   hero-cloud analyze <source> [options]
   hero-cloud plan <source> [options]
+  hero-cloud deploy <source> [options]
+  hero-cloud health <deployment>
+  hero-cloud outputs <deployment>
+  hero-cloud destroy <deployment> [options]
 
 <source> is a folder, a .zip file, or an https:// Git repository.
 Hero reads it without running anything and tells you what it needs.
@@ -419,13 +425,26 @@ Options:
       --account-id <12 digits>        The AWS account the plan is for
       --offline                       Never use the network, not even for public prices
       --answer <question>=<answer>    Answer a question Hero asked (can be repeated)
+      --approve <plan digest>         Approve exactly this plan without a prompt (for scripts)
+      --budget-email <address>        Where spending alerts are sent
+      --profile <name>                Use this AWS profile
+      --state-dir <folder>            Where Hero remembers deployments (default: .hero)
       --no-color                      Do not use colors
   -h, --help                          Show this help
   -v, --version                       Show the version
 
-Environment: HERO_LEVEL, HERO_LOCALE, NO_COLOR, and HERO_DEBUG=1 (shows technical error details).
+Environment: HERO_LEVEL, HERO_LOCALE, HERO_BUDGET_EMAIL, NO_COLOR, and HERO_DEBUG=1 (shows technical error details).
 
-More commands (deploy and others) are being built. See docs/ROADMAP.md.`,
+deploy shows the plan and creates nothing until you approve it. A <deployment> is the name
+Hero printed, such as hero-my-app. Exit codes: 0 ok, 1 failed, 2 wrong command, 3 plan blocked,
+4 deployed but the checks did not show it working.`,
+    'cli.prompt.approve': 'Approve this plan and apply it to your AWS account? [y/N]',
+    'cli.prompt.budget-email':
+      'Email address for spending alerts (stored only in your AWS account):',
+    'cli.declined': 'Not approved. Nothing was changed.',
+    'cli.progress.deploy': 'Setting things up on AWS...',
+    'cli.progress.verify': 'Checking that it works...',
+    'cli.progress.destroy': 'Removing from AWS...',
     'cli.hint.answer':
       'To answer a question, run the command again with --answer <question>=<answer>. Questions to answer: {ids}',
     'cli.progress.plan': 'Planning...',

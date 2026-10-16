@@ -32,3 +32,6 @@ export type { DeployOutcome, DeployRequest, ToolkitPort } from './deploy/deploye
 export { verifyAssembly } from './deploy/assembly.js';
 export { createGuardedIoHost } from './deploy/guard.js';
 export { applyDiff, diffAgainstDeployed } from './deploy/diff.js';
+export { createApplier } from './deploy/apply.js';
+export { createHealthChecker, isHeroEndpoint } from './deploy/health.js';
+export { loadBundle } from './bundle.js';

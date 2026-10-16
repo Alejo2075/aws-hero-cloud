@@ -101,6 +101,12 @@ export interface PlanBody {
    * part of the digest, so approving a plan approves exactly those artifacts (D1).
    */
   readonly artifactHash: string;
+  /**
+   * Absent for a deployment. `destroy` marks a plan whose changes are all removals; it needs
+   * approval like any other plan, and `deploymentId` names what it removes.
+   */
+  readonly intent?: 'destroy';
+  readonly deploymentId?: string;
 }
 
 /**
@@ -130,6 +136,7 @@ export const planWarningCodes = [
   'plan.secrets-required',
   'plan.nothing-to-deploy',
   'plan.unsupported-schedule',
+  'plan.destroy-keeps-data',
 ] as const;
 
 export type PlanWarningCode = (typeof planWarningCodes)[number];

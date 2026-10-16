@@ -1,5 +1,6 @@
 import type { MessageCatalog } from '../types.js';
 import { esPlan } from './es-plan.js';
+import { esResult } from './es-result.js';
 
 const tri = (simple: string, guided: string, expert: string) => ({ simple, guided, expert });
 
@@ -7,6 +8,7 @@ export const es: MessageCatalog = {
   locale: 'es',
   messages: {
     ...esPlan,
+    ...esResult,
     // ---- etiquetas de las vistas -----------------------------------------------------------
     'view.analysis.title': 'Lo que Hero entendió de {name}',
     'view.section.summary': 'Resumen',
@@ -435,6 +437,10 @@ export const es: MessageCatalog = {
 Uso:
   hero-cloud analyze <fuente> [opciones]
   hero-cloud plan <fuente> [opciones]
+  hero-cloud deploy <fuente> [opciones]
+  hero-cloud health <despliegue>
+  hero-cloud outputs <despliegue>
+  hero-cloud destroy <despliegue> [opciones]
 
 <fuente> es una carpeta, un archivo .zip o un repositorio Git https://.
 Hero la lee sin ejecutar nada y te dice qué necesita.
@@ -451,13 +457,26 @@ Opciones:
       --account-id <12 dígitos>       La cuenta de AWS para la que es el plan
       --offline                       No usa la red, ni siquiera para precios públicos
       --answer <pregunta>=<respuesta> Responde una pregunta de Hero (se puede repetir)
+      --approve <digest del plan>     Aprueba exactamente este plan sin preguntar (para scripts)
+      --budget-email <dirección>      Adónde se envían las alertas de gasto
+      --profile <nombre>              Usa este perfil de AWS
+      --state-dir <carpeta>           Dónde Hero recuerda los despliegues (por defecto: .hero)
       --no-color                      No usa colores
   -h, --help                          Muestra esta ayuda
   -v, --version                       Muestra la versión
 
-Entorno: HERO_LEVEL, HERO_LOCALE, NO_COLOR y HERO_DEBUG=1 (muestra detalles técnicos de errores).
+Entorno: HERO_LEVEL, HERO_LOCALE, HERO_BUDGET_EMAIL, NO_COLOR y HERO_DEBUG=1 (muestra detalles técnicos de errores).
 
-Se están construyendo más comandos (deploy y otros). Consulta docs/ROADMAP.md.`,
+deploy muestra el plan y no crea nada hasta que lo apruebes. Un <despliegue> es el nombre
+que Hero mostró, como hero-mi-app. Códigos de salida: 0 bien, 1 falló, 2 comando incorrecto,
+3 plan bloqueado, 4 desplegado pero las comprobaciones no mostraron que funcione.`,
+    'cli.prompt.approve': '¿Apruebas este plan y lo aplicas a tu cuenta de AWS? [s/N]',
+    'cli.prompt.budget-email':
+      'Correo para las alertas de gasto (se guarda solo en tu cuenta de AWS):',
+    'cli.declined': 'No se aprobó. No se cambió nada.',
+    'cli.progress.deploy': 'Preparando todo en AWS...',
+    'cli.progress.verify': 'Comprobando que funciona...',
+    'cli.progress.destroy': 'Quitando de AWS...',
     'cli.hint.answer':
       'Para responder una pregunta, ejecuta el comando de nuevo con --answer <pregunta>=<respuesta>. Preguntas por responder: {ids}',
     'cli.progress.plan': 'Planificando...',

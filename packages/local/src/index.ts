@@ -47,3 +47,5 @@ export interface AiConsent {
   readonly scope: 'file-names' | 'snippets' | 'full-files';
   readonly grantedAt: string;
 }
+
+export { FileStateStore } from './state-store.js';

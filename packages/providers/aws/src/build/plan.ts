@@ -25,10 +25,19 @@ export interface BuildJob {
   readonly outputDirectory: string | undefined;
 }
 
+/** A static site and where its finished files are: the output of a build, or a folder of the source. */
+export interface SiteFiles {
+  readonly id: string;
+  readonly outputDirectory: string;
+  /** True when a build produces the files; false when the folder in the source is shipped as is. */
+  readonly built: boolean;
+}
+
 export interface BuildPlan {
   readonly image: string;
   readonly timeoutMinutes: number;
   readonly jobs: readonly BuildJob[];
+  readonly sites: readonly SiteFiles[];
 }
 
 /** Chooses the package manager from the lock file that is present, and never runs `latest`. */
@@ -75,9 +84,15 @@ const text = (component: Component, key: string): string | undefined => {
 /** What has to be built for these components. Components that need no build are left out. */
 export function buildPlanFor(components: readonly Component[]): BuildPlan {
   const jobs: BuildJob[] = [];
+  const sites: SiteFiles[] = [];
   for (const component of components) {
     if (component.kind === 'static-site') {
       const build = text(component, 'buildCommand');
+      sites.push({
+        id: component.id,
+        outputDirectory: assertSafeDirectory(text(component, 'outputDirectory') ?? '.'),
+        built: build !== undefined,
+      });
       // A site that is already finished is shipped as it is; there is nothing to build.
       if (build === undefined) continue;
       jobs.push({
@@ -107,7 +122,7 @@ export function buildPlanFor(components: readonly Component[]): BuildPlan {
       });
     }
   }
-  return { image: BUILD_IMAGE, timeoutMinutes: BUILD_TIMEOUT_MINUTES, jobs };
+  return { image: BUILD_IMAGE, timeoutMinutes: BUILD_TIMEOUT_MINUTES, jobs, sites };
 }
 
 /** Where a job's result goes in the artifact bucket. */

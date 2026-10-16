@@ -1,4 +1,5 @@
 import {
+  CfnOutput,
   Duration,
   PermissionsBoundary,
   RemovalPolicy,
@@ -148,7 +149,7 @@ export class BuildStack extends Stack {
         'Build artifacts are encrypted with the AWS-managed S3 key; a customer-managed key would add cost and a shared key to manage for a short-lived build.',
     });
 
-    this.exportValue(bucket.bucketName, { name: `${props.deploymentId}-build-bucket` });
-    this.exportValue(projectName, { name: `${props.deploymentId}-build-project` });
+    new CfnOutput(this, 'BucketName', { value: bucket.bucketName });
+    new CfnOutput(this, 'ProjectName', { value: projectName });
   }
 }

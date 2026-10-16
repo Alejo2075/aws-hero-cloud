@@ -13,11 +13,15 @@ import { bundleHash, storeBundle } from './bundle.js';
 import { synthesize, synthesizeBuild } from './cdk/synth.js';
 import { changesFromTemplate } from './changes.js';
 import { estimateCost } from './cost.js';
+import { createApplier } from './deploy/apply.js';
+import { createHealthChecker } from './deploy/health.js';
 import { getIdentity } from './identity.js';
 import { parameterChanges } from './parameters.js';
 import { builtInPriceBook } from './prices/book.js';
 import { loadPriceBook } from './prices/live.js';
 import type { FetchText } from './prices/live.js';
+import type { ToolkitFactory } from './deploy/deployer.js';
+import { CloudFormationClient } from '@aws-sdk/client-cloudformation';
 
 export interface AwsProviderOptions {
   /** Folder where downloaded prices are cached. Without one, prices are fetched each time. */
@@ -28,6 +32,8 @@ export interface AwsProviderOptions {
    */
   readonly assemblyDirectory?: string;
   readonly fetchText?: FetchText;
+  /** The toolkit used to deploy; tests pass a fake. */
+  readonly toolkit?: ToolkitFactory;
   /** A named profile from the shared AWS configuration, used to find out who the user is. */
   readonly profile?: string;
   readonly now?: () => Date;
@@ -45,9 +51,29 @@ const MEMO_LIMIT = 32;
 export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvider {
   // Synthesis is pure but not free, so equal requests reuse their result.
   const memo = new Map<string, ProviderPlanResult>();
+  const applierFor = (region: string) =>
+    createApplier({
+      assemblyDirectory: options.assemblyDirectory ?? '',
+      region,
+      ...(options.profile === undefined ? {} : { profile: options.profile }),
+      ...(options.toolkit === undefined ? {} : { toolkit: options.toolkit }),
+    });
 
   return {
     id: 'aws',
+    ...(options.assemblyDirectory === undefined
+      ? {}
+      : {
+          apply: (request) => applierFor(request.plan.target.region).apply(request),
+          destroy: (request) => applierFor(request.plan.target.region).destroy(request),
+        }),
+    health: (request) =>
+      createHealthChecker({
+        cloudFormation: new CloudFormationClient({
+          region: request.region,
+          ...(options.profile === undefined ? {} : { profile: options.profile }),
+        }),
+      })(request),
     identity: (identityOptions = {}) =>
       getIdentity({
         ...(identityOptions.region === undefined ? {} : { region: identityOptions.region }),

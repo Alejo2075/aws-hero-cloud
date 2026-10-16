@@ -54,6 +54,8 @@ export function storeBundle(root: string, source: BundleSource): string {
 }
 
 export interface LoadedBundle {
+  readonly appHash: string;
+  readonly buildHash: string | undefined;
   readonly appDirectory: string;
   readonly buildDirectory: string | undefined;
   readonly buildPlan: BuildPlan;
@@ -88,5 +90,11 @@ export function loadBundle(
     buildDirectory = join(directory, 'build');
     verifyAssembly(buildDirectory, { hash: parts.buildHash, ...environment });
   }
-  return { appDirectory, buildDirectory, buildPlan: parts.buildPlan };
+  return {
+    appHash: parts.appHash,
+    buildHash: parts.buildHash,
+    appDirectory,
+    buildDirectory,
+    buildPlan: parts.buildPlan,
+  };
 }

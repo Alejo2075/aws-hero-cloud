@@ -1,4 +1,5 @@
 import {
+  CfnOutput,
   CfnParameter,
   CfnResource,
   Duration,
@@ -200,9 +201,17 @@ export class HeroStack extends Stack {
         'The default CloudFront certificate fixes the minimum TLS version; a custom domain enables TLS 1.2.',
     });
 
-    this.exportValue(distribution.distributionDomainName, {
-      name: `${this.#deploymentId}-site-domain`,
-    });
+    this.#output(component, 'Url', `https://${distribution.distributionDomainName}`);
+    this.#output(component, 'FilesBucket', files.bucketName);
+    this.#output(component, 'DistributionId', distribution.distributionId);
+  }
+
+  /**
+   * A stack output with a predictable name, `<Kind><Id><Thing>`, which the deployer reads back to
+   * tell the person where their application is. Outputs never hold secrets.
+   */
+  #output(component: Component, thing: string, value: string): void {
+    new CfnOutput(this, `${pascal(component.kind)}${pascal(component.id)}${thing}`, { value });
   }
 
   #artifacts(): s3.IBucket {
@@ -368,7 +377,8 @@ export class HeroStack extends Stack {
         });
       }
     }
-    this.exportValue(api.apiEndpoint, { name: `${this.#deploymentId}-${component.id}-endpoint` });
+    this.#output(component, 'Url', api.apiEndpoint);
+    this.#output(component, 'Function', fn.functionName);
   }
 
   #scheduledJob(group: Construct, component: Component): void {
@@ -389,6 +399,7 @@ export class HeroStack extends Stack {
       logGroup,
       environment: this.#environment(),
     });
+    this.#output(component, 'Function', fn.functionName);
 
     const expression = toAwsCron(S(component, 'schedule'));
     if (expression === undefined) {
@@ -437,6 +448,7 @@ export class HeroStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
     this.#tables.set(component.id, table);
+    this.#output(component, 'Name', table.tableName);
   }
 
   #bucket(group: Construct, component: Component): void {
@@ -453,6 +465,7 @@ export class HeroStack extends Stack {
       serverAccessLogsPrefix: 'data/',
     });
     this.#buckets.set(component.id, bucket);
+    this.#output(component, 'Name', bucket.bucketName);
   }
 
   #identity(group: Construct, component: Component): void {
@@ -486,12 +499,14 @@ export class HeroStack extends Stack {
       id: 'AwsSolutions::AwsSolutions-COG3',
       reason: 'Advanced security features add a per-user fee and are not enabled by default.',
     });
-    pool.addClient('Client', {
+    const client = pool.addClient('Client', {
       generateSecret: false,
       authFlows: { userSrp: true },
       oAuth: { flows: { authorizationCodeGrant: true } },
       preventUserExistenceErrors: true,
     });
+    this.#output(component, 'PoolId', pool.userPoolId);
+    this.#output(component, 'ClientId', client.userPoolClientId);
   }
 
   #budget(group: Construct, component: Component): void {

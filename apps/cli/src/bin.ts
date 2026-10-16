@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
+import { createInterface } from 'node:readline/promises';
 import { homedir } from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { FileStateStore } from '@hero-cloud/local';
 import { createHero } from '@hero-cloud/sdk';
 import { run } from './cli.js';
 import { cacheDirectory } from './paths.js';
@@ -18,9 +20,27 @@ const code = await run(process.argv.slice(2), {
   version: typeof __HERO_VERSION__ === 'string' ? __HERO_VERSION__ : '0.0.0-dev',
   readFile: (path) => readFile(path, 'utf8'),
   resolvePath: (path) => resolve(process.cwd(), path),
-  createHero: () => {
+  stdinIsTTY: process.stdin.isTTY,
+  ask: async (question) => {
+    const lines = createInterface({ input: process.stdin, output: process.stderr });
+    try {
+      return await lines.question(question);
+    } finally {
+      lines.close();
+    }
+  },
+  createHero: (settings) => {
     const cache = cacheDirectory(process.env, process.platform, homedir());
-    return createHero(cache === undefined ? {} : { cacheDirectory: cache });
+    return createHero({
+      ...(cache === undefined ? {} : { cacheDirectory: cache }),
+      ...(settings === undefined
+        ? {}
+        : {
+            state: new FileStateStore(join(settings.stateDirectory, 'state')),
+            assemblyDirectory: join(settings.stateDirectory, 'assemblies'),
+            ...(settings.profile === undefined ? {} : { awsProfile: settings.profile }),
+          }),
+    });
   },
 });
 process.exitCode = code;

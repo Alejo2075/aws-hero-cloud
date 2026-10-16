@@ -65,7 +65,7 @@ describe('help, version, and usage errors', () => {
   });
 
   it.each([
-    [['deploy', 'x']],
+    [['launch', 'x']],
     [['analyze']],
     [['analyze', 'a', 'b']],
     [['analyze', 'a', '--level', 'nope']],
@@ -81,11 +81,11 @@ describe('help, version, and usage errors', () => {
 
   it('explains the reason at the guided level, and honours level and language even on a bad command', async () => {
     const guided = capture();
-    expect(await run(['deploy', 'x', '-l', 'guided'], guided.io)).toBe(2);
-    expect(guided.err()).toContain('unknown command "deploy"');
+    expect(await run(['launch', 'x', '-l', 'guided'], guided.io)).toBe(2);
+    expect(guided.err()).toContain('unknown command "launch"');
     const spanish = capture();
-    await run(['deploy', 'x', '--level=expert', '--locale=es'], spanish.io);
-    expect(spanish.err()).toContain('Uso inválido: unknown command "deploy"');
+    await run(['launch', 'x', '--level=expert', '--locale=es'], spanish.io);
+    expect(spanish.err()).toContain('Uso inválido: unknown command "launch"');
     const badLevel = capture();
     await run(['analyze', 'x', '--level', 'nope', '--locale', 'es'], badLevel.io);
     expect(badLevel.err()).toContain('Hero no entendió ese comando.');

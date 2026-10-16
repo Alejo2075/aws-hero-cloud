@@ -133,14 +133,16 @@ _Status: implemented and unit-tested with mocks. Running a real build in CodeBui
 
 ### Phase 8: Deploy, health, and outputs (M) → 0.3
 
-- [ ] `hero-cloud deploy` with an interactive approval; `--approve <digest>` for scripts.
-- [ ] Health checks derived from the Hero Spec: `reachability`, `resource-state`, `smoke`.
-- [ ] 🔒 Smoke paths must be paths, not URLs; requests go only to Hero-created endpoints; redirects off-host refused; timeouts and size limits (D7).
-- [ ] `DeploymentResult` with endpoints, health, links, cost, and next steps; `hero-cloud health`, `hero-cloud outputs`, `hero-cloud destroy` (destroy is a plan).
-- [ ] Local `StateStore` under `.hero/`; the AWS stack is the source of truth.
-- [ ] `examples/headless` deploys end to end using only the SDK.
+- [x] `hero-cloud deploy` with an interactive approval; `--approve <digest>` for scripts.
+- [x] Health checks derived from the Hero Spec: `reachability`, `resource-state`, `smoke`.
+- [x] 🔒 Smoke paths must be paths, not URLs; requests go only to Hero-created endpoints; redirects off-host refused; timeouts and size limits (D7).
+- [x] `DeploymentResult` with endpoints, health, links, cost, and next steps; `hero-cloud health`, `hero-cloud outputs`, `hero-cloud destroy` (destroy is a plan).
+- [x] Local `StateStore` under `.hero/`; the AWS stack is the source of truth.
+- [x] `examples/headless` deploys end to end using only the SDK.
 
 **Done when:** every JS/TS example goes from folder to healthy URL to clean destroy in the sandbox account, at all three levels. **Release 0.3.**
+
+_Status: implemented and tested end to end with a fake cloud (engine, CLI, headless example) and with mocked AWS clients (applier, health). The run against a real sandbox account is `tests/integration/` and has not happened yet, so the "folder to healthy URL to clean destroy" bar and Release 0.3 stay open. Not yet done: CloudFront invalidation on update (Phase 9) and secret values (Phase 9)._
 
 ### Phase 9: Updates, secrets, and guardrails (M) → 0.4
 

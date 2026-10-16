@@ -1,5 +1,15 @@
+import type { HeroEventListener } from './events.js';
+import type { ProjectSnapshot } from './ports.js';
+import type {
+  DeployedResource,
+  Endpoint,
+  Health,
+  OperationLink,
+  SensitiveOutput,
+} from './result.js';
 import type {
   CostEstimate,
+  DeploymentPlan,
   DeploymentStrategy,
   PlanChange,
   PlanWarning,
@@ -50,6 +60,46 @@ export interface ProviderPlanResult {
   readonly artifactHash: string;
 }
 
+/** What a provider needs to apply one approved plan. */
+export interface ProviderApplyRequest {
+  readonly plan: DeploymentPlan;
+  /**
+   * The reloaded source, already checked against `plan.sourceHash`. Absent when the plan builds
+   * nothing and ships no files.
+   */
+  readonly snapshot: ProjectSnapshot | undefined;
+  /** Values for template parameters that are not secrets, such as the budget alert email. */
+  readonly parameters: Readonly<Record<string, string>>;
+  readonly deploymentId: string;
+  /** For a destroy plan: the `artifactHash` of the deployment it removes. */
+  readonly deployedArtifactHash?: string;
+  readonly emit: HeroEventListener;
+}
+
+/** What exists after an apply or a destroy, in the provider's terms but without secrets. */
+export interface ProviderOutputs {
+  readonly endpoints: readonly Endpoint[];
+  readonly resources: readonly DeployedResource[];
+  readonly sensitiveOutputs: readonly SensitiveOutput[];
+  readonly links: readonly OperationLink[];
+  /** Things the provider kept on purpose when removing a deployment, such as data. */
+  readonly kept?: readonly DeployedResource[];
+}
+
+export interface ProviderHealthRequest {
+  readonly deploymentId: string;
+  readonly region: string;
+  readonly accountId: string;
+  readonly endpoints: readonly Endpoint[];
+  /** What to check, from the Hero Spec: the component and an optional smoke path. */
+  readonly components: readonly {
+    readonly id: string;
+    readonly kind: string;
+    readonly healthPath?: string;
+  }[];
+  readonly now: () => Date;
+}
+
 /** Who the credentials in use belong to, as the cloud reports it. Never holds a key or token. */
 export interface CallerIdentity {
   /** The cloud account the credentials act in. */
@@ -71,4 +121,13 @@ export interface CloudProvider {
    * the account owner and `identity.unknown` when the credentials cannot be verified.
    */
   identity?(options?: { readonly region?: string }): Promise<CallerIdentity>;
+  /**
+   * Applies an approved plan: builds, deploys, and reports what exists. Must verify that what it
+   * applies is exactly what `plan.artifactHash` covers.
+   */
+  apply?(request: ProviderApplyRequest): Promise<ProviderOutputs>;
+  /** Removes an approved destroy plan's deployment. */
+  destroy?(request: ProviderApplyRequest): Promise<ProviderOutputs>;
+  /** Observes the deployment and returns evidence; claims nothing beyond it. */
+  health?(request: ProviderHealthRequest): Promise<Health>;
 }

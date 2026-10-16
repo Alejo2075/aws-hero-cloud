@@ -8,6 +8,14 @@ export function computePlanDigest(body: PlanBody): string {
   return sha256Hex(canonicalJson(body));
 }
 
+/**
+ * The `artifactHash` of a destroy plan. It covers which deployment is removed and the exact bundle
+ * that was deployed, so approving the plan approves removing that and nothing else.
+ */
+export function destroyArtifactHash(deploymentId: string, deployedArtifactHash: string): string {
+  return sha256Hex(canonicalJson({ destroy: deployedArtifactHash, deployment: deploymentId }));
+}
+
 /** Seals a plan body: derives the digest and the id. The same body always gives the same plan. */
 export function sealPlan(body: PlanBody): DeploymentPlan {
   const digest = computePlanDigest(body);
