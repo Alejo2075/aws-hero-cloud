@@ -21,6 +21,8 @@ export const presentationCodes = [
   'cli.prompt.approve',
   'cli.prompt.budget-email',
   'cli.declined',
+  'cli.prompt.secret',
+  'cli.secret.stored',
   'cli.hint.answer',
 ] as const;
 

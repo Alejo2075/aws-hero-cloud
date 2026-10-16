@@ -204,4 +204,39 @@ export const enResult: Readonly<Record<string, Message>> = {
     'Hero planned the removal of {name} from your AWS account. Nothing is deleted until you approve exactly this plan.',
     'Destroy plan for {name}: account={account}, region={region}. No resource is deleted without an Approval bound to this digest.',
   ),
+  'warning.plan.update-unverified': tri(
+    'Hero could not check what is already online, so this list may show things that already exist.',
+    'Hero could not compare this plan with what is deployed ({reasonText}). Items are listed as if they were new; some may already exist or be replaced.',
+    'Diff unavailable ({reason}); the changes shown are the synthesized template, not a change set.',
+  ),
+  'warning.plan.destructive-changes': tri(
+    'Some parts will be replaced or removed, and what they hold could be lost.',
+    '{count} change(s) replace or delete something that exists now. Check the list before you approve; data in a replaced resource can be lost.',
+    '{count} change(s) are replace or delete actions on existing resources.',
+  ),
+  'view.section.plan-destructive': 'Parts that will be replaced or removed',
+  'view.plan.destructive': tri(
+    '{count} part(s) of your app will be replaced or removed. What they hold could be lost.',
+    '{count} existing resource(s) will be replaced or removed:',
+    '{count} destructive change(s):',
+  ),
+  'check.health.drift': tri(
+    'Nobody has changed your setup by hand.',
+    'AWS compared your resources with what Hero created and found no differences.',
+    'CloudFormation drift detection: IN_SYNC.',
+  ),
+  'check.health.drift.drifted': tri(
+    'Something in your setup was changed outside Hero.',
+    'AWS found resources that differ from what Hero created, which usually means someone changed them by hand. Updating through Hero may undo those changes.',
+    'CloudFormation drift detection: DRIFTED.',
+  ),
+  'check.health.drift.unavailable': tri(
+    'Hero could not check whether your setup was changed by hand.',
+    'The drift check did not finish or was not allowed, so Hero does not know whether the resources still match.',
+    'Drift detection did not complete (denied, failed, or timed out); status unknown.',
+  ),
+  'update.reason.offline': 'you chose not to use the network',
+  'update.reason.unsupported': 'this cloud cannot compare',
+  'update.reason.failed': 'the comparison failed',
+  'update.reason.no-account': 'there is no verified account',
 };

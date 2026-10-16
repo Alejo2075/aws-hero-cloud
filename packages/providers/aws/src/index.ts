@@ -35,3 +35,4 @@ export { applyDiff, diffAgainstDeployed } from './deploy/diff.js';
 export { createApplier } from './deploy/apply.js';
 export { createHealthChecker, isHeroEndpoint } from './deploy/health.js';
 export { loadBundle } from './bundle.js';
+export { createParameterSink } from './secrets.js';

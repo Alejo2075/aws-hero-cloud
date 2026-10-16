@@ -1,4 +1,6 @@
-import { rmSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { heroError } from '@hero-cloud/core';
 import type {
   CloudProvider,
   PlanWarning,
@@ -9,11 +11,14 @@ import { canonicalJson, sha256Hex } from '@hero-cloud/shared';
 import { parameterPath } from './cdk/names.js';
 import { buildJobChanges } from './build/changes.js';
 import { buildPlanFor } from './build/plan.js';
-import { bundleHash, storeBundle } from './bundle.js';
+import { bundleHash, loadBundle, storeBundle } from './bundle.js';
 import { synthesize, synthesizeBuild } from './cdk/synth.js';
 import { changesFromTemplate } from './changes.js';
+import type { CfnTemplate } from './cdk/synth.js';
 import { estimateCost } from './cost.js';
 import { createApplier } from './deploy/apply.js';
+import { defaultToolkit } from './deploy/deployer.js';
+import { diffAgainstDeployed } from './deploy/diff.js';
 import { createHealthChecker } from './deploy/health.js';
 import { getIdentity } from './identity.js';
 import { parameterChanges } from './parameters.js';
@@ -59,14 +64,50 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
       ...(options.toolkit === undefined ? {} : { toolkit: options.toolkit }),
     });
 
+  const needsBundles = (): never => {
+    throw heroError('provider.unavailable', { reason: 'no-assembly-directory' });
+  };
+
   return {
     id: 'aws',
-    ...(options.assemblyDirectory === undefined
-      ? {}
-      : {
-          apply: (request) => applierFor(request.plan.target.region).apply(request),
-          destroy: (request) => applierFor(request.plan.target.region).destroy(request),
-        }),
+    apply: (request) =>
+      options.assemblyDirectory === undefined
+        ? needsBundles()
+        : applierFor(request.plan.target.region).apply(request),
+    destroy: (request) =>
+      options.assemblyDirectory === undefined
+        ? needsBundles()
+        : applierFor(request.plan.target.region).destroy(request),
+    diff: async (request) => {
+      if (options.assemblyDirectory === undefined) return needsBundles();
+      const bundle = loadBundle(options.assemblyDirectory, request.artifactHash, {
+        accountId: request.accountId,
+        region: request.region,
+      });
+      const template = JSON.parse(
+        readFileSync(join(bundle.appDirectory, `${request.deploymentId}.template.json`), 'utf8'),
+      ) as CfnTemplate;
+      const changed = await diffAgainstDeployed(
+        {
+          assemblyDirectory: bundle.appDirectory,
+          artifactHash: bundle.appHash,
+          accountId: request.accountId,
+          region: request.region,
+          deploymentId: request.deploymentId,
+          template,
+        },
+        options.toolkit ?? defaultToolkit(request.region, options.profile),
+      );
+      // Everything that is not part of the application template (the build stack, the builds, the
+      // settings) is applied again as it is, and shown as an update.
+      const inTemplate = new Set(
+        changesFromTemplate(template, request.region, request.deploymentId).map((c) => c.id),
+      );
+      const rest = request.fresh
+        .filter((change) => !inTemplate.has(change.id))
+        .map((change) => ({ ...change, action: 'update' as const }));
+      return [...changed, ...rest];
+    },
     health: (request) =>
       createHealthChecker({
         cloudFormation: new CloudFormationClient({

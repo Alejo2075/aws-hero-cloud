@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CloudFormationClient } from '@aws-sdk/client-cloudformation';
+import { CloudFrontClient, CreateInvalidationCommand } from '@aws-sdk/client-cloudfront';
 import {
   DeleteObjectsCommand,
   GetObjectCommand,
   ListObjectVersionsCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -39,6 +41,7 @@ export interface ApplierOptions {
   readonly toolkit?: ToolkitFactory;
   readonly cloudFormation?: CloudFormationPort;
   readonly s3?: S3Port;
+  readonly cloudFront?: Pick<CloudFrontClient, 'send'>;
   readonly builder?: ReturnType<typeof createBuilder>;
   readonly sleep?: (ms: number) => Promise<void>;
 }
@@ -98,6 +101,8 @@ export function createApplier(options: ApplierOptions): {
   };
   const cfn: CloudFormationPort = options.cloudFormation ?? new CloudFormationClient(auth);
   const s3: S3Port = options.s3 ?? new S3Client(auth);
+  const cloudFront: Pick<CloudFrontClient, 'send'> =
+    options.cloudFront ?? new CloudFrontClient(auth);
 
   const deployerFor = (request: ProviderApplyRequest) =>
     createDeployer({
@@ -106,7 +111,18 @@ export function createApplier(options: ApplierOptions): {
       emit: request.emit,
     });
 
-  async function uploadSite(bucket: string, files: ReadonlyMap<string, Uint8Array>): Promise<void> {
+  /**
+   * Makes the site's bucket match the new files exactly: uploads them, removes what is no longer
+   * part of the site, and clears the CDN's copies so visitors see the new version. An empty set is
+   * refused, so a mistake can never blank a live site.
+   */
+  async function syncSite(
+    bucket: string,
+    files: ReadonlyMap<string, Uint8Array>,
+    distributionId: string | undefined,
+    deploymentId: string,
+  ): Promise<void> {
+    if (files.size === 0) throw heroError('deployment.failed', { step: 'site-files-empty' });
     for (const [path, body] of files) {
       if (path.split('/').includes('..') || path.startsWith('/')) {
         throw heroError('source.unsafe-path', { reason: 'site-file' });
@@ -120,6 +136,43 @@ export function createApplier(options: ApplierOptions): {
           ServerSideEncryption: 'AES256',
         }),
       );
+    }
+    let token: string | undefined;
+    const stale: { Key: string }[] = [];
+    do {
+      const page = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          ...(token === undefined ? {} : { ContinuationToken: token }),
+        }),
+      );
+      for (const item of page.Contents ?? []) {
+        if (item.Key !== undefined && !files.has(item.Key)) stale.push({ Key: item.Key });
+      }
+      token = page.NextContinuationToken;
+    } while (token !== undefined);
+    for (let index = 0; index < stale.length; index += 1000) {
+      await s3.send(
+        new DeleteObjectsCommand({
+          Bucket: bucket,
+          Delete: { Objects: stale.slice(index, index + 1000), Quiet: true },
+        }),
+      );
+    }
+    if (distributionId !== undefined) {
+      try {
+        await cloudFront.send(
+          new CreateInvalidationCommand({
+            DistributionId: distributionId,
+            InvalidationBatch: {
+              CallerReference: `${deploymentId}-${String(Date.now())}`,
+              Paths: { Quantity: 1, Items: ['/*'] },
+            },
+          }),
+        );
+      } catch (error) {
+        throw heroError('deployment.failed', { step: 'invalidate-cache' }, error);
+      }
     }
   }
 
@@ -219,7 +272,12 @@ export function createApplier(options: ApplierOptions): {
             throw heroError('deployment.failed', { step: 'site-files' });
           files = await siteFilesFromSnapshot(request.snapshot, site.outputDirectory);
         }
-        await uploadSite(target, files);
+        await syncSite(
+          target,
+          files,
+          app.outputs[`StaticSite${pascal(site.id)}DistributionId`],
+          request.deploymentId,
+        );
       }
 
       const components = plan.changes

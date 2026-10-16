@@ -4,7 +4,7 @@ import { HeroError } from '@hero-cloud/sdk';
 import type { AudienceLevel } from '@hero-cloud/presentation';
 
 export type Command =
-  'analyze' | 'plan' | 'deploy' | 'destroy' | 'health' | 'outputs' | 'help' | 'version';
+  'analyze' | 'plan' | 'deploy' | 'destroy' | 'health' | 'outputs' | 'secret' | 'help' | 'version';
 
 export interface ParsedArguments {
   readonly command: Command;
@@ -21,6 +21,8 @@ export interface ParsedArguments {
   readonly region: string | undefined;
   readonly accountId: string | undefined;
   readonly offline: boolean;
+  /** For `secret`: the name of the secret to store. */
+  readonly secretName: string | undefined;
   /** The plan digest a script approves instead of answering a prompt. */
   readonly approve: string | undefined;
   /** Email address for spending alerts. */
@@ -167,6 +169,7 @@ export function parseArguments(
     accountId: values['account-id'],
     offline: values.offline === true,
     approve: values.approve,
+    secretName: undefined,
     budgetEmail: values['budget-email'],
     profile: values.profile,
     stateDir: values['state-dir'],
@@ -176,6 +179,21 @@ export function parseArguments(
   if (values.version === true || first === 'version') return { ...base, command: 'version' };
   if (values.help === true || first === 'help' || first === undefined) {
     return { ...base, command: 'help' };
+  }
+  if (first === 'secret') {
+    const [id, name] = rest;
+    if (
+      rest.length !== 2 ||
+      id === undefined ||
+      name === undefined ||
+      !/^[a-z0-9][a-z0-9-]{0,62}$/.test(id) ||
+      !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name)
+    ) {
+      throw usageError(
+        'secret needs a deployment name and a secret name, such as hero-my-app API_KEY',
+      );
+    }
+    return { ...base, command: 'secret', source: id, kind: undefined, secretName: name };
   }
   if (first === 'health' || first === 'outputs' || first === 'destroy') {
     const id = rest[0];

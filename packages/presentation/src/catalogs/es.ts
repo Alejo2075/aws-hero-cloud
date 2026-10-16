@@ -440,6 +440,7 @@ Uso:
   hero-cloud deploy <fuente> [opciones]
   hero-cloud health <despliegue>
   hero-cloud outputs <despliegue>
+  hero-cloud secret <despliegue> <NOMBRE>
   hero-cloud destroy <despliegue> [opciones]
 
 <fuente> es una carpeta, un archivo .zip o un repositorio Git https://.
@@ -473,6 +474,10 @@ que Hero mostró, como hero-mi-app. Códigos de salida: 0 bien, 1 falló, 2 coma
     'cli.prompt.approve': '¿Apruebas este plan y lo aplicas a tu cuenta de AWS? [s/N]',
     'cli.prompt.budget-email':
       'Correo para las alertas de gasto (se guarda solo en tu cuenta de AWS):',
+    'cli.prompt.secret':
+      'Valor del secreto {name} (no se muestra lo que escribes; déjalo vacío para omitirlo):',
+    'cli.secret.stored':
+      'Se guardó {name} en tu propia cuenta de AWS en {location}. Hero no guardó el valor.',
     'cli.declined': 'No se aprobó. No se cambió nada.',
     'cli.progress.deploy': 'Preparando todo en AWS...',
     'cli.progress.verify': 'Comprobando que funciona...',

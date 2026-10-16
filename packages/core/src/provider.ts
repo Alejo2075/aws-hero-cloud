@@ -126,6 +126,17 @@ export interface CloudProvider {
    * applies is exactly what `plan.artifactHash` covers.
    */
   apply?(request: ProviderApplyRequest): Promise<ProviderOutputs>;
+  /**
+   * What applying this bundle would change in the deployment that exists now, as the cloud itself
+   * reports it. Replacements and deletions are marked destructive. Needs credentials.
+   */
+  diff?(request: {
+    readonly deploymentId: string;
+    readonly artifactHash: string;
+    readonly accountId: string;
+    readonly region: string;
+    readonly fresh: readonly PlanChange[];
+  }): Promise<readonly PlanChange[]>;
   /** Removes an approved destroy plan's deployment. */
   destroy?(request: ProviderApplyRequest): Promise<ProviderOutputs>;
   /** Observes the deployment and returns evidence; claims nothing beyond it. */

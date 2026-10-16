@@ -1,4 +1,8 @@
-import { DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
+import {
+  DescribeStackDriftDetectionStatusCommand,
+  DescribeStacksCommand,
+  DetectStackDriftCommand,
+} from '@aws-sdk/client-cloudformation';
 import type {
   CloudProvider,
   ComponentHealth,
@@ -23,6 +27,9 @@ export interface HealthOptions {
   readonly fetch?: FetchLike;
   readonly timeoutMs?: number;
   readonly clock?: () => number;
+  /** How long to wait for a drift check, in milliseconds. 0 turns drift detection off. */
+  readonly driftWaitMs?: number;
+  readonly sleep?: (ms: number) => Promise<void>;
 }
 
 const MAX_BYTES = 64 * 1024;
@@ -111,6 +118,41 @@ async function request(
   return { failure: 'too-many-redirects' };
 }
 
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+type DriftResult = 'in-sync' | 'drifted' | 'unavailable' | 'off';
+
+/** Starts a drift check and waits for it for a short while. Anything unclear is `unavailable`. */
+async function detectDrift(options: HealthOptions, stackName: string): Promise<DriftResult> {
+  const budget = options.driftWaitMs ?? 20_000;
+  if (budget <= 0) return 'off';
+  const sleep = options.sleep ?? defaultSleep;
+  try {
+    const started = await options.cloudFormation.send(
+      new DetectStackDriftCommand({ StackName: stackName }),
+    );
+    const id = started.StackDriftDetectionId;
+    if (id === undefined) return 'unavailable';
+    for (let waited = 0; waited <= budget; waited += 1000) {
+      const status = await options.cloudFormation.send(
+        new DescribeStackDriftDetectionStatusCommand({ StackDriftDetectionId: id }),
+      );
+      if (status.DetectionStatus === 'DETECTION_COMPLETE') {
+        if (status.StackDriftStatus === 'IN_SYNC') return 'in-sync';
+        return status.StackDriftStatus === 'DRIFTED' ? 'drifted' : 'unavailable';
+      }
+      if (status.DetectionStatus === 'DETECTION_FAILED') return 'unavailable';
+      await sleep(1000);
+    }
+    return 'unavailable';
+  } catch {
+    return 'unavailable';
+  }
+}
+
 const statusOf = (checks: readonly HealthCheck[]): HealthStatus => {
   const ran = checks.filter((c) => c.status !== 'skipped');
   if (ran.length === 0) return 'unknown';
@@ -157,6 +199,23 @@ export function createHealthChecker(options: HealthOptions): NonNullable<CloudPr
       status: stackOk ? 'passed' : 'failed',
       target: stackStatus,
     });
+
+    // drift: ask the provider whether the deployed resources still match what Hero created.
+    const drift = await detectDrift(options, req.deploymentId);
+    if (drift !== 'off') {
+      add('stack', {
+        id: 'stack.drift',
+        component: 'stack',
+        kind: 'drift',
+        code:
+          drift === 'in-sync'
+            ? 'health.drift'
+            : drift === 'drifted'
+              ? 'health.drift.drifted'
+              : 'health.drift.unavailable',
+        status: drift === 'in-sync' ? 'passed' : drift === 'drifted' ? 'failed' : 'skipped',
+      });
+    }
 
     const origins = new Map<string, URL>();
     for (const endpoint of req.endpoints) {

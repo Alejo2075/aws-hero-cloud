@@ -1,5 +1,10 @@
-import { CloudFormationClient, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
-import type { ProviderHealthRequest } from '@hero-cloud/core';
+import {
+  CloudFormationClient,
+  DescribeStackDriftDetectionStatusCommand,
+  DescribeStacksCommand,
+  DetectStackDriftCommand,
+} from '@aws-sdk/client-cloudformation';
+import type { Health, ProviderHealthRequest } from '@hero-cloud/core';
 import { mockClient } from 'aws-sdk-client-mock';
 import { describe, expect, it } from 'vitest';
 import { createHealthChecker, isHeroEndpoint, isSafePath } from './health.js';
@@ -42,6 +47,7 @@ function checker(fetch: FetchLike, stack = 'CREATE_COMPLETE') {
       fetch,
       timeoutMs: 100,
       clock: () => 0,
+      driftWaitMs: 0,
     }),
   };
 }
@@ -186,6 +192,88 @@ describe('createHealthChecker', () => {
       expect(health.status).toBe('down');
     } finally {
       cfn.restore();
+    }
+  });
+});
+
+describe('drift', () => {
+  const drifting = (
+    detection: { DetectionStatus: string; StackDriftStatus?: string } | Error,
+    started: { StackDriftDetectionId?: string } = { StackDriftDetectionId: 'd-1' },
+  ) => {
+    const cfn = mockClient(CloudFormationClient);
+    cfn.on(DescribeStacksCommand).resolves({
+      Stacks: [{ StackName: 'x', StackStatus: 'CREATE_COMPLETE', CreationTime: new Date() }],
+    });
+    cfn.on(DetectStackDriftCommand).resolves(started);
+    if (detection instanceof Error)
+      cfn.on(DescribeStackDriftDetectionStatusCommand).rejects(detection);
+    else {
+      cfn.on(DescribeStackDriftDetectionStatusCommand).resolves({
+        StackId: 's',
+        StackDriftDetectionId: 'd-1',
+        Timestamp: new Date(),
+        DetectionStatus: detection.DetectionStatus as never,
+        ...(detection.StackDriftStatus === undefined
+          ? {}
+          : { StackDriftStatus: detection.StackDriftStatus as never }),
+      });
+    }
+    return {
+      cfn,
+      check: createHealthChecker({
+        cloudFormation: new CloudFormationClient({ region: 'us-east-1' }),
+        fetch: reply({}),
+        sleep: () => Promise.resolve(),
+        driftWaitMs: 2000,
+      }),
+    };
+  };
+  const drift = (health: Health) => health.checks.find((c) => c.kind === 'drift');
+
+  it('passes only when the provider says everything is in sync', async () => {
+    const { cfn, check } = drifting({
+      DetectionStatus: 'DETECTION_COMPLETE',
+      StackDriftStatus: 'IN_SYNC',
+    });
+    try {
+      const h = await check(base({ endpoints: [], components: [] }));
+      expect(drift(h)).toMatchObject({ code: 'health.drift', status: 'passed' });
+    } finally {
+      cfn.restore();
+    }
+  });
+
+  it('fails when resources changed outside Hero', async () => {
+    const { cfn, check } = drifting({
+      DetectionStatus: 'DETECTION_COMPLETE',
+      StackDriftStatus: 'DRIFTED',
+    });
+    try {
+      const h = await check(base({ endpoints: [], components: [] }));
+      expect(drift(h)).toMatchObject({ code: 'health.drift.drifted', status: 'failed' });
+      expect(h.status).toBe('degraded');
+    } finally {
+      cfn.restore();
+    }
+  });
+
+  it('is skipped, not passed, when it could not be checked', async () => {
+    const cases: (() => ReturnType<typeof drifting>)[] = [
+      () => drifting(new Error('AccessDenied')),
+      () => drifting({ DetectionStatus: 'DETECTION_FAILED' }),
+      () => drifting({ DetectionStatus: 'DETECTION_IN_PROGRESS' }),
+      () => drifting({ DetectionStatus: 'DETECTION_COMPLETE', StackDriftStatus: 'NOT_CHECKED' }),
+      () => drifting({ DetectionStatus: 'DETECTION_COMPLETE' }, {}),
+    ];
+    for (const make of cases) {
+      const setup = make();
+      try {
+        const h = await setup.check(base({ endpoints: [], components: [] }));
+        expect(drift(h)).toMatchObject({ code: 'health.drift.unavailable', status: 'skipped' });
+      } finally {
+        setup.cfn.restore();
+      }
     }
   });
 });

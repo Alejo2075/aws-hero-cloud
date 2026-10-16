@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Component } from '@hero-cloud/core';
+import type { Component, PlanChange } from '@hero-cloud/core';
 import { afterAll, describe, expect, it } from 'vitest';
 import { buildPlanFor } from './build/plan.js';
 import { bundleHash, loadBundle } from './bundle.js';
@@ -116,5 +116,81 @@ describe('loadBundle', () => {
     const parts = { appHash: 'a'.repeat(64), buildHash: 'b'.repeat(64), buildPlan };
     expect(bundleHash(parts)).toBe(bundleHash({ ...parts }));
     expect(bundleHash({ ...parts, buildHash: undefined })).not.toBe(bundleHash(parts));
+  });
+});
+
+describe('provider.diff', () => {
+  const request = (artifactHash: string, fresh: readonly PlanChange[]) => ({
+    deploymentId: 'hero-b',
+    artifactHash,
+    accountId: '123456789012',
+    region: 'us-east-1',
+    fresh,
+  });
+
+  it('reports what the cloud will do, marks a replacement destructive, and re-applies the rest', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hero-diff-provider-'));
+    roots.push(root);
+    const table: Component = {
+      id: 'kv',
+      kind: 'key-value-table',
+      capability: 'key-value-data',
+      settings: { partitionKey: 'id' },
+      rationale: [],
+    };
+    const described = await createAwsProvider({ assemblyDirectory: root }).describe({
+      strategy: 'serverless',
+      components: [table, api],
+      region: 'us-east-1',
+      accountId: '123456789012',
+      deploymentId: 'hero-b',
+      inputs: [],
+      allowNetwork: false,
+    });
+    const tableChange = described.changes.find((c) => c.resource.type === 'dynamodb-table');
+    const logicalId = String(tableChange?.details?.logicalId);
+    const provider = createAwsProvider({
+      assemblyDirectory: root,
+      toolkit: () =>
+        Promise.resolve({
+          fromAssemblyDirectory: (d) => Promise.resolve(d),
+          deploy: () => Promise.reject(new Error('never')),
+          destroy: () => Promise.reject(new Error('never')),
+          diff: () =>
+            Promise.resolve({
+              'hero-b': {
+                resources: {
+                  changes: {
+                    [logicalId]: {
+                      isAddition: false,
+                      isRemoval: false,
+                      changeImpact: 'WILL_REPLACE',
+                    },
+                    Unchanged: { isAddition: false, isRemoval: false, changeImpact: 'NO_CHANGE' },
+                  },
+                },
+              },
+            }),
+        }),
+    });
+    const changes = await provider.diff!(request(described.artifactHash, described.changes));
+    const replaced = changes.find((c) => c.id === tableChange?.id);
+    expect(replaced).toMatchObject({ action: 'replace', destructive: true });
+    // The build stack and the builds are applied again as they are.
+    const rest = changes.filter((c) => c.resource.type === 'codebuild-build');
+    expect(rest.map((c) => c.action)).toEqual(['update']);
+    expect(changes.every((c) => c.id !== 'nothing')).toBe(true);
+  });
+
+  it('needs the stored bundle and refuses a hash it does not have', async () => {
+    const provider = createAwsProvider();
+    await expect(provider.diff!(request('a'.repeat(64), []))).rejects.toMatchObject({
+      code: 'provider.unavailable',
+    });
+    const root = mkdtempSync(join(tmpdir(), 'hero-diff-provider-'));
+    roots.push(root);
+    await expect(
+      createAwsProvider({ assemblyDirectory: root }).diff!(request('a'.repeat(64), [])),
+    ).rejects.toThrow();
   });
 });

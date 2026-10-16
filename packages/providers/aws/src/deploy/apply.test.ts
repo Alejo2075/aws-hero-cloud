@@ -2,10 +2,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation';
+import { CloudFrontClient, CreateInvalidationCommand } from '@aws-sdk/client-cloudfront';
 import {
   DeleteObjectsCommand,
   GetObjectCommand,
   ListObjectVersionsCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -110,6 +112,7 @@ describe('createApplier.apply', () => {
     const s3 = mockClient(S3Client);
     const cfn = mockClient(CloudFormationClient);
     s3.on(PutObjectCommand).resolves({});
+    s3.on(ListObjectsV2Command).resolves({});
     cfn.on(ListStackResourcesCommand).resolves({
       StackResourceSummaries: [
         {
@@ -223,6 +226,7 @@ describe('createApplier.apply', () => {
       Body: { transformToByteArray: () => Promise.resolve(zip) } as never,
     });
     s3.on(PutObjectCommand).resolves({});
+    s3.on(ListObjectsV2Command).resolves({});
     const { toolkit } = fakeToolkit((n): Record<string, string> =>
       n === 1
         ? { BucketName: 'build-bucket', ProjectName: 'p' }
@@ -250,6 +254,89 @@ describe('createApplier.apply', () => {
         .map((c) => c.args[0].input.Key)
         .sort();
       expect(keys).toEqual(['a/app.js', 'index.html']);
+    } finally {
+      s3.restore();
+      cfn.restore();
+    }
+  });
+
+  it('makes the site match the new files: removes what is gone and clears the CDN copies', async () => {
+    const { root, plan } = await planFor([
+      component('static-site', 'site', { outputDirectory: 'public' }),
+    ]);
+    const s3 = mockClient(S3Client);
+    const cfn = mockClient(CloudFormationClient);
+    const cdn = mockClient(CloudFrontClient);
+    s3.on(PutObjectCommand).resolves({});
+    s3.on(ListObjectsV2Command).resolves({
+      Contents: [{ Key: 'index.html' }, { Key: 'old/page.html' }, { Key: 'gone.css' }],
+    });
+    s3.on(DeleteObjectsCommand).resolves({});
+    cdn.on(CreateInvalidationCommand).resolves({});
+    cfn.on(ListStackResourcesCommand).resolves({ StackResourceSummaries: [] });
+    const { toolkit } = fakeToolkit(() => ({
+      StaticSiteSiteUrl: 'https://d1.cloudfront.net',
+      StaticSiteSiteFilesBucket: 'files-bucket',
+      StaticSiteSiteDistributionId: 'E123',
+    }));
+    try {
+      await createApplier({
+        assemblyDirectory: root,
+        region: REGION,
+        toolkit: () => Promise.resolve(toolkit),
+        cloudFormation: new CloudFormationClient({ region: REGION }),
+        s3: new S3Client({ region: REGION }),
+        cloudFront: new CloudFrontClient({ region: REGION }),
+      }).apply({
+        plan,
+        snapshot: snapshot({ 'public/index.html': '<h1>v2</h1>' }),
+        parameters: {},
+        deploymentId: 'hero-shop',
+        emit: () => undefined,
+      });
+      expect(s3.commandCalls(DeleteObjectsCommand)[0]?.args[0].input.Delete?.Objects).toEqual([
+        { Key: 'old/page.html' },
+        { Key: 'gone.css' },
+      ]);
+      expect(cdn.commandCalls(CreateInvalidationCommand)[0]?.args[0].input).toMatchObject({
+        DistributionId: 'E123',
+        InvalidationBatch: { Paths: { Quantity: 1, Items: ['/*'] } },
+      });
+    } finally {
+      s3.restore();
+      cfn.restore();
+      cdn.restore();
+    }
+  });
+
+  it('never blanks a live site: an empty set of files is refused', async () => {
+    const { root, plan } = await planFor([
+      component('static-site', 'site', { outputDirectory: 'public' }),
+    ]);
+    const s3 = mockClient(S3Client);
+    const cfn = mockClient(CloudFormationClient);
+    cfn.on(ListStackResourcesCommand).resolves({ StackResourceSummaries: [] });
+    const { toolkit } = fakeToolkit(() => ({
+      StaticSiteSiteUrl: 'https://d1.cloudfront.net',
+      StaticSiteSiteFilesBucket: 'files-bucket',
+    }));
+    try {
+      await expect(
+        createApplier({
+          assemblyDirectory: root,
+          region: REGION,
+          toolkit: () => Promise.resolve(toolkit),
+          cloudFormation: new CloudFormationClient({ region: REGION }),
+          s3: new S3Client({ region: REGION }),
+        }).apply({
+          plan,
+          snapshot: snapshot({ 'README.md': 'nothing under public' }),
+          parameters: {},
+          deploymentId: 'hero-shop',
+          emit: () => undefined,
+        }),
+      ).rejects.toMatchObject({ params: { step: 'site-files-empty' } });
+      expect(s3.commandCalls(DeleteObjectsCommand)).toHaveLength(0);
     } finally {
       s3.restore();
       cfn.restore();

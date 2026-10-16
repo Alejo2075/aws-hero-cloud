@@ -13,6 +13,8 @@ function money(value: number, locale: string): string {
   }
 }
 
+const paragraph = (text: string): Block => ({ type: 'paragraph', text });
+
 const capitalize = (text: string): string => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
 /**
@@ -39,6 +41,9 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
     if (warning.code === 'plan.unsupported-capability') {
       params.capabilityName = t(`capability.${String(warning.params?.capability ?? '')}`);
       params.strategyName = t(`strategy.name.${String(warning.params?.needs ?? '')}`);
+    }
+    if (warning.code === 'plan.update-unverified') {
+      params.reasonText = t(`update.reason.${String(warning.params?.reason ?? 'failed')}`);
     }
     if (warning.code === 'plan.cost-low-confidence') {
       params.reasonText = t(`cost.reason.${String(warning.params?.reason ?? 'offline')}`);
@@ -97,6 +102,34 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
       id: 'blocking',
       heading: t('view.section.plan-blocking'),
       blocks: [{ type: 'list', items: blocking.map(warningText) }],
+    });
+  }
+
+  // ---- what will be replaced or removed ----------------------------------------------------
+  // Shown at every level: a person must always be able to see what could be lost.
+  const destructive = plan.changes.filter((c) => c.destructive && c.action !== 'create');
+  if (destructive.length > 0 && plan.intent !== 'destroy') {
+    const blocks: Block[] = [paragraph(t('view.plan.destructive', { count: destructive.length }))];
+    if (level !== 'simple') {
+      blocks.push({
+        type: 'list',
+        items: destructive.map(
+          (c) =>
+            `${t(`action.${c.action}`)}: ${t(`resource.${c.resource.type}`)} [${c.resource.name}]`,
+        ),
+      });
+    } else {
+      blocks.push({
+        type: 'list',
+        items: [
+          ...new Set(destructive.map((c) => capitalize(t(`capability.${c.capability}`)))),
+        ].sort(),
+      });
+    }
+    sections.push({
+      id: 'destructive',
+      heading: t('view.section.plan-destructive'),
+      blocks,
     });
   }
 

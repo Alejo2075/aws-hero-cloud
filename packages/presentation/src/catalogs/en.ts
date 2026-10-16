@@ -408,6 +408,7 @@ Usage:
   hero-cloud deploy <source> [options]
   hero-cloud health <deployment>
   hero-cloud outputs <deployment>
+  hero-cloud secret <deployment> <NAME>
   hero-cloud destroy <deployment> [options]
 
 <source> is a folder, a .zip file, or an https:// Git repository.
@@ -441,6 +442,10 @@ Hero printed, such as hero-my-app. Exit codes: 0 ok, 1 failed, 2 wrong command, 
     'cli.prompt.approve': 'Approve this plan and apply it to your AWS account? [y/N]',
     'cli.prompt.budget-email':
       'Email address for spending alerts (stored only in your AWS account):',
+    'cli.prompt.secret':
+      'Value for the secret {name} (nothing you type is shown; leave empty to skip):',
+    'cli.secret.stored':
+      'Stored {name} in your own AWS account at {location}. Hero did not keep the value.',
     'cli.declined': 'Not approved. Nothing was changed.',
     'cli.progress.deploy': 'Setting things up on AWS...',
     'cli.progress.verify': 'Checking that it works...',

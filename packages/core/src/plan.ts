@@ -137,6 +137,8 @@ export const planWarningCodes = [
   'plan.nothing-to-deploy',
   'plan.unsupported-schedule',
   'plan.destroy-keeps-data',
+  'plan.update-unverified',
+  'plan.destructive-changes',
 ] as const;
 
 export type PlanWarningCode = (typeof planWarningCodes)[number];

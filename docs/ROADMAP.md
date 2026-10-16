@@ -146,13 +146,15 @@ _Status: implemented and tested end to end with a fake cloud (engine, CLI, headl
 
 ### Phase 9: Updates, secrets, and guardrails (M) → 0.4
 
-- [ ] Update and redeploy through change sets; destructive changes and replacements shown at every level; rollback on failure.
-- [ ] 🔒 Secrets: values are entered in a hidden prompt and written straight to SSM Parameter Store (SecureString) or Secrets Manager; never CloudFormation parameters, logs, events, or `.hero/` (D6).
-- [ ] Data protection: deletion policies (snapshot or retain) for databases and buckets, backups on by default.
-- [ ] A budget alert with an email address the user enters (stored only in their AWS account) (D14).
-- [ ] A per-deployment lock against concurrent deploys from two doors; drift detection on `hero-cloud health`.
+- [x] Update and redeploy through change sets; destructive changes and replacements shown at every level; rollback on failure.
+- [x] 🔒 Secrets: values are entered in a hidden prompt and written straight to SSM Parameter Store (SecureString) or Secrets Manager; never CloudFormation parameters, logs, events, or `.hero/` (D6).
+- [x] Data protection: deletion policies (snapshot or retain) for databases and buckets, backups on by default.
+- [x] A budget alert with an email address the user enters (stored only in their AWS account) (D14).
+- [x] A per-deployment lock against concurrent deploys from two doors; drift detection on `hero-cloud health`.
 
 **Done when:** an update that would replace a table is shown as destructive and refused without explicit approval, and a secret never appears in any log or file. **Release 0.4.**
+
+_Status: implemented and unit-tested with mocks. Updates compare against the deployed stack with a CloudFormation change set; if the comparison cannot run, the plan says so (`plan.update-unverified`) instead of presenting everything as new. The change-set path and drift detection need a real account to confirm (`tests/integration/`)._
 
 ### Phase 10: Publish the SDK and CLI (M) → 0.5
 

@@ -53,6 +53,9 @@ const SMOKE_FAILURES = [
 /** Every code a health check can carry, including why a check failed. */
 export const healthCheckCodes = [
   'health.resource-state',
+  'health.drift',
+  'health.drift.drifted',
+  'health.drift.unavailable',
   'health.reachability',
   ...REACHABILITY_FAILURES.map((reason) => `health.reachability.${reason}`),
   'health.smoke',
@@ -65,8 +68,9 @@ export type HealthStatus = 'healthy' | 'degraded' | 'down' | 'unknown';
  * - `reachability`: Hero requested the endpoint from outside and looked at the answer.
  * - `resource-state`: the provider reports the resource as running, available, or in service.
  * - `smoke`: an optional request to a path the Hero Spec or the user named.
+ * - `drift`: the provider compares the deployed resources with what Hero created.
  */
-export type CheckKind = 'reachability' | 'resource-state' | 'smoke';
+export type CheckKind = 'reachability' | 'resource-state' | 'smoke' | 'drift';
 
 export interface HealthCheck {
   readonly id: string;

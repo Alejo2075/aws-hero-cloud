@@ -224,3 +224,137 @@ describe('outputs, health, and destroy', () => {
     expect(await run(['health'], t.io)).toBe(2);
   });
 });
+
+describe('secrets on the command line', () => {
+  const API = resolve(examples, 'api-dynamodb');
+
+  function secretWorld() {
+    const stored: { name: string; value: string }[] = [];
+    const real = createAwsProvider();
+    const cloud: CloudProvider = {
+      id: 'aws',
+      describe: (r) => real.describe(r),
+      identity: () => Promise.resolve({ account: ACCOUNT, principal: 'arn:test', kind: 'role' }),
+      apply: () =>
+        Promise.resolve({ endpoints: [], resources: [], sensitiveOutputs: [], links: [] }),
+      health: () => Promise.resolve(healthy),
+    };
+    const hero = createHero({
+      cloud,
+      secrets: {
+        put: (r) => {
+          stored.push({ name: r.name, value: r.value });
+          return Promise.resolve({
+            name: r.name,
+            location: `ssm:/hero/${r.deploymentId}/${r.name}`,
+          });
+        },
+      },
+    });
+    return { hero, stored };
+  }
+
+  it('asks for each secret without echoing it, only after approval, and never prints it', async () => {
+    const { hero, stored } = secretWorld();
+    const t = terminal(hero, ['me@example.com', 'y']);
+    const hidden: string[] = [];
+    const io: CliIo = {
+      ...t.io,
+      askHidden: (question) => {
+        hidden.push(question);
+        return Promise.resolve('sk_live_topsecret');
+      },
+    };
+    const code = await run(['deploy', API, '--offline', '--account-id', ACCOUNT], io);
+    expect(code).toBe(0);
+    expect(hidden).toHaveLength(1);
+    expect(hidden[0]).toContain('API_KEY');
+    expect(stored).toEqual([{ name: 'API_KEY', value: 'sk_live_topsecret' }]);
+    expect(t.out() + t.err() + t.asked.join('')).not.toContain('sk_live_topsecret');
+  });
+
+  it('does not ask for secrets when the plan is declined', async () => {
+    const { hero, stored } = secretWorld();
+    const t = terminal(hero, ['me@example.com', 'n']);
+    const io: CliIo = { ...t.io, askHidden: () => Promise.reject(new Error('must not ask')) };
+    expect(await run(['deploy', API, '--offline', '--account-id', ACCOUNT], io)).toBe(0);
+    expect(stored).toEqual([]);
+  });
+
+  it('takes a secret from the environment for scripts', async () => {
+    const { hero, stored } = secretWorld();
+    const probe = terminal(hero);
+    await run(['plan', API, '--offline', '--account-id', ACCOUNT, '--json'], probe.io);
+    const digest = (JSON.parse(probe.out()) as { plan: { digest: string } }).plan.digest;
+    const t = terminal(hero);
+    const io: CliIo = { ...t.io, env: { ...t.io.env, HERO_SECRET_API_KEY: 'from-env-value' } };
+    const code = await run(
+      [
+        'deploy',
+        API,
+        '--offline',
+        '--account-id',
+        ACCOUNT,
+        '--budget-email',
+        'a@b.co',
+        '--approve',
+        digest,
+      ],
+      io,
+    );
+    expect(code).toBe(0);
+    expect(stored).toEqual([{ name: 'API_KEY', value: 'from-env-value' }]);
+    expect(t.out() + t.err()).not.toContain('from-env-value');
+  });
+
+  it('`secret` stores one later, from the environment or a hidden prompt, and prints only where', async () => {
+    const { hero, stored } = secretWorld();
+    const probe = terminal(hero);
+    await run(['plan', API, '--offline', '--account-id', ACCOUNT, '--json'], probe.io);
+    const digest = (JSON.parse(probe.out()) as { plan: { digest: string } }).plan.digest;
+    const deployed = terminal(hero);
+    const deployCode = await run(
+      [
+        'deploy',
+        API,
+        '--offline',
+        '--account-id',
+        ACCOUNT,
+        '--budget-email',
+        'a@b.co',
+        '--approve',
+        digest,
+        '--json',
+      ],
+      deployed.io,
+    );
+    expect(deployCode, deployed.err()).toBe(0);
+    stored.length = 0;
+    const id = (JSON.parse(deployed.out()) as { result: { deploymentId: string } }).result
+      .deploymentId;
+
+    const viaEnv = terminal(hero);
+    const code = await run(['secret', id, 'API_KEY'], {
+      ...viaEnv.io,
+      env: { ...viaEnv.io.env, HERO_SECRET_API_KEY: 'v1' },
+    });
+    expect(code, viaEnv.err()).toBe(0);
+    expect(viaEnv.err()).toBe('');
+    expect(viaEnv.out()).toContain(`ssm:/hero/${id}/API_KEY`);
+    expect(viaEnv.out()).not.toContain('v1');
+
+    const prompted = terminal(hero, [], true);
+    expect(
+      await run(['secret', id, 'API_KEY'], {
+        ...prompted.io,
+        askHidden: () => Promise.resolve('v2'),
+      }),
+    ).toBe(0);
+    expect(stored.map((s) => s.value)).toEqual(['v1', 'v2']);
+
+    const nobody = terminal(hero, [], false);
+    expect(await run(['secret', id, 'API_KEY'], nobody.io)).toBe(2);
+    expect(await run(['secret', id], nobody.io)).toBe(2);
+    expect(await run(['secret', id, 'bad name'], nobody.io)).toBe(2);
+  });
+});

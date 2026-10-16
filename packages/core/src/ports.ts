@@ -52,6 +52,7 @@ export interface HeroPorts {
   readonly logger?: Logger;
   readonly plans?: PlanStore;
   readonly secrets?: SecretSink;
+  readonly locks?: DeploymentLock;
   readonly sources?: readonly SourceLoader[];
 }
 
@@ -111,5 +112,15 @@ export interface SecretSink {
     readonly deploymentId: string;
     readonly name: string;
     readonly value: string;
+    /** `config` values are stored as plain settings; `secret` values are encrypted. Default `secret`. */
+    readonly kind?: 'secret' | 'config';
   }): Promise<SecretLocation>;
+}
+
+/**
+ * Keeps two runs from changing one deployment at once, even from different processes or doors.
+ * `acquire` throws `deployment.locked` when another run holds it, and returns how to let go.
+ */
+export interface DeploymentLock {
+  acquire(deploymentId: string): Promise<() => Promise<void>>;
 }

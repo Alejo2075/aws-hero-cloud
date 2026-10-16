@@ -204,4 +204,39 @@ export const esResult: Readonly<Record<string, Message>> = {
     'Hero planificó quitar {name} de tu cuenta de AWS. No se borra nada hasta que apruebes exactamente este plan.',
     'Plan de destrucción de {name}: cuenta={account}, región={region}. No se borra ningún recurso sin una Approval ligada a este digest.',
   ),
+  'warning.plan.update-unverified': tri(
+    'Hero no pudo comprobar lo que ya está en línea, así que esta lista puede mostrar cosas que ya existen.',
+    'Hero no pudo comparar este plan con lo desplegado ({reasonText}). Los elementos se listan como si fueran nuevos; algunos pueden existir ya o reemplazarse.',
+    'Diff no disponible ({reason}); los cambios mostrados son la plantilla sintetizada, no un change set.',
+  ),
+  'warning.plan.destructive-changes': tri(
+    'Algunas partes se reemplazarán o quitarán, y lo que contienen podría perderse.',
+    '{count} cambio(s) reemplazan o borran algo que existe ahora. Revisa la lista antes de aprobar; los datos de un recurso reemplazado pueden perderse.',
+    '{count} cambio(s) son acciones de reemplazo o borrado sobre recursos existentes.',
+  ),
+  'view.section.plan-destructive': 'Partes que se reemplazarán o quitarán',
+  'view.plan.destructive': tri(
+    '{count} parte(s) de tu app se reemplazarán o quitarán. Lo que contienen podría perderse.',
+    '{count} recurso(s) existentes se reemplazarán o quitarán:',
+    '{count} cambio(s) destructivos:',
+  ),
+  'check.health.drift': tri(
+    'Nadie cambió tu preparación a mano.',
+    'AWS comparó tus recursos con lo que Hero creó y no encontró diferencias.',
+    'Detección de deriva de CloudFormation: IN_SYNC.',
+  ),
+  'check.health.drift.drifted': tri(
+    'Algo de tu preparación se cambió fuera de Hero.',
+    'AWS encontró recursos distintos de los que Hero creó, lo que suele significar que alguien los cambió a mano. Actualizar con Hero puede deshacer esos cambios.',
+    'Detección de deriva de CloudFormation: DRIFTED.',
+  ),
+  'check.health.drift.unavailable': tri(
+    'Hero no pudo comprobar si tu preparación se cambió a mano.',
+    'La comprobación de deriva no terminó o no estaba permitida, así que Hero no sabe si los recursos siguen coincidiendo.',
+    'La detección de deriva no se completó (denegada, falló o agotó el tiempo); estado desconocido.',
+  ),
+  'update.reason.offline': 'elegiste no usar la red',
+  'update.reason.unsupported': 'esta nube no puede comparar',
+  'update.reason.failed': 'la comparación falló',
+  'update.reason.no-account': 'no hay una cuenta verificada',
 };

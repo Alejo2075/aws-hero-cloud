@@ -25,6 +25,8 @@ export interface CliIo {
   /** Builds the engine. `stateDirectory` is where `.hero/` lives; `profile` is a named AWS profile. */
   createHero(settings?: HeroSettings): Hero;
   readonly stdinIsTTY?: boolean;
+  /** Asks for a secret without showing what is typed. Only used when a person is at the terminal. */
+  askHidden?(question: string): Promise<string>;
   /** Asks one question and returns the answer. Only used when a person is at the terminal. */
   ask?(question: string): Promise<string>;
 }
@@ -158,6 +160,30 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
   };
 
   try {
+    if (args.command === 'secret') {
+      const hero = io.createHero(settings);
+      const name = args.secretName ?? '';
+      let value = io.env[`HERO_SECRET_${name}`];
+      if (value === undefined) {
+        if (io.askHidden === undefined || io.stdinIsTTY !== true) {
+          throw new HeroError('usage', {
+            params: { reason: `give the value in HERO_SECRET_${name}, or run this in a terminal` },
+          });
+        }
+        value = await io.askHidden(`${presenter.text('cli.prompt.secret', render, { name })} `);
+      }
+      const stored = await hero.setSecret(args.source ?? '', name, value);
+      if (args.json) {
+        io.stdout.write(
+          `${JSON.stringify({ schema: JSON_SCHEMA_VERSION, command: 'secret', secret: stored }, null, 2)}\n`,
+        );
+      } else {
+        io.stdout.write(
+          `${presenter.text('cli.secret.stored', render, { name, location: stored.location })}\n`,
+        );
+      }
+      return 0;
+    }
     if (args.command === 'outputs' || args.command === 'health' || args.command === 'destroy') {
       const id = args.source ?? '';
       const hero = io.createHero(settings);
@@ -244,8 +270,21 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
       }
       const approval = await decide(hero, plan);
       if (approval === undefined) return 0;
+      // Secrets are asked for only after the plan is approved, never echoed, and go straight on.
+      const secrets: Record<string, string> = {};
+      for (const input of plan.requiredInputs) {
+        if (input.kind !== 'secret') continue;
+        let value = io.env[`HERO_SECRET_${input.name}`];
+        if (value === undefined && io.askHidden !== undefined && io.stdinIsTTY === true) {
+          value = await io.askHidden(
+            `${presenter.text('cli.prompt.secret', render, { name: input.name })} `,
+          );
+        }
+        if (value !== undefined && value !== '') secrets[input.name] = value;
+      }
       const result = await hero.deploy(plan, approval, {
         inputs: email === undefined ? {} : { [BUDGET_EMAIL_INPUT]: email },
+        secrets,
       });
       return finish('deploy', result, plan);
     }

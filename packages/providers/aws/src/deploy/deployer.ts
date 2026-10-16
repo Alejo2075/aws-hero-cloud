@@ -55,7 +55,7 @@ export interface DeployerOptions {
 }
 
 /** Loads the real toolkit only when something is deployed, so planning stays fast. */
-function realToolkit(region: string, profile: string | undefined): ToolkitFactory {
+export function defaultToolkit(region: string, profile: string | undefined): ToolkitFactory {
   return async (ioHost) => {
     const { Toolkit, BaseCredentials, DiffMethod, StackSelectionStrategy, StackParameters } =
       await import('@aws-cdk/toolkit-lib');
@@ -110,7 +110,7 @@ export function createDeployer(options: DeployerOptions = {}): {
       ...(options.emit === undefined ? {} : { emit: options.emit }),
       onRefused: (code) => refused.push(code),
     });
-    const factory = options.toolkit ?? realToolkit(request.region, options.profile);
+    const factory = options.toolkit ?? defaultToolkit(request.region, options.profile);
     const toolkit = await factory(ioHost);
     const source = await toolkit.fromAssemblyDirectory(verified.directory);
     return { verified, toolkit, source, refused };

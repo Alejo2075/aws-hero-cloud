@@ -3,7 +3,7 @@ import type { Approval, ApprovalChallenge } from './approval.js';
 import type { CallerIdentity } from './provider.js';
 import type { HeroEventListener } from './events.js';
 import type { DeploymentPlan, PlanRef } from './plan.js';
-import type { SkippedEntry } from './ports.js';
+import type { SecretLocation, SkippedEntry } from './ports.js';
 import type { DeploymentResult, Health } from './result.js';
 
 export interface SourceRef {
@@ -55,6 +55,11 @@ export interface AnalyzeOptions {
 }
 
 export interface DeployOptions {
+  /**
+   * Secret values by name, for the secrets the plan asked for. They go straight to the user's own
+   * secret store and are never kept, logged, or returned. Doors collect them without echoing.
+   */
+  readonly secrets?: Readonly<Record<string, string>>;
   /**
    * Values the plan asked for that are settings rather than secrets, by name, such as the email
    * address for spending alerts. Secret values never travel through here.
@@ -109,5 +114,10 @@ export interface Hero {
   outputs(deploymentId: string): Promise<DeploymentResult>;
   /** Runs the health checks again and returns fresh evidence that the system is working. */
   health(deploymentId: string): Promise<Health>;
+  /**
+   * Stores one secret of an existing deployment in the user's own secret store. The name must be
+   * one the deployed plan asked for. The value is not kept, logged, or returned.
+   */
+  setSecret(deploymentId: string, name: string, value: string): Promise<SecretLocation>;
   subscribe(listener: HeroEventListener): () => void;
 }

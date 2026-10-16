@@ -17,6 +17,7 @@ import type {
   CallerIdentity,
   ChallengeStore,
   CloudProvider,
+  DeploymentLock,
   DeploymentPlan,
   DeployOptions,
   DeploymentResult,
@@ -30,16 +31,19 @@ import type {
   PlanBody,
   PlanOptions,
   PlanRef,
+  PlanChange,
   PlanWarning,
   ProjectSnapshot,
   Rationale,
+  SecretLocation,
+  SecretSink,
   SourceLoader,
   StateStore,
   SourceRef,
 } from '@hero-cloud/core';
 import { nodePlugin } from '@hero-cloud/plugin-node';
 import { BUDGET_EMAIL_INPUT, planApplication } from '@hero-cloud/planner';
-import { createAwsProvider } from '@hero-cloud/provider-aws';
+import { createAwsProvider, createParameterSink } from '@hero-cloud/provider-aws';
 import type { DetectorPlugin } from '@hero-cloud/plugin-sdk';
 import { sha256Hex } from '@hero-cloud/shared';
 import { validateHeroSpec } from '@hero-cloud/specification';
@@ -90,6 +94,30 @@ function sortWarnings(warnings: readonly PlanWarning[]): PlanWarning[] {
   });
 }
 
+/** Keeps two runs in this process from changing one deployment at once. */
+class InProcessLock implements DeploymentLock {
+  readonly #held = new Set<string>();
+
+  acquire(deploymentId: string): Promise<() => Promise<void>> {
+    if (this.#held.has(deploymentId)) return Promise.reject(heroError('deployment.locked'));
+    this.#held.add(deploymentId);
+    return Promise.resolve(() => {
+      this.#held.delete(deploymentId);
+      return Promise.resolve();
+    });
+  }
+}
+
+/** Whether something stored is the record of a deployment that currently exists. */
+function isDeployedRecord(value: unknown): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { schema?: unknown }).schema === 1 &&
+    (value as { status?: unknown }).status === 'deployed'
+  );
+}
+
 /** What the engine remembers about a plan so it can deploy it later: where the source came from. */
 interface PlanContext {
   readonly source: { readonly source: SourceRef; readonly root: string | undefined } | undefined;
@@ -117,7 +145,10 @@ class HeroEngine implements Hero {
   readonly #state: StateStore;
   readonly #sourceRefs = new Map<string, { source: SourceRef; root: string | undefined }>();
   readonly #contexts = new Map<string, PlanContext>();
-  readonly #running = new Set<string>();
+  readonly #locks: DeploymentLock;
+  readonly #secrets: SecretSink | undefined;
+  readonly #awsProfile: string | undefined;
+  readonly #defaultSecrets: boolean;
   readonly #approvals: ApprovalService;
   readonly #listeners = new Set<HeroEventListener>();
   readonly #clock: { now(): Date };
@@ -143,6 +174,12 @@ class HeroEngine implements Hero {
           : { assemblyDirectory: options.assemblyDirectory }),
       });
     this.#state = options.state ?? new InMemoryStateStore();
+    this.#locks = options.locks ?? new InProcessLock();
+    this.#awsProfile = options.awsProfile;
+    // Without a sink of their own, secrets go to the AWS parameter store, but only when the cloud
+    // is the built-in AWS provider; a custom cloud must bring its own sink.
+    this.#secrets = options.secrets;
+    this.#defaultSecrets = options.cloud === undefined;
     this.#clock = options.clock ?? { now: () => new Date() };
     this.#approvals = new ApprovalService({
       ...(options.challenges === undefined ? {} : { store: options.challenges }),
@@ -265,6 +302,45 @@ class HeroEngine implements Hero {
             });
       warnings.push(...(described?.warnings ?? []));
 
+      // An update is shown as what will really change in what exists now, not as a new deployment.
+      let changes: readonly PlanChange[] = described?.changes ?? [];
+      const existing = await this.#state.read(deploymentId);
+      if (described !== undefined && isDeployedRecord(existing)) {
+        const diff = this.#cloud.diff?.bind(this.#cloud);
+        let reason: string | undefined;
+        if (options.offline === true) reason = 'offline';
+        else if (diff === undefined) reason = 'unsupported';
+        else if (options.accountId === undefined && !options.useIdentity) reason = 'no-account';
+        if (reason === undefined && diff !== undefined) {
+          try {
+            changes = await diff({
+              deploymentId,
+              artifactHash: described.artifactHash,
+              accountId,
+              region,
+              fresh: described.changes,
+            });
+          } catch {
+            reason = 'failed';
+          }
+        }
+        if (reason !== undefined) {
+          warnings.push({
+            code: 'plan.update-unverified',
+            severity: 'warning',
+            params: { reason },
+          });
+        }
+        const destructive = changes.filter((change) => change.destructive).length;
+        if (destructive > 0) {
+          warnings.push({
+            code: 'plan.destructive-changes',
+            severity: 'warning',
+            params: { count: destructive },
+          });
+        }
+      }
+
       const body: PlanBody = {
         application: planned.spec.application.name,
         specVersion: planned.spec.version,
@@ -272,7 +348,7 @@ class HeroEngine implements Hero {
         strategy: planned.strategy,
         strategyRationale: planned.strategyRationale,
         target: { provider: this.#cloud.id, region, accountId },
-        changes: described?.changes ?? [],
+        changes,
         warnings: sortWarnings(warnings),
         requiredInputs: planned.requiredInputs,
         ...(described === undefined ? {} : { cost: described.cost }),
@@ -351,6 +427,7 @@ class HeroEngine implements Hero {
     }
 
     return this.#locked(context.deploymentId, async () => {
+      await this.#storeSecrets(plan, context.deploymentId, options.secrets);
       const snapshot = await this.#reloadSource(plan, context);
       try {
         const outputs = await this.#phase('deploy', () =>
@@ -546,13 +623,56 @@ class HeroEngine implements Hero {
   }
 
   async #locked<T>(deploymentId: string, work: () => Promise<T>): Promise<T> {
-    if (this.#running.has(deploymentId)) throw heroError('deployment.locked');
-    this.#running.add(deploymentId);
+    const release = await this.#locks.acquire(deploymentId);
     try {
       return await work();
     } finally {
-      this.#running.delete(deploymentId);
+      await release();
     }
+  }
+
+  #sinkFor(region: string): SecretSink {
+    if (this.#secrets !== undefined) return this.#secrets;
+    if (!this.#defaultSecrets)
+      throw heroError('provider.unavailable', { reason: 'no-secret-sink' });
+    return createParameterSink({
+      region,
+      ...(this.#awsProfile === undefined ? {} : { profile: this.#awsProfile }),
+    });
+  }
+
+  /**
+   * Sends the secret values a person provided straight to their own secret store. Only names the
+   * plan asked for are accepted. Values are not kept, logged, or put in any result or event.
+   */
+  async #storeSecrets(
+    plan: DeploymentPlan,
+    deploymentId: string,
+    secrets: Readonly<Record<string, string>> | undefined,
+  ): Promise<void> {
+    const entries = Object.entries(secrets ?? {});
+    if (entries.length === 0) return;
+    const allowed = new Set(
+      plan.requiredInputs.filter((input) => input.kind === 'secret').map((input) => input.name),
+    );
+    for (const [name] of entries) {
+      if (!allowed.has(name)) throw heroError('plan.invalid-answer', { question: 'secret-name' });
+    }
+    const sink = this.#sinkFor(plan.target.region);
+    for (const [name, value] of entries)
+      await sink.put({ deploymentId, name, value, kind: 'secret' });
+  }
+
+  async setSecret(deploymentId: string, name: string, value: string): Promise<SecretLocation> {
+    const record = await this.#record(deploymentId);
+    if (record.status === 'destroyed') throw heroError('plan.unknown');
+    const allowed = record.plan.requiredInputs.some(
+      (input) => input.kind === 'secret' && input.name === name,
+    );
+    if (!allowed) throw heroError('plan.invalid-answer', { question: 'secret-name' });
+    return this.#locked(deploymentId, () =>
+      this.#sinkFor(record.plan.target.region).put({ deploymentId, name, value, kind: 'secret' }),
+    );
   }
 
   /** Loads the source again and proves it is the one that was reviewed. */

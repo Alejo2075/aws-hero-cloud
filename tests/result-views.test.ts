@@ -221,3 +221,58 @@ describe('destroy plan view', () => {
     }
   });
 });
+
+describe('an update that replaces something', () => {
+  it('says so at every level and in both languages, and explains when it could not compare', async () => {
+    const { sealPlan } = await import('@hero-cloud/core');
+    const plan = sealPlan({
+      application: 'shop',
+      specVersion: '1',
+      sourceHash: 'ab'.repeat(32),
+      strategy: 'serverless',
+      strategyRationale: [],
+      target: { provider: 'aws', region: 'us-east-1', accountId: '123456789012' },
+      changes: [
+        {
+          id: 'c1',
+          action: 'replace',
+          capability: 'key-value-data',
+          resource: { provider: 'aws', type: 'dynamodb-table', name: 'orders' },
+          destructive: true,
+          rationale: [],
+        },
+        {
+          id: 'c2',
+          action: 'update',
+          capability: 'http-service',
+          resource: { provider: 'aws', type: 'lambda-function', name: 'api' },
+          destructive: false,
+          rationale: [],
+        },
+      ],
+      warnings: [
+        { code: 'plan.destructive-changes', severity: 'warning', params: { count: 1 } },
+        { code: 'plan.update-unverified', severity: 'warning', params: { reason: 'offline' } },
+      ],
+      requiredInputs: [],
+      artifactHash: 'cd'.repeat(32),
+    });
+    for (const [audience, locale] of combos) {
+      const view = presenter.plan(plan, { audience, locale });
+      const out = text(view);
+      expect(
+        view.sections.some((s) => s.id === 'destructive'),
+        `${audience}/${locale}`,
+      ).toBe(true);
+      expect(out).not.toMatch(/\{[A-Za-z]+\}/);
+      expect(out).not.toMatch(/\b(?:warning|update|resource)\.[a-z]/);
+      expect(out).toMatch(/1 /);
+    }
+    const guided = text(presenter.plan(plan, { audience: 'guided', locale: 'en' }));
+    expect(guided).toContain('replace: DynamoDB table');
+    expect(guided).toContain('you chose not to use the network');
+    expect(text(presenter.plan(plan, { audience: 'simple', locale: 'en' }))).toContain(
+      'replaced or removed',
+    );
+  });
+});
