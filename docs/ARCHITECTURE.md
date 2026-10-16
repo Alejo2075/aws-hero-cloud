@@ -91,8 +91,9 @@ Defined in `packages/core` and re-exported by `packages/sdk`.
 ```ts
 interface Hero {
   analyze(source, options?): Promise<Analysis>; // Hero Spec + detections + open questions
-  plan(analysis, options?): Promise<DeploymentPlan>; // reviewable, has a digest
-  deploy(plan, approval): Promise<DeploymentResult>; // applies exactly the approved plan
+  plan(analysis, options?): Promise<DeploymentPlan>; // sealed: has a digest, stored by the engine
+  requestApproval(plan: PlanRef): Promise<ApprovalChallenge>; // one-time challenge, for the door facing a person
+  deploy(plan: PlanRef, approval): Promise<DeploymentResult>; // applies exactly the approved plan
   planDestroy(deploymentId): Promise<DeploymentPlan>; // all deletions; needs approval too
   outputs(deploymentId): Promise<DeploymentResult>; // endpoints, health, links, cost
   health(deploymentId): Promise<Health>; // re-run the checks
@@ -101,13 +102,13 @@ interface Hero {
 ```
 
 - **Analysis**: the Hero Spec, detections with evidence and confidence, open questions for the person, and whether an AI contributed (`aiAssisted`).
-- **DeploymentPlan**: target, strategy, changes (each with action, capability, resource, a `destructive` flag, and rationale codes with evidence), warnings, required inputs (names only), cost estimate, and a **digest**.
-- **Approval**: a person's decision bound to one plan digest. `deploy` rejects a mismatch.
+- **DeploymentPlan**: a _sealed_ plan. Target (provider, region, account), strategy, changes (each with action, capability, resource, a `destructive` flag, and rationale codes with evidence), warnings, required inputs (names only), cost estimate, and the **artifact hash**. Its `digest` is the SHA-256 of the RFC 8785 canonical JSON of all of that, and its `id` derives from the digest, so neither can be chosen by a caller. Because the artifact hash is inside the digest, approving a plan approves exactly the synthesized artifacts that will be applied.
+- **Approval**: not a flag a caller can set. The engine issues a one-time **challenge** for a plan it produced and keeps only a hash of its secret nonce. A door shows the plan to a person and, only when they agree, turns the challenge into an approval. `deploy` takes a **plan reference** (id and digest), resolves the real plan from the engine's own store, and accepts the approval only if the challenge is live and unused and the digest, account, and region all match. A fabricated plan, a guessed nonce, a replay, an expired approval, or an approval for another account is refused with a coded error. The nonce goes to the door facing the person, never to an AI agent.
 - **DeploymentResult**: endpoints, **health**, resources, locations of sensitive outputs, operation links, cost, next steps. No secret values.
 - **Health**: overall and per-component status plus the checks behind it (`reachability`, `resource-state`, `smoke`), each with what was observed. Re-runnable through `Hero.health`.
 - **HeroEvent**: progress as codes, for any interface.
 
-Third parties supply their own `ApprovalHandler`, `StateStore`, `AIProvider`, `Logger`, source, and cloud provider through `HeroPorts`. The engine's defaults never contact a Hero service.
+Third parties supply their own `ApprovalHandler`, `StateStore`, `PlanStore`, `SecretSink`, `SourceLoader`, `AIProvider`, `Logger`, and cloud provider through `HeroPorts`. The cloud provider and build runner ports are defined with the packages that implement them. The engine's defaults never contact a Hero service.
 
 ## Hero Spec
 

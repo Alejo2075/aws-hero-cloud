@@ -101,6 +101,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@hero-cloud/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@hero-cloud/specification':
         specifier: workspace:*
         version: link:../specification

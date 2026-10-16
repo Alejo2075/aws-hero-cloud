@@ -1,12 +1,13 @@
-import type { Rationale } from './plan.js';
+import type { SourceRef } from './hero.js';
+import type { DeploymentPlan, Rationale } from './plan.js';
 
 /**
  * Ports are the things a host replaces to embed the engine: where state lives, which AI is used,
  * how events are logged, and who approves. The engine has no console output, prompts, global
  * state, or hidden environment access; everything it touches arrives through a port.
  *
- * Source loading and the cloud provider are ports too. Their contracts are defined together with
- * the `sources` and `deployment` packages.
+ * The cloud provider and the build runner are ports too; their contracts arrive with the packages
+ * that implement them (phases 5 to 7), because their shape depends on the planner.
  */
 
 /** Persists deployment state wherever the host wants: the local disk, a database, memory. */
@@ -47,4 +48,58 @@ export interface HeroPorts {
   readonly ai?: AIProvider;
   readonly state?: StateStore;
   readonly logger?: Logger;
+  readonly plans?: PlanStore;
+  readonly secrets?: SecretSink;
+  readonly sources?: readonly SourceLoader[];
+}
+
+/** One file in a snapshot. Paths are relative, use `/`, and never escape the root. */
+export interface SnapshotFile {
+  readonly path: string;
+  readonly size: number;
+  readonly sha256: string;
+}
+
+/**
+ * A read-only view of a project's files, however it was loaded. Folder, ZIP, and Git sources of
+ * the same content have the same `hash`. Analysis and builds consume snapshots, never the origin.
+ */
+export interface ProjectSnapshot {
+  /** Hash of the sorted file index (path, size, sha256), see `computeSnapshotHash`. */
+  readonly hash: string;
+  readonly files: readonly SnapshotFile[];
+  read(path: string): Promise<Uint8Array>;
+  /** Releases temporary files. Safe to call more than once. */
+  dispose(): Promise<void>;
+}
+
+export interface LoadOptions {
+  readonly signal?: AbortSignal;
+}
+
+/** Loads untrusted input into a snapshot. Implementations must never execute project code. */
+export interface SourceLoader {
+  readonly kind: string;
+  load(ref: SourceRef, options?: LoadOptions): Promise<ProjectSnapshot>;
+}
+
+/** Remembers the plans this engine produced, so it can refuse plans it did not make (D2). */
+export interface PlanStore {
+  put(plan: DeploymentPlan): Promise<void>;
+  get(planId: string): Promise<DeploymentPlan | undefined>;
+}
+
+export interface SecretLocation {
+  readonly name: string;
+  /** Where the value lives in the user's account, e.g. an SSM parameter name. Never the value. */
+  readonly location: string;
+}
+
+/** Stores a secret value straight into the user's secret store. The value is never returned. */
+export interface SecretSink {
+  put(request: {
+    readonly deploymentId: string;
+    readonly name: string;
+    readonly value: string;
+  }): Promise<SecretLocation>;
 }

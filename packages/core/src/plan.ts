@@ -56,13 +56,12 @@ export interface RequiredInput {
 export interface DeploymentTarget {
   readonly provider: string;
   readonly region: string;
-  readonly accountId?: string;
+  /** The account the plan was made for. A plan cannot be approved for any other account. */
+  readonly accountId: string;
 }
 
-export interface DeploymentPlan {
-  readonly id: string;
-  /** Digest of the canonical plan. An approval binds to it, so a changed plan needs a new one. */
-  readonly digest: string;
+/** Everything in a plan except what is derived from it. */
+export interface PlanBody {
   readonly specVersion: string;
   readonly strategy: DeploymentStrategy;
   readonly target: DeploymentTarget;
@@ -70,4 +69,21 @@ export interface DeploymentPlan {
   readonly warnings: readonly PlanWarning[];
   readonly requiredInputs: readonly RequiredInput[];
   readonly cost?: CostEstimate;
+  /**
+   * Hash of what the provider will actually apply, such as the synthesized cloud assembly. It is
+   * part of the digest, so approving a plan approves exactly those artifacts (D1).
+   */
+  readonly artifactHash: string;
 }
+
+/**
+ * A sealed plan. `digest` is the SHA-256 of the canonical JSON of the body; `id` is derived from
+ * it. Neither can be chosen by a caller: only `sealPlan` produces them.
+ */
+export interface DeploymentPlan extends PlanBody {
+  readonly id: string;
+  readonly digest: string;
+}
+
+/** What a door needs to name a plan. The engine resolves the real plan from its own store. */
+export type PlanRef = Pick<DeploymentPlan, 'id' | 'digest'>;

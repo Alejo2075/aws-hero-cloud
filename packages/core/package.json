@@ -18,6 +18,7 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
-    "@hero-cloud/specification": "workspace:*"
+    "@hero-cloud/specification": "workspace:*",
+    "@hero-cloud/shared": "workspace:*"
   }
 }

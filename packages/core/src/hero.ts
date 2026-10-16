@@ -1,7 +1,7 @@
 import type { HeroSpec } from '@hero-cloud/specification';
-import type { Approval } from './approval.js';
+import type { Approval, ApprovalChallenge } from './approval.js';
 import type { HeroEventListener } from './events.js';
-import type { DeploymentPlan } from './plan.js';
+import type { DeploymentPlan, PlanRef } from './plan.js';
 import type { DeploymentResult, Health } from './result.js';
 
 export interface SourceRef {
@@ -50,8 +50,17 @@ export interface PlanOptions {
 export interface Hero {
   analyze(source: SourceRef, options?: AnalyzeOptions): Promise<Analysis>;
   plan(analysis: Analysis, options?: PlanOptions): Promise<DeploymentPlan>;
-  /** Applies exactly the approved plan. Rejects if the approval does not match its digest. */
-  deploy(plan: DeploymentPlan, approval: Approval): Promise<DeploymentResult>;
+  /**
+   * Issues a one-time challenge for a plan this engine produced. Give it only to the door that
+   * shows the plan to a person; never to an AI agent.
+   */
+  requestApproval(plan: PlanRef): Promise<ApprovalChallenge>;
+  /**
+   * Applies exactly the approved plan. The engine resolves the plan from its own store, so a plan
+   * it did not produce is refused, and the approval must match the plan's digest, account, and
+   * region and be unexpired and unused.
+   */
+  deploy(plan: PlanRef, approval: Approval): Promise<DeploymentResult>;
   /** A plan whose changes are all deletions. It needs approval like any other plan. */
   planDestroy(deploymentId: string): Promise<DeploymentPlan>;
   /** The result of an existing deployment: endpoints, links, cost, and the latest health. */

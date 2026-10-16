@@ -36,19 +36,19 @@ How it is built is in [ARCHITECTURE.md](ARCHITECTURE.md). This document says **i
 
 Make the repository trustworthy before writing engine code.
 
-- [ ] `git init`, first commit, and push to `github.com/Alejo2075/aws-hero-cloud`, the canonical repository; confirm the owner account before publishing (F1, F9).
-- [ ] Remove junk and stubs: `.playwright-mcp/`, `.idea/`, `.pnpm-store/`, `hero-cloud-brand-final.zip`, `turbo.json`, empty `scripts/` `tests/` `examples/` `plugins/`, and the empty stub packages; trim `pnpm-workspace.yaml` (F6).
-- [ ] Ignore `.claude/settings.local.json`; decide whether `.claude/skills/` belongs in this repository (F2).
-- [ ] Real tooling: Vitest, ESLint (typescript-eslint, strict), an import-boundary rule enforcing the dependency table (`eslint-plugin-boundaries` or `dependency-cruiser`), `astro check` for the site. `lint` and `test` must fail when they should (F5).
-- [ ] CI hardening: actions pinned by commit SHA, CodeQL, dependency review, secret scanning and push protection, OpenSSF Scorecard, CODEOWNERS, a real security contact (F8).
+- [x] `git init`, first commit, and push to `github.com/Alejo2075/aws-hero-cloud`, the canonical repository; confirm the owner account before publishing (F1, F9).
+- [x] Remove junk and stubs: `.playwright-mcp/`, `.idea/`, `.pnpm-store/`, `hero-cloud-brand-final.zip`, `turbo.json`, empty `scripts/` `tests/` `examples/` `plugins/`, and the empty stub packages; trim `pnpm-workspace.yaml` (F6).
+- [x] Ignore `.claude/settings.local.json`; decide whether `.claude/skills/` belongs in this repository (F2).
+- [x] Real tooling: Vitest, ESLint (typescript-eslint, strict), an import-boundary rule enforcing the dependency table (`eslint-plugin-boundaries` or `dependency-cruiser`), `astro check` for the site. `lint` and `test` must fail when they should (F5).
+- [x] CI hardening: actions pinned by commit SHA, CodeQL, dependency review, secret scanning and push protection, OpenSSF Scorecard, CODEOWNERS, a real security contact (F8).
 - [ ] 🔒 Claim names: create the npm organization `@hero-cloud` and publish a placeholder for the unscoped `hero-cloud` package, which will install the `hero-cloud` binary. Never document the bare `hero`: that npm name belongs to someone else (F4).
-- [ ] Public site: remove commands that do not exist yet; show "coming soon" and the repository link from `data/project.ts`; delete dead components and duplicate dependencies; align copy with PRODUCT.md (F4, F7).
-- [ ] Dependency advisory GHSA-ch52-4w7c-c8xp (`http-cache-semantics` via Astro): track the upstream fix, add a pnpm override when one exists, and record the exposure as build-time only (F3).
-- [ ] **Spikes** (throwaway code, findings written down before Phase 1):
-  - [ ] CDK Toolkit Library in-process: synthesize to a directory, deploy that exact assembly later without re-synthesizing, intercept every confirmation through `IoHost`, bootstrap with a custom qualifier and a non-admin execution policy (D1, D5, D12).
-  - [ ] CodeBuild from Node: upload a source zip, run a generated buildspec, stream logs, fetch artifacts (D3).
-  - [ ] ECS Express Mode from CDK or CloudFormation, versus Fargate with a load balancer (Phase 15).
-  - [ ] Beginner credentials without long-lived keys: `aws login`, IAM Identity Center, CloudShell hand-off (D11).
+- [x] Public site: remove commands that do not exist yet; show "coming soon" and the repository link from `data/project.ts`; delete dead components and duplicate dependencies; align copy with PRODUCT.md (F4, F7).
+- [x] Dependency advisory GHSA-ch52-4w7c-c8xp (`http-cache-semantics` via Astro): track the upstream fix, add a pnpm override when one exists, and record the exposure as build-time only (F3).
+- [x] **Spikes** (throwaway code, findings written down before Phase 1):
+  - [x] CDK Toolkit Library in-process: synthesize to a directory, deploy that exact assembly later without re-synthesizing, intercept every confirmation through `IoHost`, bootstrap with a custom qualifier and a non-admin execution policy (D1, D5, D12).
+  - [x] CodeBuild from Node: upload a source zip, run a generated buildspec, stream logs, fetch artifacts (D3).
+  - [x] ECS Express Mode from CDK or CloudFormation, versus Fargate with a load balancer (Phase 15).
+  - [x] Beginner credentials without long-lived keys: `aws login`, IAM Identity Center, CloudShell hand-off (D11).
 
 **Done when:** a fresh clone passes all checks, CI is green with real lint and tests, the site promises nothing false, and the four spike reports are in `docs/` or in their issues.
 
@@ -56,12 +56,12 @@ Make the repository trustworthy before writing engine code.
 
 Fix the design problems in the contracts before anything depends on them.
 
-- [ ] 🔒 Plan digest = SHA-256 of an RFC 8785 canonical JSON of the plan **plus** the provider artifact hash (cloud assembly) **plus** target account and region (D1).
-- [ ] 🔒 `Approval` gains `expiresAt`, target account, and a nonce. Across process boundaries, doors send a **plan id**; the engine resolves it from its own `PlanStore` and rejects plans it did not produce (D2, D8).
-- [ ] Error model: `HeroError` with stable codes; every code has messages at three levels later.
-- [ ] Ports completed: `SourceLoader`, `CloudProvider`, `BuildRunner`, `PlanStore`, `SecretSink`.
-- [ ] Hero Spec v1 as Zod schemas, exported as JSON Schema; safe YAML parsing (core schema, size and depth limits) for `hero.yaml`.
-- [ ] Contract tests and type tests; ARCHITECTURE.md updated.
+- [x] 🔒 Plan digest = SHA-256 of an RFC 8785 canonical JSON of the plan **plus** the provider artifact hash (cloud assembly) **plus** target account and region (D1).
+- [x] 🔒 `Approval` gains `expiresAt`, target account, and a nonce. Across process boundaries, doors send a **plan id**; the engine resolves it from its own `PlanStore` and rejects plans it did not produce (D2, D8).
+- [x] Error model: `HeroError` with stable codes; every code has messages at three levels later.
+- [x] Ports: `SourceLoader`, `PlanStore`, `SecretSink`, `ChallengeStore` (`CloudProvider` and `BuildRunner` are defined with the packages that implement them, in phases 5 to 7, because their shape depends on the planner).
+- [x] Hero Spec v1 as Zod schemas, exported as JSON Schema; safe YAML parsing (core schema, size and depth limits) for `hero.yaml`.
+- [x] Contract tests and type tests; ARCHITECTURE.md updated.
 
 **Done when:** the contracts compile, are tested, and every D-finding assigned here is closed in the docs.
 
