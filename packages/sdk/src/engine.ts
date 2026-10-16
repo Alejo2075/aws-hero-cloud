@@ -12,6 +12,7 @@ import type {
   AnalyzeOptions,
   Approval,
   ApprovalChallenge,
+  CallerIdentity,
   ChallengeStore,
   CloudProvider,
   DeploymentPlan,
@@ -45,6 +46,8 @@ export interface CreateHeroOptions extends HeroPorts {
   readonly challenges?: ChallengeStore;
   /** Where downloaded public prices are cached. Without one, prices are fetched each time. */
   readonly cacheDirectory?: string;
+  /** A named AWS profile for credentials. Without one the standard AWS chain is used. */
+  readonly awsProfile?: string;
   /** How long an approval challenge stays valid, in milliseconds. */
   readonly approvalTtlMs?: number;
   readonly clock?: { now(): Date };
@@ -101,9 +104,10 @@ class HeroEngine implements Hero {
     this.#plans = options.plans ?? new InMemoryPlanStore();
     this.#cloud =
       options.cloud ??
-      createAwsProvider(
-        options.cacheDirectory === undefined ? {} : { cacheDirectory: options.cacheDirectory },
-      );
+      createAwsProvider({
+        ...(options.cacheDirectory === undefined ? {} : { cacheDirectory: options.cacheDirectory }),
+        ...(options.awsProfile === undefined ? {} : { profile: options.awsProfile }),
+      });
     this.#clock = options.clock ?? { now: () => new Date() };
     this.#approvals = new ApprovalService({
       ...(options.challenges === undefined ? {} : { store: options.challenges }),
@@ -191,15 +195,19 @@ class HeroEngine implements Hero {
     }
 
     return this.#phase('plan', async () => {
+      const verified =
+        options.accountId === undefined && options.useIdentity === true
+          ? (await this.identity({ region })).account
+          : options.accountId;
       const planned = planApplication({
         analysis,
         ...(options.answers === undefined ? {} : { answers: options.answers }),
       });
 
       // Without a verified account the plan is only a preview: it cannot be approved or deployed.
-      const accountId = options.accountId ?? UNVERIFIED_ACCOUNT;
+      const accountId = verified ?? UNVERIFIED_ACCOUNT;
       const warnings: PlanWarning[] = [...planned.warnings];
-      if (options.accountId === undefined) {
+      if (verified === undefined) {
         warnings.push({ code: 'plan.account-unverified', severity: 'blocking' });
       }
 
@@ -237,6 +245,13 @@ class HeroEngine implements Hero {
       await this.#plans.put(plan);
       return plan;
     });
+  }
+
+  async identity(options: { readonly region?: string } = {}): Promise<CallerIdentity> {
+    if (this.#cloud.identity === undefined) {
+      throw heroError('provider.unavailable', { reason: 'no-identity' });
+    }
+    return this.#cloud.identity(options);
   }
 
   /** Finds a plan this engine produced. Anything else, or a plan altered since sealing, is refused. */

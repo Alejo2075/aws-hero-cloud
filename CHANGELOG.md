@@ -13,6 +13,11 @@ All notable changes to Hero Cloud are documented here. The format follows [Keep 
 - **Hero Spec v1** as strict Zod schemas with an exported JSON Schema and a safe `hero.yaml` parser.
 - **Presentation**: message catalogs with a build gate that fails when any code lacks a message at any level in any locale.
 - **`hero-cloud plan`**: a reviewable plan at three levels. The planner chooses the lowest strategy that works (static or serverless today), explains why, applies the person's answers with strict validation, and turns anything it cannot do yet into a blocking warning. The AWS provider maps components to resources with safe defaults (private, encrypted, HTTPS-only, least privilege, backups, a budget alert) and estimates cost from public AWS prices, with a cache and a built-in fallback.
+- **AWS provider on the CDK**: plans come from the real synthesized template, validated against the AWS Solutions rules (a violation stops the plan) and listing every resource, helpers included. The plan digest includes the hash of the cloud assembly. A schedule AWS cannot express exactly blocks approval instead of being approximated.
+- **Identity**: `hero.identity()` asks STS who the credentials belong to and refuses the account owner; `plan({ useIdentity: true })` plans for that account.
+- **Least-privilege bootstrap**: a permission boundary for every role Hero creates and a limited execution policy in place of administrator access, applied by an approved bootstrap.
+- **Deployer**: applies a stored assembly after proving its hash, account, and region; the toolkit's confirmations are answered only when the approval covers them. Updates are diffed through CloudFormation change sets, so replacements and deletions are shown as destructive.
+- Gated integration tests for a real sandbox account (`pnpm test:integration`).
 - Plans are bound to the source that was reviewed, and a plan with a blocking warning cannot start an approval.
 - Exit code 3 for a plan that exists but cannot be approved yet.
 - Seven example applications used as regression fixtures.

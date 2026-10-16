@@ -1,5 +1,5 @@
 import { join, resolve } from 'node:path';
-import { approvalFromChallenge, isSealIntact } from '@hero-cloud/core';
+import { approvalFromChallenge, heroError, isSealIntact } from '@hero-cloud/core';
 import type { CloudProvider, ProviderPlanRequest } from '@hero-cloud/core';
 import { createAwsProvider } from '@hero-cloud/provider-aws';
 import { describe, expect, it } from 'vitest';
@@ -153,6 +153,48 @@ describe('createHero().plan', () => {
       plan.changes.find((c) => c.resource.type === 'scheduler-schedule')?.details,
     ).toMatchObject({
       expression: 'cron(0 * * * ? *)',
+    });
+  });
+
+  describe('identity', () => {
+    const cloudWithIdentity = (account: string): CloudProvider => ({
+      ...createAwsProvider(),
+      identity: () => Promise.resolve({ account, principal: 'arn:test', kind: 'role' }),
+    });
+
+    it('plans for the account the credentials belong to when asked to', async () => {
+      const hero = createHero({ cloud: cloudWithIdentity('210987654321') });
+      const plan = await hero.plan(await analysisOf('spa', hero), {
+        useIdentity: true,
+        offline: true,
+      });
+      expect(plan.target.accountId).toBe('210987654321');
+      expect(plan.warnings.some((w) => w.code === 'plan.account-unverified')).toBe(false);
+    });
+
+    it('prefers an account that is given over asking the cloud', async () => {
+      const hero = createHero({ cloud: cloudWithIdentity('210987654321') });
+      const plan = await hero.plan(await analysisOf('spa', hero), {
+        accountId: ACCOUNT,
+        useIdentity: true,
+        offline: true,
+      });
+      expect(plan.target.accountId).toBe(ACCOUNT);
+    });
+
+    it('stops when the cloud refuses the identity, and says so when it cannot ask', async () => {
+      const refusing: CloudProvider = {
+        ...createAwsProvider(),
+        identity: () => Promise.reject(heroError('identity.root-refused')),
+      };
+      const hero = createHero({ cloud: refusing });
+      await expect(
+        hero.plan(await analysisOf('spa', hero), { useIdentity: true, offline: true }),
+      ).rejects.toMatchObject({ code: 'identity.root-refused' });
+      const blind: CloudProvider = { id: 'blind', describe: createAwsProvider().describe.bind({}) };
+      await expect(createHero({ cloud: blind }).identity()).rejects.toMatchObject({
+        code: 'provider.unavailable',
+      });
     });
   });
 

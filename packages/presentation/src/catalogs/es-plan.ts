@@ -258,6 +258,11 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'Política de IAM (mínimo privilegio)',
     'aws:iam:Policy',
   ),
+  'resource.cloudformation-stack': tri(
+    'Un registro de lo que Hero preparó',
+    'Stack de CloudFormation',
+    'aws:cloudformation:Stack',
+  ),
   'resource.other-resource': tri('Una pieza de apoyo', 'Recurso de apoyo', 'aws:other'),
   'warning.plan.unsupported-schedule': tri(
     'Hero no pudo fijar ese horario con exactitud, así que no programó {job}.',

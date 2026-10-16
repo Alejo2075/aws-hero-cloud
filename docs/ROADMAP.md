@@ -107,15 +107,17 @@ Fix the design problems in the contracts before anything depends on them.
 
 ### Phase 6: AWS provider and CDK foundation (L)
 
-- [ ] 🔒 Credentials: the AWS SDK default chain, profiles, SSO; `sts:GetCallerIdentity` to show the account and refuse root (D15).
-- [ ] 🔒 Hero bootstrap as an approved plan of its own: CDK bootstrap with a `hero` qualifier and a **least-privilege execution policy instead of the default administrator policy**, plus a permission boundary that every role Hero creates must carry (D5).
-- [ ] CDK construct library (internal to `providers/aws`): static site (S3 with CloudFront origin access control), HTTP API with Lambda, DynamoDB, Cognito, tags `hero:deployment-id`, budget alert, backups.
-- [ ] `cdk-nag` (AwsSolutions) and template snapshot tests on every construct.
-- [ ] 🔒 Synthesize once to a stored cloud assembly; the plan digest includes its hash; deploy uses that assembly and never re-synthesizes; `IoHost` rejects any confirmation not covered by the approval (D1, D12).
-- [ ] Diff through CloudFormation change sets, so `replace` and destructive changes are real, not guessed (D8).
+- [x] 🔒 Credentials: the AWS SDK default chain, profiles, SSO; `sts:GetCallerIdentity` to show the account and refuse root (D15).
+- [x] 🔒 Hero bootstrap as an approved plan of its own: CDK bootstrap with a `hero` qualifier and a **least-privilege execution policy instead of the default administrator policy**, plus a permission boundary that every role Hero creates must carry (D5).
+- [x] CDK construct library (internal to `providers/aws`): static site (S3 with CloudFront origin access control), HTTP API with Lambda, DynamoDB, Cognito, tags `hero:deployment-id`, budget alert, backups.
+- [x] `cdk-nag` (AwsSolutions) and template snapshot tests on every construct.
+- [x] 🔒 Synthesize once to a stored cloud assembly; the plan digest includes its hash; deploy uses that assembly and never re-synthesizes; `IoHost` rejects any confirmation not covered by the approval (D1, D12).
+- [x] Diff through CloudFormation change sets, so `replace` and destructive changes are real, not guessed (D8).
 - [ ] An isolated sandbox AWS account with a budget for integration tests; every test run destroys what it creates.
 
 **Done when:** each serverless example synthesizes, passes cdk-nag, and deploys and destroys cleanly in the sandbox account (with prebuilt artifacts; builds come next).
+
+_Status: implemented and unit-tested with mocks (`pnpm test`). The sandbox-account run lives in `tests/integration/` and needs `HERO_INTEGRATION=1` plus credentials for an isolated account; it has not been run yet, so the "deploys and destroys cleanly" bar is open._
 
 ### Phase 7: Safe builds in CodeBuild (M)
 

@@ -1,0 +1,60 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the budget-alert stack > creates exactly the expected kinds of resource 1`] = `
+{
+  "AWS::Budgets::Budget": 1,
+}
+`;
+
+exports[`the http-service stack > creates exactly the expected kinds of resource 1`] = `
+{
+  "AWS::ApiGatewayV2::Api": 1,
+  "AWS::ApiGatewayV2::Integration": 1,
+  "AWS::ApiGatewayV2::Route": 1,
+  "AWS::ApiGatewayV2::Stage": 1,
+  "AWS::IAM::Policy": 1,
+  "AWS::IAM::Role": 1,
+  "AWS::Lambda::Function": 1,
+  "AWS::Lambda::Permission": 1,
+  "AWS::Logs::LogGroup": 2,
+}
+`;
+
+exports[`the identity stack > creates exactly the expected kinds of resource 1`] = `
+{
+  "AWS::Cognito::UserPool": 1,
+  "AWS::Cognito::UserPoolClient": 1,
+}
+`;
+
+exports[`the key-value-table stack > creates exactly the expected kinds of resource 1`] = `
+{
+  "AWS::DynamoDB::Table": 1,
+}
+`;
+
+exports[`the object-bucket stack > creates exactly the expected kinds of resource 1`] = `
+{
+  "AWS::S3::Bucket": 2,
+  "AWS::S3::BucketPolicy": 2,
+}
+`;
+
+exports[`the scheduled-job stack > creates exactly the expected kinds of resource 1`] = `
+{
+  "AWS::IAM::Policy": 2,
+  "AWS::IAM::Role": 2,
+  "AWS::Lambda::Function": 1,
+  "AWS::Logs::LogGroup": 1,
+  "AWS::Scheduler::Schedule": 1,
+}
+`;
+
+exports[`the static-site stack > creates exactly the expected kinds of resource 1`] = `
+{
+  "AWS::CloudFront::Distribution": 1,
+  "AWS::CloudFront::OriginAccessControl": 1,
+  "AWS::S3::Bucket": 2,
+  "AWS::S3::BucketPolicy": 2,
+}
+`;

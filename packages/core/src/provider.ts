@@ -50,6 +50,15 @@ export interface ProviderPlanResult {
   readonly artifactHash: string;
 }
 
+/** Who the credentials in use belong to, as the cloud reports it. Never holds a key or token. */
+export interface CallerIdentity {
+  /** The cloud account the credentials act in. */
+  readonly account: string;
+  /** The cloud's name for the principal, such as an ARN. */
+  readonly principal: string;
+  readonly kind: 'user' | 'role' | 'federated' | 'other';
+}
+
 /**
  * A cloud the engine can plan for. Phase by phase it gains more operations (identity, deploy,
  * health, destroy); planning is what the planner needs today.
@@ -57,4 +66,9 @@ export interface ProviderPlanResult {
 export interface CloudProvider {
   readonly id: string;
   describe(request: ProviderPlanRequest): Promise<ProviderPlanResult>;
+  /**
+   * Asks the cloud who the configured credentials belong to. Throws `identity.root-refused` for
+   * the account owner and `identity.unknown` when the credentials cannot be verified.
+   */
+  identity?(options?: { readonly region?: string }): Promise<CallerIdentity>;
 }

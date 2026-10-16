@@ -11,6 +11,7 @@ import { parameterPath } from './cdk/names.js';
 import { synthesize } from './cdk/synth.js';
 import { changesFromTemplate } from './changes.js';
 import { estimateCost } from './cost.js';
+import { getIdentity } from './identity.js';
 import { parameterChanges } from './parameters.js';
 import { builtInPriceBook } from './prices/book.js';
 import { loadPriceBook } from './prices/live.js';
@@ -25,6 +26,8 @@ export interface AwsProviderOptions {
    */
   readonly assemblyDirectory?: string;
   readonly fetchText?: FetchText;
+  /** A named profile from the shared AWS configuration, used to find out who the user is. */
+  readonly profile?: string;
   readonly now?: () => Date;
 }
 
@@ -43,6 +46,11 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
 
   return {
     id: 'aws',
+    identity: (identityOptions = {}) =>
+      getIdentity({
+        ...(identityOptions.region === undefined ? {} : { region: identityOptions.region }),
+        ...(options.profile === undefined ? {} : { profile: options.profile }),
+      }),
     async describe(request: ProviderPlanRequest): Promise<ProviderPlanResult> {
       const region = REGION.test(request.region) ? request.region : 'us-east-1';
       const key = sha256Hex(canonicalJson({ ...request, region, network: request.allowNetwork }));

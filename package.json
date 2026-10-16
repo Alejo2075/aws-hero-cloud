@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json"
+    "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

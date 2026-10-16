@@ -21,6 +21,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.e2e-*/**',
       '**/.astro/**',
       '**/coverage/**',
       'apps/web/**',

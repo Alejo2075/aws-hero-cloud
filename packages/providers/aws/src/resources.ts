@@ -22,6 +22,7 @@ export const awsResourceTypes = [
   'cognito-user-pool-client',
   'budgets-budget',
   'ssm-parameter',
+  'cloudformation-stack',
   'other-resource',
 ] as const;
 

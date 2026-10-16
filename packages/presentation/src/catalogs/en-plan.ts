@@ -254,6 +254,11 @@ export const enPlan: Readonly<Record<string, Message>> = {
     'IAM policy (least privilege)',
     'aws:iam:Policy',
   ),
+  'resource.cloudformation-stack': tri(
+    'A record of what Hero set up',
+    'CloudFormation stack',
+    'aws:cloudformation:Stack',
+  ),
   'resource.other-resource': tri('A supporting piece', 'Supporting resource', 'aws:other'),
   'warning.plan.unsupported-schedule': tri(
     'Hero could not set that timetable exactly, so it did not schedule {job}.',

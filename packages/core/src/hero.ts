@@ -1,5 +1,6 @@
 import type { HeroSpec } from '@hero-cloud/specification';
 import type { Approval, ApprovalChallenge } from './approval.js';
+import type { CallerIdentity } from './provider.js';
 import type { HeroEventListener } from './events.js';
 import type { DeploymentPlan, PlanRef } from './plan.js';
 import type { SkippedEntry } from './ports.js';
@@ -62,6 +63,11 @@ export interface PlanOptions {
   readonly accountId?: string;
   /** Names the deployment. Defaults to the application name. */
   readonly name?: string;
+  /**
+   * Asks the cloud who the credentials belong to and plans for that account. Ignored when
+   * `accountId` is given. Fails with `identity.root-refused` for the account owner.
+   */
+  readonly useIdentity?: boolean;
   /** Never contact the network, not even for public prices. */
   readonly offline?: boolean;
   /** Answers to `Analysis.openQuestions`, keyed by question id. */
@@ -75,6 +81,8 @@ export interface PlanOptions {
 export interface Hero {
   analyze(source: SourceRef, options?: AnalyzeOptions): Promise<Analysis>;
   plan(analysis: Analysis, options?: PlanOptions): Promise<DeploymentPlan>;
+  /** Who the configured cloud credentials belong to. Refuses the account owner. */
+  identity(options?: { readonly region?: string }): Promise<CallerIdentity>;
   /**
    * Issues a one-time challenge for a plan this engine produced. Give it only to the door that
    * shows the plan to a person; never to an AI agent.
