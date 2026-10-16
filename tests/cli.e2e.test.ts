@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -205,4 +205,82 @@ describe('the hero-cloud binary', () => {
       await rm(project, { recursive: true, force: true });
     }
   });
+});
+
+describe('the MCP server over standard input and output', () => {
+  /** A minimal client written from the protocol text alone, as a second independent implementation. */
+  function startServer() {
+    const child = spawn('node', [binary, 'mcp', '--allow', join(root, 'examples')], {
+      cwd: root,
+      env: { PATH: process.env.PATH ?? '', HOME: directory, LANG: 'en_US.UTF-8' },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let buffer = '';
+    const lines: string[] = [];
+    const waiting: ((line: string) => void)[] = [];
+    child.stdout.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString('utf8');
+      for (let index = buffer.indexOf('\n'); index !== -1; index = buffer.indexOf('\n')) {
+        const line = buffer.slice(0, index);
+        buffer = buffer.slice(index + 1);
+        if (line.trim() === '') continue;
+        lines.push(line);
+        waiting.shift()?.(line);
+      }
+    });
+    const next = (): Promise<string> =>
+      lines.length > 0
+        ? Promise.resolve(lines.shift() as string)
+        : new Promise((resolve) => waiting.push(resolve));
+    let id = 0;
+    const request = async (method: string, params: unknown): Promise<Record<string, unknown>> => {
+      id += 1;
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+      for (;;) {
+        const message = JSON.parse(await next()) as Record<string, unknown>;
+        if (message.id === id) return message;
+      }
+    };
+    return { child, request, rawLines: lines };
+  }
+
+  it('speaks only the protocol on standard output and offers no way to approve', async () => {
+    const { child, request, rawLines } = startServer();
+    try {
+      const init = await request('initialize', {
+        protocolVersion: '2025-03-26',
+        capabilities: {},
+        clientInfo: { name: 'raw-client', version: '0' },
+      });
+      expect((init.result as { serverInfo: { name: string } }).serverInfo.name).toBe('hero-cloud');
+      child.stdin.write(
+        `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`,
+      );
+
+      const list = await request('tools/list', {});
+      const names = (list.result as { tools: { name: string }[] }).tools.map((t) => t.name);
+      expect(names).toContain('hero_request_deploy');
+      expect(names.some((n) => /approve|confirm/.test(n))).toBe(false);
+
+      const analyzed = await request('tools/call', {
+        name: 'hero_analyze',
+        arguments: { path: join(root, 'examples', 'spa') },
+      });
+      const result = analyzed.result as {
+        isError?: boolean;
+        structuredContent: { analysisId: string; untrusted: boolean };
+      };
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent.untrusted).toBe(true);
+
+      const refused = await request('tools/call', {
+        name: 'hero_analyze',
+        arguments: { path: '/etc' },
+      });
+      expect((refused.result as { isError: boolean }).isError).toBe(true);
+      expect(rawLines.every((line) => line.startsWith('{'))).toBe(true);
+    } finally {
+      child.kill();
+    }
+  }, 60_000);
 });

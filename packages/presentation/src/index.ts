@@ -22,6 +22,8 @@ export const presentationCodes = [
   'cli.prompt.approve',
   'cli.prompt.budget-email',
   'cli.declined',
+  'cli.approve.expired',
+  'cli.approve.recorded',
   'cli.prompt.write-profile',
   'cli.profile.written',
   'cli.profile.exists',

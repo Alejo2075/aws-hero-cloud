@@ -189,11 +189,13 @@ _Status: `hero-cloud setup` (inspect), `setup --prepare` (an approved plan of it
 
 ### Phase 13: MCP server (M)
 
-- [ ] Tools: `hero_analyze`, `hero_plan`, `hero_explain`, `hero_request_deploy`, `hero_outputs`, `hero_health`, `hero_plan_destroy`. **No approve tool.**
-- [ ] 🔒 `hero_request_deploy` returns a pending request; the person approves in Studio or a terminal using a nonce the agent never sees (D2).
-- [ ] 🔒 Source roots limited to an allowlist; evidence carries file paths, never contents; secret-looking files never read (D13).
-- [ ] Repository-derived text is marked as untrusted data in every tool result; progress notifications.
-- [ ] Tested with at least two MCP clients.
+- [x] Tools: `hero_analyze`, `hero_plan`, `hero_explain`, `hero_request_deploy`, `hero_outputs`, `hero_health`, `hero_plan_destroy`. **No approve tool.**
+- [x] 🔒 `hero_request_deploy` returns a pending request; the person approves in a terminal (`hero-cloud approve`) using a nonce the agent never sees (Studio is out of scope here) (D2).
+- [x] 🔒 Source roots limited to an allowlist; evidence carries file paths, never contents; secret-looking files never read (D13).
+- [x] Repository-derived text is marked as untrusted data in every tool result; progress notifications.
+- [x] Tested with two independent clients: the official MCP SDK client (in memory) and a hand-written JSON-RPC client over the real stdio server. Real assistants (Claude Desktop, Claude Code) have not been tried yet.
+
+_Status: implemented and tested. A status tool (`hero_request_status`) was added to the list so an assistant can follow a request._
 
 ### Phase 14: AI providers and AI-assisted analysis (M) → 0.7
 

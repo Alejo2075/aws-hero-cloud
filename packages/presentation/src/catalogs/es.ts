@@ -440,6 +440,8 @@ Uso:
   hero-cloud deploy <fuente> [opciones]
   hero-cloud health <despliegue>
   hero-cloud setup [--prepare] [--write-profile <nombre>]
+  hero-cloud mcp [--allow <carpeta>]...
+  hero-cloud approve <solicitud>
   hero-cloud outputs <despliegue>
   hero-cloud secret <despliegue> <NOMBRE>
   hero-cloud destroy <despliegue> [opciones]
@@ -464,6 +466,7 @@ Opciones:
       --profile <nombre>              Usa este perfil de AWS
       --prepare                       (setup) Prepara tu cuenta de AWS una vez, tras tu aprobación
       --write-profile <nombre>        (setup) Agrega un perfil que usa el rol desplegador limitado
+      --allow <carpeta>               (mcp) Una carpeta que un asistente puede analizar (se puede repetir)
       --state-dir <carpeta>           Dónde Hero recuerda los despliegues (por defecto: .hero)
       --no-color                      No usa colores
   -h, --help                          Muestra esta ayuda
@@ -484,6 +487,8 @@ que Hero mostró, como hero-mi-app. Códigos de salida: 0 bien, 1 falló, 2 coma
     'cli.prompt.write-profile': '¿Agregar este perfil a {path}? [s/N]',
     'cli.profile.written': 'Se agregó el perfil {name} a {path}. Despliega con --profile {name}.',
     'cli.profile.exists': 'Ya existe un perfil llamado {name} en {path}. No se cambió nada.',
+    'cli.approve.expired': 'Esta solicitud venció. Pídele al asistente que haga una nueva.',
+    'cli.approve.recorded': 'Registrado. La solicitud del asistente continuará ahora.',
     'cli.declined': 'No se aprobó. No se cambió nada.',
     'cli.progress.deploy': 'Preparando todo en AWS...',
     'cli.progress.verify': 'Comprobando que funciona...',

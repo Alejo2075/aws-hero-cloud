@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { isatty } from 'node:tty';
 import { join, resolve } from 'node:path';
 import { FileDeploymentLock, FileStateStore } from '@hero-cloud/local';
+import { FileApprovalInbox, createRootGuard, serveStdio } from '@hero-cloud/mcp';
 import { createHero } from '@hero-cloud/sdk';
 import { run } from './cli.js';
 import { readHidden } from './hidden.js';
@@ -34,6 +35,15 @@ const code = await run(process.argv.slice(2), {
     } finally {
       lines.close();
     }
+  },
+  openInbox: (directory) => new FileApprovalInbox(directory),
+  serveMcp: async ({ hero, roots, inboxDirectory }) => {
+    await serveStdio({
+      hero,
+      roots: await createRootGuard(roots),
+      inbox: new FileApprovalInbox(inboxDirectory),
+      version: typeof __HERO_VERSION__ === 'string' ? __HERO_VERSION__ : '0.0.0-dev',
+    });
   },
   askHidden: (question) => readHidden(question, process.stdin, process.stderr),
   createHero: (settings) => {

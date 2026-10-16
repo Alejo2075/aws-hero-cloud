@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@hero-cloud/local": "workspace:*",
+    "@hero-cloud/mcp": "workspace:*",
     "@hero-cloud/presentation": "workspace:*",
     "@hero-cloud/sdk": "workspace:*",
     "esbuild": "^0.28.2"

@@ -7,7 +7,9 @@ import {
   parseHeroSpec,
 } from '@hero-cloud/sdk';
 import type { DeploymentPlan, Hero, HeroEvent, HeroSpec } from '@hero-cloud/sdk';
+import type { ApprovalInbox } from '@hero-cloud/mcp';
 import { parseArguments, peekRenderOptions, sourceKind } from './args.js';
+import { join } from 'node:path';
 import { deployerProfileText, hasProfile } from './profile.js';
 import { renderText } from './render-text.js';
 import { sanitizeForTerminal } from './sanitize.js';
@@ -28,6 +30,14 @@ export interface CliIo {
   readonly stdinIsTTY?: boolean;
   /** Where the person's AWS configuration file is. Hero adds a profile there only when asked. */
   readonly awsConfigPath?: string;
+  /** Opens the folder where assistants' approval requests wait for a person. */
+  openInbox?(directory: string): ApprovalInbox;
+  /** Serves the assistant tools over standard input and output until the assistant disconnects. */
+  serveMcp?(options: {
+    hero: Hero;
+    roots: readonly string[];
+    inboxDirectory: string;
+  }): Promise<void>;
   appendFile?(path: string, text: string): Promise<void>;
   /** Asks for a secret without showing what is typed. Only used when a person is at the terminal. */
   askHidden?(question: string): Promise<string>;
@@ -144,6 +154,45 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
     );
   };
 
+  /**
+   * A person decides about a request an assistant made. This is the only way such a request becomes
+   * an approval: it needs a person at the terminal and cannot be answered with a flag.
+   */
+  const approveRequest = async (requestId: string): Promise<number> => {
+    if (io.openInbox === undefined || io.ask === undefined || io.stdinIsTTY !== true) {
+      throw new HeroError('usage', {
+        params: { reason: 'approving an assistant’s request needs a person at the terminal' },
+      });
+    }
+    const inbox = io.openInbox(join(settings.stateDirectory, 'approvals'));
+    const request = await inbox.read(requestId);
+    if (request === undefined) throw new HeroError('plan.unknown');
+    if (Date.parse(request.challenge.expiresAt) < Date.now()) {
+      io.stdout.write(`${presenter.text('cli.approve.expired', render)}\n`);
+      return 1;
+    }
+    show(presenter.plan(request.plan, render));
+    const answer = await io.ask(`\n${presenter.text('cli.prompt.approve', render)} `);
+    if (!/^(y|yes|s|si|sí)$/i.test(answer.trim())) {
+      await inbox.decide({ id: requestId, approved: false });
+      io.stdout.write(`${presenter.text('cli.declined', render)}\n`);
+      return 0;
+    }
+    const inputs: Record<string, string> = {};
+    if (request.plan.requiredInputs.some((input) => input.name === BUDGET_EMAIL_INPUT)) {
+      const email = (await io.ask(`${presenter.text('cli.prompt.budget-email', render)} `)).trim();
+      if (email !== '') inputs[BUDGET_EMAIL_INPUT] = email;
+    }
+    await inbox.decide({
+      id: requestId,
+      approved: true,
+      approval: approvalFromChallenge(request.challenge, 'mcp-terminal'),
+      inputs,
+    });
+    io.stdout.write(`${presenter.text('cli.approve.recorded', render)}\n`);
+    return 0;
+  };
+
   const finish = (
     command: string,
     result: Awaited<ReturnType<Hero['outputs']>>,
@@ -164,6 +213,20 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
   };
 
   try {
+    if (args.command === 'mcp') {
+      if (io.serveMcp === undefined)
+        throw new HeroError('provider.unavailable', { params: { reason: 'no-mcp' } });
+      // Standard output belongs to the protocol: nothing else is printed there.
+      await io.serveMcp({
+        hero: io.createHero(settings),
+        roots: (args.allow.length > 0 ? args.allow : ['.']).map((folder) => io.resolvePath(folder)),
+        inboxDirectory: join(settings.stateDirectory, 'approvals'),
+      });
+      return 0;
+    }
+    if (args.command === 'approve') {
+      return await approveRequest(args.source ?? '');
+    }
     if (args.command === 'setup') {
       const hero = io.createHero(settings);
       watch(hero);

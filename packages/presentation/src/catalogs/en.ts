@@ -408,6 +408,8 @@ Usage:
   hero-cloud deploy <source> [options]
   hero-cloud health <deployment>
   hero-cloud setup [--prepare] [--write-profile <name>]
+  hero-cloud mcp [--allow <folder>]...
+  hero-cloud approve <request>
   hero-cloud outputs <deployment>
   hero-cloud secret <deployment> <NAME>
   hero-cloud destroy <deployment> [options]
@@ -432,6 +434,7 @@ Options:
       --profile <name>                Use this AWS profile
       --prepare                       (setup) Prepare your AWS account once, after you approve
       --write-profile <name>          (setup) Add a profile that uses the limited deployer role
+      --allow <folder>                (mcp) A folder an assistant may analyze (can be repeated)
       --state-dir <folder>            Where Hero remembers deployments (default: .hero)
       --no-color                      Do not use colors
   -h, --help                          Show this help
@@ -452,6 +455,8 @@ Hero printed, such as hero-my-app. Exit codes: 0 ok, 1 failed, 2 wrong command, 
     'cli.prompt.write-profile': 'Add this profile to {path}? [y/N]',
     'cli.profile.written': 'Added the profile {name} to {path}. Deploy with --profile {name}.',
     'cli.profile.exists': 'A profile named {name} already exists in {path}. Nothing was changed.',
+    'cli.approve.expired': 'This request has expired. Ask the assistant to make a new one.',
+    'cli.approve.recorded': "Recorded. The assistant's request will go ahead now.",
     'cli.declined': 'Not approved. Nothing was changed.',
     'cli.progress.deploy': 'Setting things up on AWS...',
     'cli.progress.verify': 'Checking that it works...',

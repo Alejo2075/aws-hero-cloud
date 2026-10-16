@@ -13,6 +13,8 @@ export type Command =
   | 'outputs'
   | 'secret'
   | 'setup'
+  | 'mcp'
+  | 'approve'
   | 'help'
   | 'version';
 
@@ -31,6 +33,8 @@ export interface ParsedArguments {
   readonly region: string | undefined;
   readonly accountId: string | undefined;
   readonly offline: boolean;
+  /** For `mcp`: the folders an assistant may analyze. */
+  readonly allow: readonly string[];
   /** For `setup`: prepare the account (an approved plan of its own). */
   readonly prepare: boolean;
   /** For `setup`: add a profile with this name that assumes the deployer role. */
@@ -138,6 +142,7 @@ export function parseArguments(
         offline: { type: 'boolean' },
         approve: { type: 'string' },
         prepare: { type: 'boolean' },
+        allow: { type: 'string', multiple: true },
         'write-profile': { type: 'string' },
         'budget-email': { type: 'string' },
         profile: { type: 'string' },
@@ -187,6 +192,7 @@ export function parseArguments(
     approve: values.approve,
     secretName: undefined,
     prepare: values.prepare === true,
+    allow: values.allow ?? [],
     writeProfile: values['write-profile'],
     budgetEmail: values['budget-email'],
     profile: values.profile,
@@ -197,6 +203,20 @@ export function parseArguments(
   if (values.version === true || first === 'version') return { ...base, command: 'version' };
   if (values.help === true || first === 'help' || first === undefined) {
     return { ...base, command: 'help' };
+  }
+  if (first === 'mcp') {
+    if (rest.length !== 0)
+      throw usageError('mcp takes no source; use --allow <folder> to choose folders');
+    return { ...base, command: 'mcp', source: undefined, kind: undefined };
+  }
+  if (first === 'approve') {
+    const [id] = rest;
+    if (rest.length !== 1 || id === undefined || !/^req_[0-9a-f]{16}$/.test(id)) {
+      throw usageError(
+        'approve needs the request id an assistant gave you, such as req_0123456789abcdef',
+      );
+    }
+    return { ...base, command: 'approve', source: id, kind: undefined };
   }
   if (first === 'setup') {
     if (rest.length !== 0) throw usageError('setup takes no source');
