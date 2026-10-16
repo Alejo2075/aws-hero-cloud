@@ -11,8 +11,6 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'MCP server lint pending'",
-    "test": "echo 'MCP server tests pending'"
+    "typecheck": "tsc --noEmit"
   }
 }

@@ -11,8 +11,6 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'AWS provider lint pending'",
-    "test": "echo 'AWS provider tests pending'"
+    "typecheck": "tsc --noEmit"
   }
 }

@@ -18,6 +18,6 @@ The site is served at http://localhost:4321. The static output is written to `di
 
 ## Boundaries
 
-The page is the public project site, not a hosted deployment service and not the product's interface. The interface where people analyze, review, and deploy is Hero Studio (planned, runs locally), which runs locally. This site must not ask users to paste AWS secrets or AI keys, and it never runs the engine. Anything beyond documentation hands off to `hero-cloud studio` or the CLI on the user's machine.
+The page is the public project site, not a hosted deployment service and not the product's interface. The interface where people analyze, review, and deploy is Hero Studio, which runs locally on the user's machine (planned). This site must not ask users to paste AWS secrets or AI keys, and it never runs the engine. Anything beyond documentation hands off to `hero-cloud studio` or the CLI on the user's machine.
 
-The repository link is centralized in `src/data/project.ts`. The canonical repository is `Alejo2075/aws-hero-cloud`. `apps/cli` and `packages/core` are currently scaffolds, so the page marks their install status as coming soon and does not invent package commands.
+The repository link is centralized in `src/data/project.ts`. The canonical repository is `Alejo2075/aws-hero-cloud`. The engine and CLI are still in development, so the page says so and marks every command as coming soon. Never document a command that does not exist yet.

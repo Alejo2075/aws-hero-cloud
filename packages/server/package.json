@@ -11,8 +11,6 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'Local server lint pending'",
-    "test": "echo 'Local server tests pending'"
+    "typecheck": "tsc --noEmit"
   }
 }

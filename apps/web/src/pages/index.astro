@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/pixelact-ui/card';
 import { Kbd } from '@/components/ui/pixelact-ui/kbd';
+import { project } from '../data/project';
 ---
 
 <!doctype html>
@@ -59,13 +60,16 @@ import { Kbd } from '@/components/ui/pixelact-ui/kbd';
                 De tu aplicación a AWS, con un plan antes de tocar nada.
               </CardTitle>
               <CardDescription className="max-w-3xl text-base leading-8 md:text-lg">
-                Hero Cloud entiende lo que necesita tu aplicación, prepara un plan de despliegue
-                revisable y solo despliega en tu cuenta de AWS cuando lo apruebas.
+                Dale a Hero Cloud cualquier aplicación, nueva o antigua. Entiende lo que necesita,
+                prepara un plan que puedes leer, lo despliega en tu cuenta de AWS cuando lo apruebas
+                y comprueba que funciona.
               </CardDescription>
             </CardHeader>
             <CardFooter className="flex flex-wrap gap-4 py-8">
               <Button variant="success" size="lg" asChild>
-                <a href="#guia">Empezar la guía</a>
+                <a href={project.repository} target="_blank" rel="noreferrer noopener">
+                  Ver el código
+                </a>
               </Button>
               <Button variant="warning" size="lg" asChild>
                 <a href="#explicacion">Cómo funciona</a>
@@ -126,6 +130,14 @@ import { Kbd } from '@/components/ui/pixelact-ui/kbd';
           </div>
 
           <Alert>
+            <AlertTitle>Estado: pre-alfa</AlertTitle>
+            <AlertDescription>
+              Los contratos y la arquitectura ya están definidos, pero el motor todavía se está
+              construyendo. Hoy no se puede desplegar nada con Hero Cloud.
+            </AlertDescription>
+          </Alert>
+
+          <Alert>
             <AlertTitle>La aprobación es la frontera</AlertTitle>
             <AlertDescription>
               Ninguna creación, modificación o eliminación de infraestructura debe ejecutarse sin un
@@ -138,14 +150,14 @@ import { Kbd } from '@/components/ui/pixelact-ui/kbd';
           <Card>
             <CardHeader>
               <CardAction>
-                <Badge variant="outline">Guía</Badge>
+                <Badge variant="outline">Próximamente</Badge>
               </CardAction>
               <CardTitle id="guia-title" className="text-3xl md:text-4xl">
                 Del código al despliegue
               </CardTitle>
               <CardDescription className="max-w-3xl text-base leading-7">
-                El mismo motor alimenta la CLI, la web y el SDK. Este es el recorrido base desde la
-                terminal.
+                El mismo motor alimentará la CLI, Hero Studio, el SDK y tu asistente de IA. Así será
+                el recorrido desde la terminal; la CLI todavía está en desarrollo.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -154,27 +166,27 @@ import { Kbd } from '@/components/ui/pixelact-ui/kbd';
             <Card>
               <CardHeader>
                 <Badge>01</Badge>
-                <CardTitle>Prepara el proyecto</CardTitle>
+                <CardTitle>Elige tu aplicación</CardTitle>
                 <CardDescription>
-                  Usa un proyecto local, un repositorio Git o un archivo ZIP como fuente.
+                  Una carpeta local, un repositorio Git o un archivo ZIP, de cualquier antigüedad.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Kbd>hero-cloud init</Kbd>
+                <Kbd>hero-cloud analyze ./mi-app</Kbd>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <Badge>02</Badge>
-                <CardTitle>Analiza la aplicación</CardTitle>
+                <CardTitle>Entiende lo que necesita</CardTitle>
                 <CardDescription>
                   Hero detecta el framework y las capacidades necesarias sin ejecutar el código
                   recibido.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Kbd>hero-cloud analyze .</Kbd>
+                <Kbd>hero-cloud analyze ./mi-app --level simple</Kbd>
               </CardContent>
             </Card>
 
@@ -188,20 +200,21 @@ import { Kbd } from '@/components/ui/pixelact-ui/kbd';
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Kbd>hero-cloud plan .</Kbd>
+                <Kbd>hero-cloud plan ./mi-app</Kbd>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
                 <Badge>04</Badge>
-                <CardTitle>Aprueba y despliega</CardTitle>
+                <CardTitle>Aprueba, despliega y comprueba</CardTitle>
                 <CardDescription>
-                  Solo después de revisar el plan, Hero lo ejecuta en tu propia cuenta de AWS.
+                  Solo después de que apruebas el plan exacto, Hero lo ejecuta en tu cuenta de AWS y
+                  comprueba que el sistema funciona.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Kbd>hero-cloud deploy .</Kbd>
+                <Kbd>hero-cloud deploy ./mi-app</Kbd>
               </CardContent>
             </Card>
           </div>
@@ -263,10 +276,11 @@ import { Kbd } from '@/components/ui/pixelact-ui/kbd';
 
                 <Card className="md:col-span-2">
                   <CardHeader>
-                    <CardTitle>¿Qué aplicaciones cubre el MVP?</CardTitle>
+                    <CardTitle>¿Qué aplicaciones cubre?</CardTitle>
                     <CardDescription>
-                      El primer recorrido se centra en JavaScript, TypeScript, React, Vite y
-                      Node.js, con fuentes locales, repositorios Git y archivos ZIP.
+                      Empezamos con JavaScript y TypeScript (React, Vite, Node.js). El objetivo es
+                      cualquier aplicación, incluidas las antiguas, con carpetas locales,
+                      repositorios Git y archivos ZIP.
                     </CardDescription>
                   </CardHeader>
                 </Card>
@@ -289,7 +303,9 @@ import { Kbd } from '@/components/ui/pixelact-ui/kbd';
                 <a href="#hero">Volver arriba</a>
               </Button>
               <Button variant="link" asChild>
-                <a href="#guia">Ver la guía</a>
+                <a href={project.issues} target="_blank" rel="noreferrer noopener">
+                  Reportar un problema
+                </a>
               </Button>
             </CardFooter>
           </Card>

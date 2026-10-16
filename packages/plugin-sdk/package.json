@@ -11,8 +11,6 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'Plugin SDK lint pending'",
-    "test": "echo 'Plugin SDK tests pending'"
+    "typecheck": "tsc --noEmit"
   }
 }

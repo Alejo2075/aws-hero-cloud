@@ -11,7 +11,8 @@ import type { Rationale } from './plan.js';
 
 /** Persists deployment state wherever the host wants: the local disk, a database, memory. */
 export interface StateStore {
-  read(deploymentId: string): Promise<unknown | undefined>;
+  /** Resolves to `undefined` when nothing is stored for this deployment. */
+  read(deploymentId: string): Promise<unknown>;
   write(deploymentId: string, state: unknown): Promise<void>;
   list(): Promise<readonly string[]>;
 }

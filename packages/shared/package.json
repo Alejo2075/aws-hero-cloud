@@ -11,8 +11,6 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'Shared lint pending'",
-    "test": "echo 'Shared tests pending'"
+    "typecheck": "tsc --noEmit"
   }
 }

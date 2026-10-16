@@ -1,0 +1,9 @@
+# Every change is reviewed by the maintainer; security-sensitive areas are called out explicitly.
+*                          @Alejo2075
+/packages/core/            @Alejo2075
+/packages/sources/         @Alejo2075
+/packages/providers/aws/   @Alejo2075
+/packages/server/          @Alejo2075
+/packages/mcp/             @Alejo2075
+/.github/                  @Alejo2075
+/docs/ARCHITECTURE.md      @Alejo2075

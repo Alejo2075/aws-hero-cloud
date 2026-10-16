@@ -201,6 +201,17 @@ The deployment engine applies an approved plan through a provider. The AWS provi
 
 Each check is `passed`, `failed`, or `skipped` (with a reason), and component and overall status are `healthy`, `degraded`, `down`, or `unknown`. A deployment that creates resources but fails its checks is reported as such. Hero states what it observed, such as "the page answered in 0.4 s" or "the database is available". It does not claim the application's logic is correct, and it says which things it did not check.
 
+### Provider notes
+
+What the phase 0 research established. These came from AWS documentation, not from a live account, and the integration tests will confirm them.
+
+- **CDK Toolkit Library** (`@aws-cdk/toolkit-lib`) runs synth, deploy, diff, rollback, and destroy in process. `synth` returns a cloud assembly that later actions reuse without re-synthesizing, and the default deployment method uses CloudFormation change sets. Hotswap is never used: it introduces drift.
+- **`destroy` does not ask for confirmation** in the library (the CLI does). Hero therefore runs it only for a destroy plan that a person approved.
+- **Bootstrap** accepts a custom qualifier and custom CloudFormation execution policies, so Hero bootstraps with its own qualifier and a restricted policy instead of the default administrator policy.
+- **ECS Express Mode** exists as the CloudFormation resource `AWS::ECS::ExpressGatewayService`: a Fargate service with load balancer, security groups, auto scaling, and a URL. It is the default for the `container` strategy, with plain Fargate behind a load balancer as the fallback when a workload needs more control.
+- **Beginner credentials:** `aws login` gives short-term credentials from console sign-in (valid 15 minutes, refreshed automatically for up to 12 hours) without creating access keys. It also accepts the root user, so Hero checks `sts:GetCallerIdentity` and refuses a root identity.
+- **CodeBuild:** a build starts with an S3 source override and an inline buildspec override that Hero generates, reports status by polling, writes logs to CloudWatch Logs, and delivers artifacts to S3.
+
 ## Output levels
 
 Presentation is outside the engine and optional: a product that only wants data ignores it. `simple`, `guided`, and `expert` are views of the same data, each containing the previous. [PRODUCT.md](PRODUCT.md#what-you-get-back) defines what each shows.

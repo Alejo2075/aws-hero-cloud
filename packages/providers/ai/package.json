@@ -11,8 +11,6 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'AI provider lint pending'",
-    "test": "echo 'AI provider tests pending'"
+    "typecheck": "tsc --noEmit"
   }
 }

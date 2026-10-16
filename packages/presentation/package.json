@@ -11,9 +11,7 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "lint": "echo 'Presentation lint pending'",
-    "test": "echo 'Presentation tests pending'"
+    "typecheck": "tsc --noEmit"
   },
   "exports": {
     ".": "./src/index.ts"
