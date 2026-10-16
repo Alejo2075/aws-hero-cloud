@@ -67,11 +67,11 @@ Fix the design problems in the contracts before anything depends on them.
 
 ### Phase 2: Sources (M)
 
-- [ ] 🔒 Local directory: canonical paths, symlinks never followed outside the root, ignore lists (`node_modules`, `.git`, build output), file count and size limits.
-- [ ] 🔒 ZIP: reject traversal, absolute paths, and symlink entries; limits on entries, total size, and compression ratio (zip bombs) (D10).
-- [ ] 🔒 Git: HTTPS only, depth 1, no submodules, no hooks, no LFS smudge, `core.symlinks=false`, `protocol.file.allow=never`, timeouts, minimum safe `git` version or a pure-JS client (D10).
-- [ ] A read-only snapshot model (file index with hashes) that the analyzer and builds consume.
-- [ ] A fixture corpus of malicious archives and repositories, run in CI.
+- [x] 🔒 Local directory: canonical paths, symlinks never followed outside the root, ignore lists (`node_modules`, `.git`, build output), file count and size limits.
+- [x] 🔒 ZIP: reject traversal, absolute paths, and symlink entries; limits on entries, total size, and compression ratio (zip bombs) (D10).
+- [x] 🔒 Git: HTTPS only, depth 1, no submodules, no hooks, no LFS smudge, `core.symlinks=false`, `protocol.file.allow=never`, timeouts, minimum safe `git` version or a pure-JS client (D10).
+- [x] A read-only snapshot model (file index with hashes) that the analyzer and builds consume.
+- [x] A fixture corpus of malicious archives and repositories, run in CI.
 
 **Done when:** the malicious corpus is rejected, and folder, ZIP, and Git sources of the same app produce the same snapshot hash.
 

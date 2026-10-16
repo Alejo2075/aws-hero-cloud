@@ -127,6 +127,19 @@ environment: [API_SECRET]
 
 The spec is saved as `hero.yaml` next to the project. A user or another system can provide a valid one directly and skip source analysis. A service may declare an optional `healthPath` that Hero uses as a smoke check. Legacy and unclassified workloads use `type: process` services (runtime, start command, port), `relational` data with an `engine` hint, and `file-system` storage. They describe needs; the planner decides whether they imply a container or a virtual machine.
 
+## Sources
+
+A source turns untrusted input into a **snapshot**: a read-only index of files with sizes and SHA-256 hashes, whose own hash depends only on content. A folder, a ZIP, and a Git checkout of the same files have the same snapshot hash. Everything downstream (analysis, builds, AI context) consumes snapshots, never the origin.
+
+Rules every source follows:
+
+- **No symlink is ever followed.** Symlinks, devices, and pipes are left out and reported. Each read re-checks the file against its hash and refuses a file that changed or was swapped for a link after loading.
+- **Secrets never enter a snapshot.** Environment files with values, private keys, token files, and state files are left out and reported by name only. `.env.example` is kept because it holds names, not values. So a secret cannot reach the analyzer, a build upload, or an AI.
+- **Bounded.** Limits on file count, file size, total size, path length, and depth, enforced while reading.
+- **ZIP:** the whole index is validated before anything is written: no traversal, absolute or drive paths, backslashes, symlinks or special files, encryption, or paths that collide on case-insensitive disks; a compression-ratio limit; and the bytes actually written are counted, because an archive can lie about its sizes. A single project root folder, as in a GitHub archive, is stripped.
+- **Git:** HTTPS only, no credentials in the URL, no private or local hosts, a shallow clone with no hooks, submodules, LFS filters, symlinks, prompts, or user and system configuration, a minimal environment that carries none of the user's secrets, a timeout, and a minimum Git version. Committed symlinks are detected and left out.
+- Temporary files are removed on `dispose` and on any failure.
+
 ## Analyzer
 
 Answers "what does this application need to run?" without executing it. It works in layers and degrades gracefully:

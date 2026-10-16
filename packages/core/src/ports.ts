@@ -68,9 +68,17 @@ export interface ProjectSnapshot {
   /** Hash of the sorted file index (path, size, sha256), see `computeSnapshotHash`. */
   readonly hash: string;
   readonly files: readonly SnapshotFile[];
+  /** What the loader left out on purpose, and why. It never includes file contents. */
+  readonly skipped: readonly SkippedEntry[];
   read(path: string): Promise<Uint8Array>;
   /** Releases temporary files. Safe to call more than once. */
   dispose(): Promise<void>;
+}
+
+export interface SkippedEntry {
+  readonly path: string;
+  /** `symlink`: never followed. `sensitive`: looks like a secret. `ignored`: build output or dependencies. `special`: a device, socket, or pipe. */
+  readonly reason: 'symlink' | 'sensitive' | 'ignored' | 'special';
 }
 
 export interface LoadOptions {
