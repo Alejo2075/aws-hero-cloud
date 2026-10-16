@@ -1,0 +1,60 @@
+---
+const stages = [
+  {
+    number: '01',
+    title: 'Read the source',
+    text: 'Hero inspects local folders, Git repositories, or ZIP files as untrusted input.',
+    output: 'Application evidence',
+  },
+  {
+    number: '02',
+    title: 'Describe the need',
+    text: 'The analyzer produces provider-neutral requirements instead of guessing AWS resources.',
+    output: 'Portable requirements',
+  },
+  {
+    number: '03',
+    title: 'Build the plan',
+    text: 'The AWS provider converts those requirements into an explicit architecture you can inspect.',
+    output: 'Reviewable AWS plan',
+  },
+  {
+    number: '04',
+    title: 'Wait for approval',
+    text: 'Nothing deploys until you review the plan and deliberately approve the change.',
+    output: 'Your decision',
+  },
+] as const;
+---
+
+<section class="system-section" id="system" aria-labelledby="system-title">
+  <div class="page-shell">
+    <header class="section-heading">
+      <p class="eyebrow"><span>02</span> The system</p>
+      <h2 id="system-title">The shortest safe path from code to cloud.</h2>
+      <p>
+        Hero Cloud is not another control panel. It is a transparent pipeline with a human decision
+        in the middle.
+      </p>
+    </header>
+
+    <ol class="process-list">
+      {
+        stages.map((stage) => (
+          <li>
+            <span class="process-list__number">{stage.number}</span>
+            <h3>{stage.title}</h3>
+            <p>{stage.text}</p>
+            <span class="process-list__output">OUT / {stage.output}</span>
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="principles" aria-label="Hero Cloud principles">
+      <p><strong>No Hero account.</strong> Your tools remain yours.</p>
+      <p><strong>No hidden deploy.</strong> Every change begins with a plan.</p>
+      <p><strong>No locked model.</strong> AI stays optional and replaceable.</p>
+    </div>
+  </div>
+</section>

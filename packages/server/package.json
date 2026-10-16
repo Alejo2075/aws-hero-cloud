@@ -1,0 +1,18 @@
+{
+  "name": "@hero-cloud/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alejo2075/aws-hero-cloud.git",
+    "directory": "packages/server"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'Local server lint pending'",
+    "test": "echo 'Local server tests pending'"
+  }
+}

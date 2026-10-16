@@ -1,0 +1,21 @@
+---
+interface Props {
+  href: string;
+  label: string;
+  tone?: 'light' | 'dark' | 'line';
+  external?: boolean;
+}
+
+const { href, label, tone = 'light', external = false } = Astro.props;
+---
+
+<a
+  class={`text-link text-link--${tone}`}
+  href={href}
+  target={external ? '_blank' : undefined}
+  rel={external ? 'noreferrer' : undefined}
+  data-sfx="confirm"
+>
+  <span>{label}</span>
+  <span class="text-link__mark" aria-hidden="true">↗</span>
+</a>

@@ -1,0 +1,34 @@
+name: Unsupported application
+description: Hero could not understand or plan an application.
+labels: [framework, good first issue]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reports like this teach Hero new stacks. Share only what you are comfortable making public. Do not paste source or secrets.
+  - type: input
+    id: stack
+    attributes:
+      label: What is the application built with?
+      description: Language, framework, database, and roughly how old it is.
+    validations:
+      required: true
+  - type: textarea
+    id: needs
+    attributes:
+      label: What does it need to run?
+      description: For example a port, a database engine, files written to disk, a background process, a specific runtime.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What did Hero say or do?
+      description: The analysis or error, and the redacted report if Hero prepared one.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Can you help?
+      options:
+        - label: I can share a small public example that reproduces this
+        - label: I would like to write the detector myself

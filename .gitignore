@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.astro/
+.turbo/
+.env
+.env.*
+!.env.example
+coverage/
+.hero/
+.idea/
+.playwright-mcp/
+.DS_Store
+*.log
+.pnpm-store/
+.claude/
+hero-cloud-brand-final.zip

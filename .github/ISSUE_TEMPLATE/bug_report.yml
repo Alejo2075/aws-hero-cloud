@@ -1,0 +1,30 @@
+name: Bug report
+description: Something in Hero does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove credentials, account IDs, and source you do not want public before posting.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: door
+    attributes:
+      label: Interface
+      options: [CLI, Studio, MCP server, SDK, Other]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Hero version and Node.js version
+  - type: dropdown
+    id: level
+    attributes:
+      label: Audience level, if it is about output
+      options: [simple, guided, expert, Not applicable]

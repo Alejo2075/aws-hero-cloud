@@ -1,0 +1,18 @@
+{
+  "name": "@hero-cloud/provider-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alejo2075/aws-hero-cloud.git",
+    "directory": "packages/providers/ai"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'AI provider lint pending'",
+    "test": "echo 'AI provider tests pending'"
+  }
+}

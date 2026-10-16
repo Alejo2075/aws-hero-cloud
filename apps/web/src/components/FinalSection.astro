@@ -1,0 +1,25 @@
+---
+import TextLink from './TextLink.astro';
+
+interface Props {
+  repository: string;
+  issues: string;
+}
+
+const { repository, issues } = Astro.props;
+---
+
+<section class="final-section" aria-labelledby="final-title">
+  <div class="page-shell final-section__inner">
+    <p class="eyebrow"><span>04</span> Open source</p>
+    <h2 id="final-title">Built in public.<br />Better with you.</h2>
+    <p>
+      Thanks for following the project. Read the code, improve the docs, report a problem, or build
+      a provider.
+    </p>
+    <div class="final-section__actions">
+      <TextLink href={repository} label="Contribute" tone="dark" external />
+      <TextLink href={issues} label="Report an issue" tone="line" external />
+    </div>
+  </div>
+</section>

@@ -1,0 +1,10 @@
+{
+  "name": "Hero Cloud pixel palette",
+  "colors": {
+    "heroYellow": "#FFDB3B",
+    "cloudBlue": "#2E86FF",
+    "capeRed": "#FF3B3B",
+    "outlineNavy": "#0D1B2A",
+    "paper": "#F5F7FA"
+  }
+}

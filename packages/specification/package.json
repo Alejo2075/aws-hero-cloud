@@ -1,0 +1,22 @@
+{
+  "name": "@hero-cloud/specification",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alejo2075/aws-hero-cloud.git",
+    "directory": "packages/specification"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'Specification lint pending'",
+    "test": "echo 'Specification tests pending'"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts"
+}
