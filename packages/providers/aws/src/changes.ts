@@ -22,6 +22,7 @@ const TYPE_OF: Readonly<Record<string, AwsResourceType>> = {
   'AWS::Cognito::UserPool': 'cognito-user-pool',
   'AWS::Cognito::UserPoolClient': 'cognito-user-pool-client',
   'AWS::Budgets::Budget': 'budgets-budget',
+  'AWS::CodeBuild::Project': 'codebuild-project',
 };
 
 /** The safeguards each kind of resource carries, as reasons a person can read. */

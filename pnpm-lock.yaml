@@ -237,6 +237,12 @@ importers:
       '@aws-sdk/client-cloudformation':
         specifier: ^3.1152.0
         version: 3.1152.0
+      '@aws-sdk/client-codebuild':
+        specifier: ^3.1152.0
+        version: 3.1152.0
+      '@aws-sdk/client-s3':
+        specifier: ^3.1152.0
+        version: 3.1152.0
       '@aws-sdk/client-sts':
         specifier: ^3.1152.0
         version: 3.1152.0
@@ -258,6 +264,9 @@ importers:
       constructs:
         specifier: ^10.8.1
         version: 10.8.1
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
     devDependencies:
       aws-sdk-client-mock:
         specifier: ^4.1.0

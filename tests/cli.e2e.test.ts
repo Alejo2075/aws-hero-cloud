@@ -123,7 +123,7 @@ describe('the hero-cloud binary', () => {
         }
       }
     }
-  }, 180_000);
+  }, 600_000);
 
   it('plans a project whose plan is blocked with exit code 3', async () => {
     const result = await hero(

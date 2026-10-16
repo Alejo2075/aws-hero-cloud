@@ -1,5 +1,4 @@
-import { cpSync, mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { rmSync } from 'node:fs';
 import type {
   CloudProvider,
   PlanWarning,
@@ -8,7 +7,10 @@ import type {
 } from '@hero-cloud/core';
 import { canonicalJson, sha256Hex } from '@hero-cloud/shared';
 import { parameterPath } from './cdk/names.js';
-import { synthesize } from './cdk/synth.js';
+import { buildJobChanges } from './build/changes.js';
+import { buildPlanFor } from './build/plan.js';
+import { bundleHash, storeBundle } from './bundle.js';
+import { synthesize, synthesizeBuild } from './cdk/synth.js';
 import { changesFromTemplate } from './changes.js';
 import { estimateCost } from './cost.js';
 import { getIdentity } from './identity.js';
@@ -63,16 +65,42 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
         accountId: request.accountId,
         components: request.components,
       });
+      const buildPlan = buildPlanFor(request.components);
+      const buildAssembly =
+        buildPlan.jobs.length === 0
+          ? undefined
+          : synthesizeBuild({
+              deploymentId: request.deploymentId,
+              region,
+              accountId: request.accountId,
+            });
+      const artifactHash = bundleHash({
+        appHash: assembly.hash,
+        buildHash: buildAssembly?.hash,
+        buildPlan,
+      });
       if (options.assemblyDirectory !== undefined) {
-        const target = join(options.assemblyDirectory, assembly.hash);
-        rmSync(target, { recursive: true, force: true });
-        mkdirSync(options.assemblyDirectory, { recursive: true });
-        cpSync(assembly.directory, target, { recursive: true });
+        storeBundle(options.assemblyDirectory, {
+          appHash: assembly.hash,
+          buildHash: buildAssembly?.hash,
+          buildPlan,
+          appDirectory: assembly.directory,
+          buildDirectory: buildAssembly?.directory,
+        });
       }
       rmSync(assembly.directory, { recursive: true, force: true });
+      if (buildAssembly !== undefined) {
+        rmSync(buildAssembly.directory, { recursive: true, force: true });
+      }
 
       const changes = [
         ...changesFromTemplate(assembly.template, region, request.deploymentId),
+        ...(buildAssembly === undefined
+          ? []
+          : [
+              ...changesFromTemplate(buildAssembly.template, region, request.deploymentId),
+              ...buildJobChanges(buildPlan, region, request.deploymentId),
+            ]),
         ...parameterChanges(
           request.inputs,
           region,
@@ -115,8 +143,9 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
         changes,
         warnings,
         cost,
-        // The hash of what will be applied: the template, the account, and the region.
-        artifactHash: assembly.hash,
+        // The hash of everything that will be applied: the stacks, the account, the region, and
+        // the exact build commands.
+        artifactHash,
       };
       if (memo.size >= MEMO_LIMIT) memo.delete(memo.keys().next().value as string);
       memo.set(key, result);

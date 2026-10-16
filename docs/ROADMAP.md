@@ -121,13 +121,15 @@ _Status: implemented and unit-tested with mocks (`pnpm test`). The sandbox-accou
 
 ### Phase 7: Safe builds in CodeBuild (M)
 
-- [ ] 🔒 Builds run only in AWS CodeBuild in the user's account. Hero generates the buildspec; a buildspec from the repository is never used (D3).
-- [ ] 🔒 The build commands, runtime image, and timeout are part of the plan and the approval.
-- [ ] 🔒 The CodeBuild role can read its source and write its artifacts and logs, and nothing else; the user's credentials never enter the build.
-- [ ] Source upload excludes `.env*`, keys, and other secret-looking files, and the plan says so.
-- [ ] Artifacts: static output to S3, Lambda bundles, and (in Phase 15) images to ECR. Logs streamed as events.
+- [x] 🔒 Builds run only in AWS CodeBuild in the user's account. Hero generates the buildspec; a buildspec from the repository is never used (D3).
+- [x] 🔒 The build commands, runtime image, and timeout are part of the plan and the approval.
+- [x] 🔒 The CodeBuild role can read its source and write its artifacts and logs, and nothing else; the user's credentials never enter the build.
+- [x] Source upload excludes `.env*`, keys, and other secret-looking files, and the plan says so.
+- [x] Artifacts: Lambda bundles to S3 (finished static sites ship as they are; images to ECR arrive in Phase 15). Build progress is reported as events; build logs stay in the user's CloudWatch.
 
 **Done when:** examples build in CodeBuild with no local Node, Docker, or credentials exposed to project code.
+
+_Status: implemented and unit-tested with mocks. Running a real build in CodeBuild needs the sandbox account (`tests/integration/`)._
 
 ### Phase 8: Deploy, health, and outputs (M) → 0.3
 

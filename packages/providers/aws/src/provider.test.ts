@@ -94,6 +94,11 @@ describe('createAwsProvider().describe', () => {
         'iam-role',
         'iam-policy',
         'logs-log-group',
+        // The application is built in the person's own account, so the build stack is listed too.
+        's3-bucket',
+        's3-bucket-policy',
+        'codebuild-project',
+        'codebuild-build',
       ]),
     );
     expect(detailsOf(changes, 'lambda-function')).toMatchObject({ architecture: 'arm64' });

@@ -17,6 +17,7 @@ All notable changes to Hero Cloud are documented here. The format follows [Keep 
 - **Identity**: `hero.identity()` asks STS who the credentials belong to and refuses the account owner; `plan({ useIdentity: true })` plans for that account.
 - **Least-privilege bootstrap**: a permission boundary for every role Hero creates and a limited execution policy in place of administrator access, applied by an approved bootstrap.
 - **Deployer**: applies a stored assembly after proving its hash, account, and region; the toolkit's confirmations are answered only when the approval covers them. Updates are diffed through CloudFormation change sets, so replacements and deletions are shown as destructive.
+- **Safe builds in your account**: Hero generates the buildspec itself (a `buildspec.yml` in the project is never used), shows the install and build commands, the pinned image, and the time limit as part of the plan, and builds in a CodeBuild project whose role can only read the uploaded source and write its artifacts and logs. Source is packed from the reviewed snapshot, each file checked against its recorded hash, with secret-looking files already left out. Start commands travel as base64 so they cannot break out of their line.
 - Gated integration tests for a real sandbox account (`pnpm test:integration`).
 - Plans are bound to the source that was reviewed, and a plan with a blocking warning cannot start an approval.
 - Exit code 3 for a plan that exists but cannot be approved yet.

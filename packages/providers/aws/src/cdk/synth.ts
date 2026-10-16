@@ -2,11 +2,13 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { App, DefaultStackSynthesizer, Validations } from 'aws-cdk-lib';
+import type { Stack } from 'aws-cdk-lib';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { heroError } from '@hero-cloud/core';
 import type { Component } from '@hero-cloud/core';
 import { canonicalJson, sha256Hex } from '@hero-cloud/shared';
 import { BOOTSTRAP_QUALIFIER } from './names.js';
+import { BuildStack } from './build-stack.js';
 import { HeroStack } from './stack.js';
 
 export interface SynthInput {
@@ -60,6 +62,47 @@ export function hashAssembly(
  * reach a plan: Hero fails closed. Needs no credentials and no network.
  */
 export function synthesize(input: SynthInput, outdir?: string): Synthesized {
+  return synthesizeStack(
+    input,
+    (app) =>
+      new HeroStack(app, input.deploymentId, {
+        env: { account: input.accountId, region: input.region },
+        deploymentId: input.deploymentId,
+        components: input.components,
+        synthesizer: new DefaultStackSynthesizer({ qualifier: BOOTSTRAP_QUALIFIER }),
+        description: `Created by Hero Cloud for ${input.deploymentId}. Safe to remove with hero-cloud destroy.`,
+      }),
+    outdir,
+  );
+}
+
+/**
+ * Builds the place where a deployment's code is built: a private bucket and a CodeBuild project
+ * with a role that can only read its source and write its artifacts and logs.
+ */
+export function synthesizeBuild(
+  input: Omit<SynthInput, 'components'>,
+  outdir?: string,
+): Synthesized {
+  const id = `${input.deploymentId}-build`;
+  return synthesizeStack(
+    { ...input, components: [] },
+    (app) =>
+      new BuildStack(app, id, {
+        env: { account: input.accountId, region: input.region },
+        deploymentId: input.deploymentId,
+        synthesizer: new DefaultStackSynthesizer({ qualifier: BOOTSTRAP_QUALIFIER }),
+        description: `Created by Hero Cloud to build ${input.deploymentId}. Safe to remove with hero-cloud destroy.`,
+      }),
+    outdir,
+  );
+}
+
+function synthesizeStack(
+  input: SynthInput,
+  create: (app: App) => Stack & { readonly invalidSchedules?: string[] },
+  outdir?: string,
+): Synthesized {
   const directory = outdir ?? mkdtempSync(join(tmpdir(), 'hero-assembly-'));
   const app = new App({
     outdir: directory,
@@ -74,13 +117,7 @@ export function synthesize(input: SynthInput, outdir?: string): Synthesized {
       'aws:cdk:enable-path-metadata': true,
     },
   });
-  const stack = new HeroStack(app, input.deploymentId, {
-    env: { account: input.accountId, region: input.region },
-    deploymentId: input.deploymentId,
-    components: input.components,
-    synthesizer: new DefaultStackSynthesizer({ qualifier: BOOTSTRAP_QUALIFIER }),
-    description: `Created by Hero Cloud for ${input.deploymentId}. Safe to remove with hero-cloud destroy.`,
-  });
+  const stack = create(app);
   Validations.of(app).addPlugins(new AwsSolutionsChecks(app));
 
   try {
@@ -97,7 +134,7 @@ export function synthesize(input: SynthInput, outdir?: string): Synthesized {
     stackName: stack.stackName,
     template,
     hash: hashAssembly(stack.stackName, template, input.accountId, input.region),
-    invalidSchedules: stack.invalidSchedules,
+    invalidSchedules: stack.invalidSchedules ?? [],
     parameters: Object.keys(template.Parameters ?? {})
       .filter((name) => name !== 'BootstrapVersion')
       .sort(),

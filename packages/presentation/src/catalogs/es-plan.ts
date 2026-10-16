@@ -263,6 +263,21 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'Stack de CloudFormation',
     'aws:cloudformation:Stack',
   ),
+  'rationale.build.in-your-account': tri(
+    'Tu app se prepara en tu propia cuenta de AWS. Hero nunca la ejecuta en tu computadora y tus contraseñas y llaves no se envían.',
+    'AWS CodeBuild construye la app dentro de tu cuenta, usando solo los comandos que se muestran aquí. Los archivos que parecen secretos se dejan fuera de la subida.',
+    'Build en CodeBuild con un buildspec generado por Hero; se ignora el buildspec del repositorio; el código fuente excluye archivos que parecen secretos; el rol solo puede leer el código, escribir artefactos y logs.',
+  ),
+  'resource.codebuild-project': tri(
+    'Un taller donde se prepara tu app',
+    'Proyecto de CodeBuild (prepara tu app en tu cuenta)',
+    'aws:codebuild:Project',
+  ),
+  'resource.codebuild-build': tri(
+    'Preparando tu app',
+    'Ejecución de build (instala y construye tu app)',
+    'aws:codebuild:Build',
+  ),
   'resource.other-resource': tri('Una pieza de apoyo', 'Recurso de apoyo', 'aws:other'),
   'warning.plan.unsupported-schedule': tri(
     'Hero no pudo fijar ese horario con exactitud, así que no programó {job}.',

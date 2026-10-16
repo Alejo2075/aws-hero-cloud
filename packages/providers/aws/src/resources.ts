@@ -23,6 +23,8 @@ export const awsResourceTypes = [
   'budgets-budget',
   'ssm-parameter',
   'cloudformation-stack',
+  'codebuild-project',
+  'codebuild-build',
   'other-resource',
 ] as const;
 
@@ -38,6 +40,7 @@ export const awsRationaleCodes = [
   'guardrail.backups',
   'guardrail.versioning',
   'guardrail.secret-store',
+  'build.in-your-account',
   'cost.assumption.traffic',
   'cost.assumption.function',
   'cost.assumption.free-tier',

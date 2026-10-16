@@ -259,6 +259,21 @@ export const enPlan: Readonly<Record<string, Message>> = {
     'CloudFormation stack',
     'aws:cloudformation:Stack',
   ),
+  'rationale.build.in-your-account': tri(
+    'Your app is prepared on your own AWS account. Hero never runs it on your computer, and your passwords and keys are not sent along.',
+    'The app is built by AWS CodeBuild inside your account, using only the commands shown here. Files that look like secrets are left out of the upload.',
+    'Build in CodeBuild with a Hero-generated buildspec; the repository buildspec is ignored; source excludes secret-looking files; role limited to source read, artifact write, and logs.',
+  ),
+  'resource.codebuild-project': tri(
+    'A workshop where your app is prepared',
+    'CodeBuild project (prepares your app in your account)',
+    'aws:codebuild:Project',
+  ),
+  'resource.codebuild-build': tri(
+    'Preparing your app',
+    'Build run (installs and builds your app)',
+    'aws:codebuild:Build',
+  ),
   'resource.other-resource': tri('A supporting piece', 'Supporting resource', 'aws:other'),
   'warning.plan.unsupported-schedule': tri(
     'Hero could not set that timetable exactly, so it did not schedule {job}.',
