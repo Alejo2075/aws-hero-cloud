@@ -40,6 +40,12 @@ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 - A new rationale, warning, event, or check code needs messages for `simple`, `guided`, and `expert`.
 - Never include credentials, API keys, customer source, or real account IDs in code, fixtures, logs, or issues.
 
+## Changes and releases
+
+A change that people who install Hero would notice needs a changeset: run `pnpm changeset` and describe it in a sentence a user can understand. If you change the public API of `core` or `sdk`, run `pnpm api:update` and commit the updated `api/*.api.md`; CI fails when the report and the code disagree. After adding or changing a published package, run `pnpm release:prepare`.
+
+Maintainers release by running `pnpm version-packages`, committing, and pushing a signed tag `vX.Y.Z`. The release workflow checks, builds, publishes with provenance, and attaches a software bill of materials. All published packages share one version.
+
 ## Decisions
 
 Open an issue labeled `rfc` for a significant feature, a new interface, or a change to the SDK, Hero Spec, or plugin contracts. When it is accepted, the decision is added to [ARCHITECTURE.md](../docs/ARCHITECTURE.md#decisions). Small fixes need no RFC. How maintainers decide is in [GOVERNANCE.md](GOVERNANCE.md).

@@ -12,7 +12,40 @@
   <a href=".github/CONTRIBUTING.md">Contributing</a>
 </p>
 
-> **Status: pre-alpha.** The architecture and public contracts are defined and type-check. The engine is being built; see the [roadmap](docs/ROADMAP.md). Nothing deploys yet.
+> **Status: alpha, not yet exercised against a real AWS account.** Analysis, planning, cost estimates, safe builds, deploy, health, updates, secrets, and destroy are implemented and tested with mocks and synthesis. The run against a real sandbox account (`pnpm test:integration`) has not happened yet, so treat deploys as unproven. Studio, the MCP server, AI providers, and containers are on the [roadmap](docs/ROADMAP.md).
+
+## Quick start
+
+Needs Node.js 22.12+. Analyzing and planning need no AWS account.
+
+```bash
+npx @hero-cloud/cli analyze ./my-app     # what your app needs
+npx @hero-cloud/cli plan ./my-app --offline --account-id 123456789012   # a plan and a cost range, no network
+```
+
+To deploy to your own account, sign in to AWS the usual way (a profile, SSO, or environment variables; never the account owner), then:
+
+```bash
+npx @hero-cloud/cli deploy ./my-app      # shows the plan; creates nothing until you approve it
+npx @hero-cloud/cli health hero-my-app   # proof it works, and what that proof does not cover
+npx @hero-cloud/cli destroy hero-my-app  # remove it (data is kept until you delete it)
+```
+
+Add `--level guided` or `--level expert` for more detail and `--locale es` for Spanish. Build it into your own product with [`@hero-cloud/sdk`](packages/sdk/README.md).
+
+## Troubleshooting
+
+| You see                                             | What it means                                                                     | What to do                                                                     |
+| --------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Exit code 3, "Before this can go online"            | The plan needs something from you (an answer, or a capability Hero cannot do yet) | Read the list; answer with `--answer <question>=<answer>` and run again        |
+| "You are signed in to AWS as the account owner"     | Hero refuses root credentials                                                     | Use a limited user, role, or SSO profile (`--profile <name>`)                  |
+| "The credentials belong to another account"         | The plan was approved for a different account                                     | Plan again with the credentials you want to use                                |
+| Exit code 4                                         | It deployed, but the checks did not show it working                               | Run `health`, read the failed check, then look at the logs link                |
+| "Another deployment of this app is already running" | A lock is held by another run                                                     | Wait for it, or remove a stale `.hero/locks/<name>.lock` if nothing is running |
+| `plan.update-unverified` warning                    | Hero could not compare with what is deployed                                      | Treat the list as a template, not a diff; re-plan online with credentials      |
+| Slow first `plan`                                   | Public AWS prices are being downloaded                                            | Use `--offline` for built-in prices, or wait once; they are cached             |
+
+Set `HERO_DEBUG=1` for technical detail on errors. It never prints credentials or secret values.
 
 ## What it does
 
@@ -54,14 +87,14 @@ The engine is a library, separate from every interface. It takes an input, under
 Every interface is an adapter over the same SDK, so they all behave the same. An AI assistant can analyze and plan for you, but only a person can approve. The contract:
 
 ```ts
-const hero = createHero({ ai, state }); // ports are injected; coming with the engine skeleton
+const hero = createHero({ ai, state }); // ports are injected: ai, state, locks, secrets, cloud, ...
 
 const analysis = await hero.analyze({ kind: 'directory', location: './my-app' });
-const plan = await hero.plan(analysis);
+const plan = await hero.plan(analysis, { useIdentity: true });
 
 const approval = await myApprovalUi.request(plan); // your system asks a person
 if (approval) {
-  const result = await hero.deploy(plan, approval);
+  const result = await hero.deploy(plan, approval, { inputs: { BUDGET_ALERT_EMAIL: email } });
   console.log(result.endpoints, result.health.status); // where it is, and whether it works
 }
 ```

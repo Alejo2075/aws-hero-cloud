@@ -25,6 +25,7 @@ All notable changes to Hero Cloud are documented here. The format follows [Keep 
 - **Secrets**: entered without echo (or from `HERO_SECRET_<NAME>` for scripts), asked for only after the plan is approved, and sent straight to the user's own AWS parameter store as encrypted values. They are never kept, logged, put in a result, an event, a template, or `.hero/`. `hero-cloud secret <deployment> <NAME>` sets one later.
 - **Locks**: two runs cannot change one deployment at once, even from different processes; a lock left by a dead process is taken over.
 - **Drift**: `health` also asks AWS whether the resources still match what Hero created, and says plainly when it could not find out.
+- **Publishable packages**: the engine libraries and the CLI are built to `dist/` with types, versioned together with Changesets, and published with npm provenance and an SBOM from signed `v*` tags. The public API of `core` and `sdk` is recorded in `api/*.api.md` and checked in CI. The CLI bundle is 1.1 MB (CDK and AWS SDK stay external, 313 MB installed in all).
 - `examples/headless`: deploys using only the SDK.
 - Gated integration tests for a real sandbox account (`pnpm test:integration`).
 - Plans are bound to the source that was reviewed, and a plan with a blocking warning cannot start an approval.

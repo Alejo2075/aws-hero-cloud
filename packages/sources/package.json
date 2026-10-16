@@ -1,7 +1,6 @@
 {
   "name": "@hero-cloud/sources",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "license": "Apache-2.0",
   "repository": {
@@ -26,5 +25,20 @@
     "@types/node": "^22",
     "@types/yauzl": "^3.4.0",
     "fflate": "^0.8.3"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "types": "dist/index.d.ts"
   }
 }

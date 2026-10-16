@@ -11,7 +11,7 @@ await build({
   outfile,
   bundle: true,
   // Infrastructure libraries read their own files at run time, so they stay installed packages.
-  external: ['aws-cdk-lib', 'constructs', 'cdk-nag', '@aws-cdk/toolkit-lib'],
+  external: ['aws-cdk-lib', 'constructs', 'cdk-nag', '@aws-cdk/toolkit-lib', '@aws-sdk/*'],
   platform: 'node',
   format: 'esm',
   target: 'node22',
@@ -20,6 +20,9 @@ await build({
     js: "import { createRequire as __createRequire } from 'node:module';\nimport { fileURLToPath as __fileURLToPath } from 'node:url';\nimport { dirname as __dirname_of } from 'node:path';\nconst require = __createRequire(import.meta.url);\nconst __filename = __fileURLToPath(import.meta.url);\nconst __dirname = __dirname_of(__filename);",
   },
   define: { __HERO_VERSION__: JSON.stringify(version) },
+  // Smaller to download; names stay readable so an error report is still useful.
+  minifyWhitespace: true,
+  minifySyntax: true,
   legalComments: 'none',
   logLevel: 'warning',
 });

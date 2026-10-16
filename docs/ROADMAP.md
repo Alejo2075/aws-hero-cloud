@@ -158,12 +158,14 @@ _Status: implemented and unit-tested with mocks. Updates compare against the dep
 
 ### Phase 10: Publish the SDK and CLI (M) → 0.5
 
-- [ ] API review of the SDK; API Extractor report checked in CI.
-- [ ] Compiled `dist/` and `exports` for published packages; Changesets; npm provenance; SBOM; signed tags.
-- [ ] 🔒 Install-size budget for the CLI (CDK is heavy; measure and trim) (D12).
-- [ ] Docs: quick start, SDK guide, troubleshooting, the public site updated with real commands.
+- [x] API review of the SDK; API Extractor reports for `core` and `sdk` checked in CI (`pnpm api:check`).
+- [x] Compiled `dist/` and `exports` for published packages (TypeScript project references; `pnpm pack` verified by installing the tarballs in a clean project); Changesets with one shared version; npm provenance and an SBOM in the release workflow; releases only from `v*` tags that maintainers sign (protect the tag pattern in the repository settings).
+- [x] 🔒 Install-size budget for the CLI (D12). Measured: a clean `npm install` of the CLI is about 313 MB, of which `aws-cdk-lib` is 153 MB and the AWS SDK about 90 MB; both are required by in-process CDK. What Hero adds is a 1.1 MB bundle, with a test that fails above 2 MB. AWS SDK clients are external so they are installed once.
+- [x] Docs: quick start and troubleshooting in the README, the SDK guide in `packages/sdk/README.md`, the CLI guide in `apps/cli/README.md`. (The public site is out of scope for this plan.)
 
 **Done when:** `npx @hero-cloud/cli analyze` works from npm on macOS, Linux, and Windows, and a third party can embed `@hero-cloud/sdk`. **Release 0.5 (public alpha).**
+
+_Status: ready to publish but nothing has been published: that needs an npm account, the `@hero-cloud` scope, and `NPM_TOKEN` in the `release` environment. The macOS, Linux, and Windows run of the CLI is in the CI matrix (`cli-smoke`) and has not run yet because this repository has not been pushed. Release 0.5 stays open until it does._
 
 ### Phase 11: Local server and Studio (L) → 0.6 (part 1)
 

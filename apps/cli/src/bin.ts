@@ -2,6 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import { homedir } from 'node:os';
+import { isatty } from 'node:tty';
 import { join, resolve } from 'node:path';
 import { FileDeploymentLock, FileStateStore } from '@hero-cloud/local';
 import { createHero } from '@hero-cloud/sdk';
@@ -21,7 +22,9 @@ const code = await run(process.argv.slice(2), {
   version: typeof __HERO_VERSION__ === 'string' ? __HERO_VERSION__ : '0.0.0-dev',
   readFile: (path) => readFile(path, 'utf8'),
   resolvePath: (path) => resolve(process.cwd(), path),
-  stdinIsTTY: process.stdin.isTTY,
+  // `isatty` looks at the file descriptor; touching `process.stdin` would keep the process alive
+  // while a parent holds the pipe open.
+  stdinIsTTY: isatty(0),
   ask: async (question) => {
     const lines = createInterface({ input: process.stdin, output: process.stderr });
     try {

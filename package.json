@@ -17,9 +17,17 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "build:packages": "tsc -b tsconfig.build.json",
+    "release:prepare": "node scripts/prepare-release.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build:packages && pnpm --filter @hero-cloud/cli build && changeset publish",
+    "api:check": "pnpm build:packages && api-extractor run --config packages/core/api-extractor.json && api-extractor run --config packages/sdk/api-extractor.json",
+    "api:update": "pnpm build:packages && api-extractor run --local --config packages/core/api-extractor.json && api-extractor run --local --config packages/sdk/api-extractor.json"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
     "@hero-cloud/analyzer": "workspace:*",
     "@hero-cloud/cli": "workspace:*",
@@ -31,6 +39,7 @@
     "@hero-cloud/provider-aws": "workspace:*",
     "@hero-cloud/sdk": "workspace:*",
     "@hero-cloud/shared": "workspace:*",
+    "@microsoft/api-extractor": "^7.59.4",
     "@types/node": "^22",
     "@vitest/coverage-v8": "^5.0.5",
     "esbuild": "^0.28.2",

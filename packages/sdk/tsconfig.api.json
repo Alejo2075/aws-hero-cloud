@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@hero-cloud/shared": ["../shared/dist/index.d.ts"],
+      "@hero-cloud/specification": ["../specification/dist/index.d.ts"],
+      "@hero-cloud/core": ["../core/dist/index.d.ts"],
+      "@hero-cloud/sources": ["../sources/dist/index.d.ts"],
+      "@hero-cloud/plugin-sdk": ["../plugin-sdk/dist/index.d.ts"],
+      "@hero-cloud/analyzer": ["../analyzer/dist/index.d.ts"],
+      "@hero-cloud/plugin-node": ["../../plugins/node/dist/index.d.ts"],
+      "@hero-cloud/planner": ["../planner/dist/index.d.ts"],
+      "@hero-cloud/provider-aws": ["../providers/aws/dist/index.d.ts"],
+      "@hero-cloud/presentation": ["../presentation/dist/index.d.ts"],
+      "@hero-cloud/local": ["../local/dist/index.d.ts"],
+      "@hero-cloud/sdk": ["./dist/index.d.ts"],
+      "@hero-cloud/core/testing": ["../core/dist/testing.d.ts"]
+    }
+  },
+  "include": ["dist/**/*.d.ts"]
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@hero-cloud/shared",
+      "@hero-cloud/specification",
+      "@hero-cloud/core",
+      "@hero-cloud/sources",
+      "@hero-cloud/plugin-sdk",
+      "@hero-cloud/analyzer",
+      "@hero-cloud/plugin-node",
+      "@hero-cloud/planner",
+      "@hero-cloud/provider-aws",
+      "@hero-cloud/presentation",
+      "@hero-cloud/local",
+      "@hero-cloud/sdk",
+      "@hero-cloud/cli"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@hero-cloud/web",
+    "@hero-cloud/deployment",
+    "@hero-cloud/mcp",
+    "@hero-cloud/server",
+    "@hero-cloud/provider-ai"
+  ]
+}

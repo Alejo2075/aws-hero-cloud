@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -39,7 +39,9 @@ beforeAll(async () => {
     entryPoints: [join(root, 'apps', 'cli', 'src', 'bin.ts')],
     outfile: binary,
     bundle: true,
-    external: ['aws-cdk-lib', 'constructs', 'cdk-nag', '@aws-cdk/toolkit-lib'],
+    external: ['aws-cdk-lib', 'constructs', 'cdk-nag', '@aws-cdk/toolkit-lib', '@aws-sdk/*'],
+    minifyWhitespace: true,
+    minifySyntax: true,
     platform: 'node',
     format: 'esm',
     target: 'node22',
@@ -53,6 +55,15 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await rm(directory, { recursive: true, force: true });
+});
+
+describe('install size budget (D12)', () => {
+  // The CDK libraries are external and dominate an install (measured: about 330 MB in all, 153 MB
+  // of it aws-cdk-lib). What Hero itself adds must stay small, so the bundle has a hard ceiling.
+  it('keeps the bundled CLI under 2 MB', async () => {
+    const { size } = await stat(binary);
+    expect(size).toBeLessThan(2 * 1024 * 1024);
+  });
 });
 
 describe('the hero-cloud binary', () => {

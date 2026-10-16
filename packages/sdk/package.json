@@ -1,7 +1,6 @@
 {
   "name": "@hero-cloud/sdk",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "license": "Apache-2.0",
   "repository": {
@@ -30,5 +29,20 @@
   },
   "devDependencies": {
     "fflate": "^0.8.2"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "types": "dist/index.d.ts"
   }
 }

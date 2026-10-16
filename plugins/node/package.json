@@ -1,7 +1,6 @@
 {
   "name": "@hero-cloud/plugin-node",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Official Hero Cloud detectors for JavaScript and TypeScript projects.",
   "license": "Apache-2.0",
@@ -26,5 +25,20 @@
   },
   "devDependencies": {
     "@hero-cloud/analyzer": "workspace:*"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "types": "dist/index.d.ts"
   }
 }

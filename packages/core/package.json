@@ -1,7 +1,6 @@
 {
   "name": "@hero-cloud/core",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "license": "Apache-2.0",
   "repository": {
@@ -21,5 +20,24 @@
   "dependencies": {
     "@hero-cloud/specification": "workspace:*",
     "@hero-cloud/shared": "workspace:*"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./testing": {
+        "types": "./dist/testing.d.ts",
+        "import": "./dist/testing.js"
+      }
+    },
+    "types": "dist/index.d.ts"
   }
 }

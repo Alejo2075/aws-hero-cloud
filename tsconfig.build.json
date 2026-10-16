@@ -1,0 +1,41 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/shared/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/specification/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/core/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/sources/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/plugin-sdk/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/analyzer/tsconfig.build.json"
+    },
+    {
+      "path": "./plugins/node/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/planner/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/providers/aws/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/presentation/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/local/tsconfig.build.json"
+    },
+    {
+      "path": "./packages/sdk/tsconfig.build.json"
+    }
+  ]
+}
