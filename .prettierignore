@@ -1,0 +1,5 @@
+packages/specification/schema/
+pnpm-lock.yaml
+**/dist/
+**/.astro/
+**/node_modules/
