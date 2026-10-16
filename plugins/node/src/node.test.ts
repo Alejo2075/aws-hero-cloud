@@ -391,3 +391,82 @@ describe('monorepo and unrecognized projects', () => {
     expect(capabilities(a)).toContain('process-service');
   });
 });
+
+describe('vocabulary', () => {
+  it('uses only standard capabilities, evidence kinds, and declared question codes', async () => {
+    const { evidenceKinds, parseEvidence, standardCapabilities } =
+      await import('@hero-cloud/plugin-sdk');
+    const { nodeQuestionCodes } = await import('./index.js');
+    const everything = {
+      'package.json': pkg({
+        name: 'all',
+        engines: { node: '>=20' },
+        workspaces: ['apps/*'],
+        dependencies: {
+          express: '5',
+          'node-cron': '3',
+          pg: '8',
+          mysql2: '3',
+          mongoose: '8',
+          ioredis: '5',
+          meilisearch: '1',
+          '@aws-sdk/client-s3': '3',
+          '@aws-sdk/lib-dynamodb': '3',
+          multer: '2',
+          passport: '0.7',
+          'better-sqlite3': '11',
+          typeorm: '0.3',
+        },
+        devDependencies: { vite: '7', react: '19' },
+        scripts: { build: 'x', start: 'y' },
+      }),
+      'index.html': '<p>x</p>',
+      'hero.yaml': "version: '1'\napplication:\n  name: x\n",
+      '.env.example': 'A_VAR=\n',
+      'a.js': 'fs.writeFile("x", y); app.listen(3000)',
+      'apps/a/package.json': '{}',
+      'apps/b/package.json': '{}',
+    };
+    const analysis = await analyze(everything);
+    for (const detection of analysis.detections) {
+      expect(standardCapabilities, detection.capability).toContain(detection.capability);
+      for (const evidence of detection.evidence) {
+        expect(evidenceKinds, evidence).toContain(parseEvidence(evidence).kind);
+      }
+    }
+    const declared = new Set<string>(nodeQuestionCodes);
+    const analyzerOwned = new Set([
+      'detector.failed',
+      'merge.conflict',
+      'repository-spec.invalid',
+      'repository-spec.unverified',
+    ]);
+    for (const question of analysis.openQuestions) {
+      expect(declared.has(question.code) || analyzerOwned.has(question.code), question.code).toBe(
+        true,
+      );
+    }
+  });
+});
+
+describe('hostile package.json values never reach results', () => {
+  it('leaves out version ranges that are not plain ranges', async () => {
+    const a = await analyze({
+      'package.json': pkg({
+        dependencies: { express: '^5\u001b]0;pwned\u0007', pg: 'http://evil.example/x.tgz' },
+        scripts: { start: 'node .' },
+      }),
+    });
+    const evidence = a.detections.flatMap((d) => d.evidence).join('\n');
+    expect(evidence).toContain('dependency:express');
+    expect(evidence).not.toContain('\u001b');
+    expect(evidence).not.toContain('pwned');
+    expect(evidence).not.toContain('evil.example');
+    expect(evidence).toContain('dependency:pg');
+  });
+
+  it('does not echo a name with control characters into the application name', async () => {
+    const a = await analyze({ 'package.json': pkg({ name: '\u001b[31mred\u001b[0m' }) });
+    expect(a.spec.application.name).not.toContain('\u001b');
+  });
+});

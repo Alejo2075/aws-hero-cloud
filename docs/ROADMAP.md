@@ -88,12 +88,12 @@ Fix the design problems in the contracts before anything depends on them.
 
 ### Phase 4: Presentation and first CLI (M) → 0.1
 
-- [ ] `presentation`: presenter, message catalogs (English and Spanish), `simple`, `guided`, `expert`, fallback rules, a renderer-neutral `View`.
-- [ ] A check that fails CI when any code lacks a message for one of the three levels.
-- [ ] CLI: `hero-cloud analyze` with `--level`, `--locale`, `--json`; terminal renderer.
-- [ ] Snapshot tests for every example at every level and locale.
+- [x] `presentation`: presenter, message catalogs (English and Spanish), `simple`, `guided`, `expert`, fallback rules, a renderer-neutral `View`.
+- [x] A check that fails CI when any code lacks a message for one of the three levels.
+- [x] CLI: `hero-cloud analyze` with `--level`, `--locale`, `--json`; terminal renderer.
+- [x] Snapshot tests for every example at every level and locale.
 
-**Done when:** `hero-cloud analyze` on each example reads well at all three levels in both languages. **Release 0.1.**
+**Done when:** `hero-cloud analyze` on each example reads well at all three levels in both languages (checked by running the real bundled binary on every example, level, and language). **Release 0.1.**
 
 ### Phase 5: Planner for static and serverless (M) → 0.2
 

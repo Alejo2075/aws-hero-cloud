@@ -73,7 +73,11 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
     '@hero-cloud/provider-ai',
     '@hero-cloud/shared',
   ],
-  '@hero-cloud/presentation': ['@hero-cloud/core', '@hero-cloud/shared'],
+  '@hero-cloud/presentation': [
+    '@hero-cloud/core',
+    '@hero-cloud/shared',
+    '@hero-cloud/specification',
+  ],
   '@hero-cloud/local': ['@hero-cloud/core', '@hero-cloud/presentation', '@hero-cloud/shared'],
   '@hero-cloud/server': [
     '@hero-cloud/sdk',

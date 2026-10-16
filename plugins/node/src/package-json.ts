@@ -89,6 +89,18 @@ export function startCommand(manager: PackageManager): string {
   return `${manager} start`;
 }
 
+/** Version ranges such as `^5.0.0`, `~1.2`, `>=3 <4`, or `latest`. Anything else is not echoed. */
+const SAFE_RANGE = /^[A-Za-z0-9.^~<>=*|+\- ]{1,40}$/;
+
+/**
+ * Evidence names where something was seen, for example `dependency:express@^5.0.0`. The name and
+ * version come from an untrusted `package.json`, so a value that is not plainly a name or a range
+ * is left out rather than repeated into results that a terminal or an AI will read.
+ */
 export function dependencyEvidence(info: PackageInfo, name: string): string {
-  return `dependency:${name}${info.versions.has(name) ? `@${info.versions.get(name) ?? ''}` : ''}`;
+  const version = info.versions.get(name);
+  const safeName = /^[@A-Za-z0-9._/-]{1,214}$/.test(name) ? name : 'invalid-name';
+  return version !== undefined && SAFE_RANGE.test(version)
+    ? `dependency:${safeName}@${version}`
+    : `dependency:${safeName}`;
 }

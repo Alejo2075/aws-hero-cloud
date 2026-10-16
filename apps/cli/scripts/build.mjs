@@ -1,0 +1,24 @@
+// Bundles the CLI and the workspace packages it uses into one runnable file.
+import { chmod, mkdir, readFile } from 'node:fs/promises';
+import { build } from 'esbuild';
+
+const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+await mkdir(new URL('../dist/', import.meta.url), { recursive: true });
+const outfile = new URL('../dist/hero-cloud.js', import.meta.url).pathname;
+
+await build({
+  entryPoints: [new URL('../src/bin.ts', import.meta.url).pathname],
+  outfile,
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node22',
+  // Some bundled dependencies are CommonJS and call require().
+  banner: {
+    js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);",
+  },
+  define: { __HERO_VERSION__: JSON.stringify(version) },
+  legalComments: 'none',
+  logLevel: 'warning',
+});
+await chmod(outfile, 0o755);

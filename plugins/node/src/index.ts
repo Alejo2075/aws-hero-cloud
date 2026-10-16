@@ -11,6 +11,20 @@ import { staticSiteDetector } from './detectors/static-site.js';
 import { storageDetector } from './detectors/storage.js';
 import { unrecognizedDetector } from './detectors/unrecognized.js';
 
+/** Question codes the Node detectors can raise. Each needs a message at every audience level. */
+export const nodeQuestionCodes = [
+  'frontend.build-missing',
+  'service.start-unknown',
+  'service.port-unknown',
+  'scheduled.inside-server',
+  'data.sqlite-persistence',
+  'data.engine-unknown',
+  'storage.uploads',
+  'storage.writes-to-disk',
+  'monorepo.choose-package',
+  'app.not-recognized',
+] as const;
+
 /** Official detectors for JavaScript and TypeScript projects. */
 export const nodePlugin = definePlugin({
   id: 'node',

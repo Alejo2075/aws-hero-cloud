@@ -40,3 +40,5 @@ export type {
   StateStore,
 } from '@hero-cloud/core';
 export type { HeroSpec } from '@hero-cloud/specification';
+export { parseHeroSpec, serializeHeroSpec, validateHeroSpec } from '@hero-cloud/specification';
+export type { ParseResult, SpecIssue } from '@hero-cloud/specification';

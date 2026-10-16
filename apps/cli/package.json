@@ -10,7 +10,18 @@
     "directory": "apps/cli"
   },
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "tsc --noEmit && node scripts/build.mjs",
     "typecheck": "tsc --noEmit"
+  },
+  "bin": {
+    "hero-cloud": "./dist/hero-cloud.js"
+  },
+  "description": "The hero-cloud command line: put any application on your own AWS account.",
+  "dependencies": {
+    "@hero-cloud/presentation": "workspace:*",
+    "@hero-cloud/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

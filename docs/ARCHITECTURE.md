@@ -249,7 +249,8 @@ Plan / Result / Health  (codes + parameters + evidence)
   Renderer: terminal │ Studio │ Markdown │ chat reply
 ```
 
-- Producers emit **codes**, never sentences. `presentation` maps codes to text per level and locale.
+- Producers emit **codes**, never sentences. `presentation` maps codes to text per level and locale. A code is a message key: `error.<code>`, `question.<code>`, `capability.<name>`, `evidence.<kind>`, with `evidence.<kind>.<value>` for specific pieces of evidence.
+- **Completeness is enforced.** Producers publish their codes (`errorCodes`, the question codes of the analyzer and of each plugin, the standard capabilities, the evidence kinds). `tests/messages.test.ts` fails the build if any code lacks a message at any of the three levels in any shipped locale, and if a catalog still holds a message for a code that no longer exists. The catalogs must define the same codes and the same placeholders in every language.
 - A new rationale, warning, event, or check code ships with messages for all three levels in the same change.
 - Costs, destructive changes, warnings, required inputs, approval, and the limits of the checks appear at every level. Hiding them to look simpler is a bug.
 - Adding a language is a message catalog, not a code change. Output is deterministic and snapshot-tested.
@@ -268,7 +269,9 @@ Doors parse input, call the SDK, and render through `presentation`. They add no 
 | MCP server   | Tools: `hero_analyze`, `hero_plan`, `hero_explain`, `hero_request_deploy`, `hero_outputs`, `hero_health`, `hero_plan_destroy`. **No approve tool.**        |
 | Later        | Editor extension, CI action (plan on PR, deploy behind an environment approval), desktop wrapper for people who avoid terminals.                           |
 
-**CLI.** Commands: `hero-cloud init`, `analyze`, `plan`, `deploy`, `health`, `outputs`, `destroy`, and later `validate`, `diff`, `doctor`, `plugins`. Every command accepts `--level simple|guided|expert`, `--locale`, and `--json`.
+**CLI.** The binary is `hero-cloud`. Today it has `analyze <folder | .zip | https:// repository>`; `plan`, `deploy`, `health`, `outputs`, and `destroy` arrive with their phases, and later `validate`, `diff`, `doctor`, `plugins`. Every command accepts `--level simple|guided|expert` (or `HERO_LEVEL`), `--locale` (or the system language), and `--json`, which prints a stable, versioned document (`schema: 1`) to stdout. Results go to stdout; progress and errors go to stderr; exit code 0 is success, 1 is a failure, 2 is a mistake in the command line. Usage errors still honour the requested level and language. Technical detail (`HERO_DEBUG=1`) is opt-in, and an error's cause is never printed because it may hold secrets.
+
+**Terminal safety.** Text that comes from the analyzed project (dependency names, paths, spec values) is untrusted, and printed raw it could carry escape sequences that rewrite the screen or write to the clipboard. The CLI replaces control characters before printing, and the Node detectors do not echo version ranges that are not plainly ranges.
 
 ```text
 $ hero-cloud analyze ./my-app

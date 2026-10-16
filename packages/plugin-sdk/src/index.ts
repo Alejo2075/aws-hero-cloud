@@ -7,6 +7,55 @@ import type { DataSpec, FrontendSpec, ServiceSpec, StorageSpec } from '@hero-clo
  * executes the project and never names cloud resources.
  */
 
+/**
+ * The provider-neutral vocabulary of things an application can need. Detectors report these names,
+ * the planner reads them, and every one has a message at each audience level. Adding one means
+ * adding its messages in the same change.
+ */
+export const standardCapabilities = [
+  'web-frontend',
+  'http-service',
+  'scheduled-job',
+  'process-service',
+  'relational-data',
+  'key-value-data',
+  'document-data',
+  'cache',
+  'search',
+  'object-storage',
+  'file-uploads',
+  'file-system-write',
+  'authentication',
+  'environment-variables',
+  'node-runtime',
+  'monorepo',
+  'declared-spec',
+] as const;
+
+export type StandardCapability = (typeof standardCapabilities)[number];
+
+/** The kinds of reference an evidence string can start with, as in `dependency:express`. */
+export const evidenceKinds = [
+  'dependency',
+  'file',
+  'script',
+  'field',
+  'config',
+  'source',
+  'absent',
+  'default',
+] as const;
+
+export type EvidenceKind = (typeof evidenceKinds)[number];
+
+/** Splits an evidence string such as `dependency:express@^5` into its kind and value. */
+export function parseEvidence(evidence: string): { kind: string; value: string } {
+  const index = evidence.indexOf(':');
+  return index === -1
+    ? { kind: 'unknown', value: evidence }
+    : { kind: evidence.slice(0, index), value: evidence.slice(index + 1) };
+}
+
 /** A read-only view of the project handed to every detector. */
 export interface DetectionContext {
   /** Every file in scope, sorted by path. Paths are relative and use `/`. */
