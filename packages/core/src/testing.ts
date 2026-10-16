@@ -7,8 +7,11 @@ import { computeSnapshotHash } from './snapshot.js';
 /** A minimal valid plan body, shared by tests across packages. */
 export function samplePlanBody(overrides: Partial<PlanBody> = {}): PlanBody {
   return {
+    application: 'store',
     specVersion: '1',
+    sourceHash: 'b'.repeat(64),
     strategy: 'static',
+    strategyRationale: [{ code: 'strategy.static' }],
     target: { provider: 'aws', region: 'us-east-1', accountId: '123456789012' },
     changes: [
       {

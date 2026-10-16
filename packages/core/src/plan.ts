@@ -38,12 +38,30 @@ export interface PlanWarning {
   readonly params?: Readonly<Record<string, string | number | boolean>>;
 }
 
+/** One item in a cost estimate, such as API requests or database reads. */
+export interface CostLine {
+  /** Names the item; its words live in `presentation` under `cost.line.<code>`. */
+  readonly code: string;
+  readonly monthlyLow: number;
+  readonly monthlyHigh: number;
+}
+
+/**
+ * A monthly cost range, never a single promise. `monthlyLow` is a nearly idle application and
+ * `monthlyHigh` a busy small one; the assumptions behind both are listed as codes with parameters.
+ */
 export interface CostEstimate {
   readonly currency: 'USD';
   readonly monthlyLow: number;
   readonly monthlyHigh: number;
+  /** Usage is always a guess, so this is `medium` at best, and `low` when prices were not fresh. */
   readonly confidence: 'low' | 'medium' | 'high';
-  readonly assumptions: readonly string[];
+  readonly lines: readonly CostLine[];
+  readonly assumptions: readonly Rationale[];
+  /** Where unit prices came from: fetched now, cached, or built into Hero. */
+  readonly priceSource: 'live' | 'cache' | 'built-in';
+  /** The date the prices were published, as `YYYY-MM-DD`. */
+  readonly pricesAsOf: string;
 }
 
 /** Something the user must supply before deploying. Values are never stored in the plan. */
@@ -62,8 +80,17 @@ export interface DeploymentTarget {
 
 /** Everything in a plan except what is derived from it. */
 export interface PlanBody {
+  /** The application's name, so every view of the plan can say what it is for. */
+  readonly application: string;
   readonly specVersion: string;
+  /**
+   * Hash of the source snapshot that was analyzed. Anything built later must come from a source
+   * with this same hash, so what is approved is what was reviewed.
+   */
+  readonly sourceHash: string;
   readonly strategy: DeploymentStrategy;
+  /** Why this strategy and not a lower one, so every audience level can explain the choice. */
+  readonly strategyRationale: readonly Rationale[];
   readonly target: DeploymentTarget;
   readonly changes: readonly PlanChange[];
   readonly warnings: readonly PlanWarning[];
@@ -87,3 +114,21 @@ export interface DeploymentPlan extends PlanBody {
 
 /** What a door needs to name a plan. The engine resolves the real plan from its own store. */
 export type PlanRef = Pick<DeploymentPlan, 'id' | 'digest'>;
+
+/**
+ * Warning codes the planner and providers can raise. Each has a message at every audience level
+ * under `warning.<code>`. A `blocking` warning stops a plan from being approved or deployed.
+ */
+export const planWarningCodes = [
+  'plan.account-unverified',
+  'plan.open-question',
+  'plan.unsupported-capability',
+  'plan.public-exposure',
+  'plan.cost-low-confidence',
+  'plan.ssr-cold-start',
+  'plan.scheduled-inside-server',
+  'plan.secrets-required',
+  'plan.nothing-to-deploy',
+] as const;
+
+export type PlanWarningCode = (typeof planWarningCodes)[number];

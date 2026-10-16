@@ -247,6 +247,36 @@ describe('scheduled', () => {
   });
 });
 
+describe('scheduled: the schedule', () => {
+  const withCode = (code: string) =>
+    analyze({
+      'package.json': pkg({ dependencies: { 'node-cron': '3' }, scripts: { start: 'node .' } }),
+      'job.js': code,
+    });
+
+  it.each([
+    ["cron.schedule('*/5 * * * *', run)", '*/5 * * * *'],
+    ['schedule.scheduleJob("0 9 * * 1", run)', '0 9 * * 1'],
+    ["new CronJob('30   2  * * *', run)", '30 2 * * *'],
+  ])('reads %s', async (code, expected) => {
+    const a = await withCode(code);
+    expect(a.spec.services?.[0]?.schedule).toBe(expected);
+    expect(questionIds(a)).not.toContain('scheduled.schedule-unknown');
+  });
+
+  it.each([
+    'cron.schedule(expression, run)',
+    "cron.schedule('every day', run)",
+    "cron.schedule('0 * * *', run)",
+    "cron.schedule('0 * * * * extra', run)",
+    'cron.schedule(`${minute} * * * *`, run)',
+  ])('does not guess from %s, and asks instead', async (code) => {
+    const a = await withCode(code);
+    expect(a.spec.services?.[0]?.schedule).toBeUndefined();
+    expect(questionIds(a)).toContain('scheduled.schedule-unknown');
+  });
+});
+
 describe('data', () => {
   it.each([
     [{ '@aws-sdk/lib-dynamodb': '3' }, { id: 'kv', type: 'key-value' }],

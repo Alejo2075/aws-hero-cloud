@@ -4,6 +4,7 @@ export * from './errors.js';
 export * from './events.js';
 export * from './hero.js';
 export * from './plan.js';
+export * from './provider.js';
 export * from './ports.js';
 export * from './result.js';
 export * from './snapshot.js';

@@ -3,7 +3,7 @@ import { audienceLevels } from '@hero-cloud/presentation';
 import { HeroError } from '@hero-cloud/sdk';
 import type { AudienceLevel } from '@hero-cloud/presentation';
 
-export type Command = 'analyze' | 'help' | 'version';
+export type Command = 'analyze' | 'plan' | 'help' | 'version';
 
 export interface ParsedArguments {
   readonly command: Command;
@@ -17,6 +17,11 @@ export interface ParsedArguments {
   readonly root: string | undefined;
   readonly name: string | undefined;
   readonly specFile: string | undefined;
+  readonly region: string | undefined;
+  readonly accountId: string | undefined;
+  readonly offline: boolean;
+  /** Answers to open questions, keyed by question id. */
+  readonly answers: Readonly<Record<string, string>>;
 }
 
 /** A mistake in the command line. Carries the stable code `usage`, so it has a localized message. */
@@ -31,6 +36,22 @@ export function localeFromEnvironment(env: Readonly<Record<string, string | unde
   const raw = env.HERO_LOCALE ?? env.LC_ALL ?? env.LC_MESSAGES ?? env.LANG ?? '';
   const language = raw.split('.')[0]?.replace('_', '-') ?? '';
   return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(language) ? language : 'en';
+}
+
+/** `--answer service.port-unknown=4000` becomes `{ 'service.port-unknown': '4000' }`. */
+function parseAnswers(entries: readonly string[]): Record<string, string> {
+  const answers: Record<string, string> = {};
+  for (const entry of entries) {
+    const index = entry.indexOf('=');
+    const id = index === -1 ? '' : entry.slice(0, index);
+    const value = index === -1 ? '' : entry.slice(index + 1);
+    if (!/^[a-z][a-z0-9.-]{0,80}$/.test(id) || value.length > 500) {
+      throw usageError('--answer must look like question-id=answer');
+    }
+    if (id in answers) throw usageError(`--answer ${id} was given twice`);
+    answers[id] = value;
+  }
+  return answers;
 }
 
 function isLevel(value: string): value is AudienceLevel {
@@ -87,6 +108,10 @@ export function parseArguments(
         root: { type: 'string' },
         name: { type: 'string' },
         spec: { type: 'string' },
+        region: { type: 'string' },
+        'account-id': { type: 'string' },
+        offline: { type: 'boolean' },
+        answer: { type: 'string', multiple: true },
         help: { type: 'boolean', short: 'h' },
         version: { type: 'boolean', short: 'v' },
       },
@@ -122,18 +147,22 @@ export function parseArguments(
     root: values.root,
     name: values.name,
     specFile: values.spec,
+    region: values.region,
+    accountId: values['account-id'],
+    offline: values.offline === true,
+    answers: parseAnswers(values.answer ?? []),
   } as const;
 
   if (values.version === true || first === 'version') return { ...base, command: 'version' };
   if (values.help === true || first === 'help' || first === undefined) {
     return { ...base, command: 'help' };
   }
-  if (first !== 'analyze') throw usageError(`unknown command "${first}"`);
+  if (first !== 'analyze' && first !== 'plan') throw usageError(`unknown command "${first}"`);
   if (rest.length !== 1)
     throw usageError(
-      'analyze needs exactly one source: a folder, a .zip file, or an https:// repository',
+      `${first} needs exactly one source: a folder, a .zip file, or an https:// repository`,
     );
-  return { ...base, command: 'analyze', source: rest[0], kind: kind as ParsedArguments['kind'] };
+  return { ...base, command: first, source: rest[0], kind: kind as ParsedArguments['kind'] };
 }
 
 /** Decides what kind of source an argument is. */

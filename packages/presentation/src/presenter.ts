@@ -1,8 +1,9 @@
 import { HeroError } from '@hero-cloud/shared';
-import type { Analysis } from '@hero-cloud/core';
+import type { Analysis, DeploymentPlan } from '@hero-cloud/core';
 import { analysisView } from './analysis-view.js';
 import { defaultCatalogs } from './catalogs/index.js';
 import { Messages } from './messages.js';
+import { planView } from './plan-view.js';
 import type { MessageCatalog, MessageParams, RenderOptions, View } from './types.js';
 
 export interface ErrorDescription {
@@ -14,6 +15,7 @@ export interface ErrorDescription {
 
 export interface Presenter {
   analysis(analysis: Analysis, options: RenderOptions): View;
+  plan(plan: DeploymentPlan, options: RenderOptions): View;
   /** Words for any error, including ones that are not Hero's. Never exposes a cause or a stack. */
   describeError(error: unknown, options: RenderOptions): ErrorDescription;
   /** Text for a message code, for interfaces that show their own labels. */
@@ -33,6 +35,7 @@ export function createPresenter(options: PresenterOptions = {}): Presenter {
   );
   return {
     analysis: (analysis, render) => analysisView(analysis, render, messages),
+    plan: (plan, render) => planView(plan, render, messages),
     describeError(error, render) {
       const known = error instanceof HeroError;
       const code = known ? error.code : 'unknown';

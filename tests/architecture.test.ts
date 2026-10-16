@@ -52,7 +52,14 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
     '@hero-cloud/specification',
     '@hero-cloud/shared',
   ],
-  '@hero-cloud/planner': ['@hero-cloud/core', '@hero-cloud/specification', '@hero-cloud/shared'],
+  '@hero-cloud/planner': [
+    '@hero-cloud/core',
+    '@hero-cloud/specification',
+    '@hero-cloud/shared',
+    // development only: planner tests build analyses from real fixtures
+    '@hero-cloud/analyzer',
+    '@hero-cloud/plugin-node',
+  ],
   '@hero-cloud/deployment': ['@hero-cloud/core', '@hero-cloud/shared'],
   '@hero-cloud/provider-aws': [
     '@hero-cloud/core',

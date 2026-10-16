@@ -20,8 +20,10 @@
   "dependencies": {
     "@hero-cloud/analyzer": "workspace:*",
     "@hero-cloud/core": "workspace:*",
+    "@hero-cloud/planner": "workspace:*",
     "@hero-cloud/plugin-node": "workspace:*",
     "@hero-cloud/plugin-sdk": "workspace:*",
+    "@hero-cloud/provider-aws": "workspace:*",
     "@hero-cloud/shared": "workspace:*",
     "@hero-cloud/sources": "workspace:*",
     "@hero-cloud/specification": "workspace:*"

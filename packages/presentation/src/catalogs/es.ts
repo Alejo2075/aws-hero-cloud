@@ -1,10 +1,12 @@
 import type { MessageCatalog } from '../types.js';
+import { esPlan } from './es-plan.js';
 
 const tri = (simple: string, guided: string, expert: string) => ({ simple, guided, expert });
 
 export const es: MessageCatalog = {
   locale: 'es',
   messages: {
+    ...esPlan,
     // ---- etiquetas de las vistas -----------------------------------------------------------
     'view.analysis.title': 'Lo que Hero entendió de {name}',
     'view.section.summary': 'Resumen',
@@ -432,6 +434,7 @@ export const es: MessageCatalog = {
 
 Uso:
   hero-cloud analyze <fuente> [opciones]
+  hero-cloud plan <fuente> [opciones]
 
 <fuente> es una carpeta, un archivo .zip o un repositorio Git https://.
 Hero la lee sin ejecutar nada y te dice qué necesita.
@@ -444,13 +447,20 @@ Opciones:
       --name <nombre>                 Nombre a usar si el proyecto no tiene uno
       --spec <archivo>                Usa un Hero Spec que tú aportas en vez de analizar
       --kind <directory|zip|git>      Fuerza el tipo de fuente
+      --region <región>               Región de AWS para el plan (por defecto: us-east-1)
+      --account-id <12 dígitos>       La cuenta de AWS para la que es el plan
+      --offline                       No usa la red, ni siquiera para precios públicos
+      --answer <pregunta>=<respuesta> Responde una pregunta de Hero (se puede repetir)
       --no-color                      No usa colores
   -h, --help                          Muestra esta ayuda
   -v, --version                       Muestra la versión
 
 Entorno: HERO_LEVEL, HERO_LOCALE, NO_COLOR y HERO_DEBUG=1 (muestra detalles técnicos de errores).
 
-Se están construyendo más comandos (plan, deploy). Consulta docs/ROADMAP.md.`,
+Se están construyendo más comandos (deploy y otros). Consulta docs/ROADMAP.md.`,
+    'cli.hint.answer':
+      'Para responder una pregunta, ejecuta el comando de nuevo con --answer <pregunta>=<respuesta>. Preguntas por responder: {ids}',
+    'cli.progress.plan': 'Planificando...',
     'cli.usage-hint': 'Ejecuta hero-cloud --help para ver cómo usarlo.',
     'cli.progress.load': 'Leyendo tu proyecto...',
     'cli.progress.analyze': 'Averiguando qué necesita...',

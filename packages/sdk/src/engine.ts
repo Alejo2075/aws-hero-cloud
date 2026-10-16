@@ -1,12 +1,19 @@
 import { basename } from 'node:path';
 import { analyzeSnapshot, toApplicationName } from '@hero-cloud/analyzer';
-import { ApprovalService, InMemoryPlanStore, heroError, isSealIntact } from '@hero-cloud/core';
+import {
+  ApprovalService,
+  InMemoryPlanStore,
+  heroError,
+  isSealIntact,
+  sealPlan,
+} from '@hero-cloud/core';
 import type {
   Analysis,
   AnalyzeOptions,
   Approval,
   ApprovalChallenge,
   ChallengeStore,
+  CloudProvider,
   DeploymentPlan,
   DeploymentResult,
   Health,
@@ -15,13 +22,18 @@ import type {
   HeroEventListener,
   HeroPhase,
   HeroPorts,
+  PlanBody,
   PlanOptions,
   PlanRef,
+  PlanWarning,
   SourceLoader,
   SourceRef,
 } from '@hero-cloud/core';
 import { nodePlugin } from '@hero-cloud/plugin-node';
+import { BUDGET_EMAIL_INPUT, planApplication } from '@hero-cloud/planner';
+import { createAwsProvider } from '@hero-cloud/provider-aws';
 import type { DetectorPlugin } from '@hero-cloud/plugin-sdk';
+import { sha256Hex } from '@hero-cloud/shared';
 import { validateHeroSpec } from '@hero-cloud/specification';
 import { DirectorySource, GitSource, ZipSource } from '@hero-cloud/sources';
 import type { SourceLimits } from '@hero-cloud/sources';
@@ -31,9 +43,39 @@ export interface CreateHeroOptions extends HeroPorts {
   readonly detectors?: readonly DetectorPlugin[];
   readonly limits?: SourceLimits;
   readonly challenges?: ChallengeStore;
+  /** Where downloaded public prices are cached. Without one, prices are fetched each time. */
+  readonly cacheDirectory?: string;
   /** How long an approval challenge stays valid, in milliseconds. */
   readonly approvalTtlMs?: number;
   readonly clock?: { now(): Date };
+}
+
+const DEFAULT_REGION = 'us-east-1';
+const REGION = /^[a-z]{2}(?:-[a-z]+)+-\d$/;
+const ACCOUNT_ID = /^\d{12}$/;
+const UNVERIFIED_ACCOUNT = '000000000000';
+const EMPTY_ARTIFACT_HASH = sha256Hex('nothing-to-apply');
+
+/** `hero-` plus the application name, lowercased and made safe for use in resource names. */
+export function deploymentIdFor(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+    .replace(/-+$/g, '');
+  return `hero-${slug === '' ? 'app' : slug}`;
+}
+
+const SEVERITY_ORDER: Readonly<Record<string, number>> = { blocking: 0, warning: 1, info: 2 };
+
+function sortWarnings(warnings: readonly PlanWarning[]): PlanWarning[] {
+  const key = (warning: PlanWarning): string =>
+    `${warning.code}:${JSON.stringify(warning.params ?? {})}`;
+  return [...warnings].sort((a, b) => {
+    const bySeverity = (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9);
+    return bySeverity !== 0 ? bySeverity : key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0;
+  });
 }
 
 /** The engine behind the `Hero` interface. Create it with `createHero`. */
@@ -41,6 +83,7 @@ class HeroEngine implements Hero {
   readonly #loaders: ReadonlyMap<string, SourceLoader>;
   readonly #detectors: readonly DetectorPlugin[];
   readonly #plans;
+  readonly #cloud: CloudProvider;
   readonly #approvals: ApprovalService;
   readonly #listeners = new Set<HeroEventListener>();
   readonly #clock: { now(): Date };
@@ -56,6 +99,11 @@ class HeroEngine implements Hero {
     );
     this.#detectors = options.detectors ?? nodePlugin.detectors;
     this.#plans = options.plans ?? new InMemoryPlanStore();
+    this.#cloud =
+      options.cloud ??
+      createAwsProvider(
+        options.cacheDirectory === undefined ? {} : { cacheDirectory: options.cacheDirectory },
+      );
     this.#clock = options.clock ?? { now: () => new Date() };
     this.#approvals = new ApprovalService({
       ...(options.challenges === undefined ? {} : { store: options.challenges }),
@@ -135,8 +183,60 @@ class HeroEngine implements Hero {
     }
   }
 
-  plan(_analysis: Analysis, _options?: PlanOptions): Promise<DeploymentPlan> {
-    return Promise.reject(heroError('internal.not-implemented', { operation: 'plan' }));
+  async plan(analysis: Analysis, options: PlanOptions = {}): Promise<DeploymentPlan> {
+    const region = options.region ?? DEFAULT_REGION;
+    if (!REGION.test(region)) throw heroError('plan.invalid-answer', { question: 'region' });
+    if (options.accountId !== undefined && !ACCOUNT_ID.test(options.accountId)) {
+      throw heroError('plan.invalid-answer', { question: 'accountId' });
+    }
+
+    return this.#phase('plan', async () => {
+      const planned = planApplication({
+        analysis,
+        ...(options.answers === undefined ? {} : { answers: options.answers }),
+      });
+
+      // Without a verified account the plan is only a preview: it cannot be approved or deployed.
+      const accountId = options.accountId ?? UNVERIFIED_ACCOUNT;
+      const warnings: PlanWarning[] = [...planned.warnings];
+      if (options.accountId === undefined) {
+        warnings.push({ code: 'plan.account-unverified', severity: 'blocking' });
+      }
+
+      const deploymentId = deploymentIdFor(options.name ?? planned.spec.application.name);
+      const described =
+        planned.components.length === 0
+          ? undefined
+          : await this.#cloud.describe({
+              strategy: planned.strategy,
+              components: planned.components,
+              region,
+              accountId,
+              deploymentId,
+              inputs: planned.requiredInputs
+                .filter((input) => input.name !== BUDGET_EMAIL_INPUT)
+                .map((input) => ({ name: input.name, kind: input.kind })),
+              allowNetwork: options.offline !== true,
+            });
+      warnings.push(...(described?.warnings ?? []));
+
+      const body: PlanBody = {
+        application: planned.spec.application.name,
+        specVersion: planned.spec.version,
+        sourceHash: analysis.sourceHash,
+        strategy: planned.strategy,
+        strategyRationale: planned.strategyRationale,
+        target: { provider: this.#cloud.id, region, accountId },
+        changes: described?.changes ?? [],
+        warnings: sortWarnings(warnings),
+        requiredInputs: planned.requiredInputs,
+        ...(described === undefined ? {} : { cost: described.cost }),
+        artifactHash: described?.artifactHash ?? EMPTY_ARTIFACT_HASH,
+      };
+      const plan = sealPlan(body);
+      await this.#plans.put(plan);
+      return plan;
+    });
   }
 
   /** Finds a plan this engine produced. Anything else, or a plan altered since sealing, is refused. */
@@ -148,7 +248,12 @@ class HeroEngine implements Hero {
   }
 
   async requestApproval(plan: PlanRef): Promise<ApprovalChallenge> {
-    return this.#approvals.issue(await this.#resolvePlan(plan));
+    const resolved = await this.#resolvePlan(plan);
+    // A plan with a blocking warning cannot be approved: it would ask a person to agree to
+    // something that Hero already knows it cannot do, or that is missing information.
+    const blocking = resolved.warnings.filter((warning) => warning.severity === 'blocking');
+    if (blocking.length > 0) throw heroError('plan.blocking-warning', { count: blocking.length });
+    return this.#approvals.issue(resolved);
   }
 
   deploy(_plan: PlanRef, _approval: Approval): Promise<DeploymentResult> {

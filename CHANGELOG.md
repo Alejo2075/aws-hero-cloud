@@ -12,6 +12,9 @@ All notable changes to Hero Cloud are documented here. The format follows [Keep 
 - **Engine core**: sealed plans (RFC 8785 digest including the provider artifact hash), single-use approval challenges, ports for AI, state, plans, secrets, and sources, coded errors, and `createHero()`.
 - **Hero Spec v1** as strict Zod schemas with an exported JSON Schema and a safe `hero.yaml` parser.
 - **Presentation**: message catalogs with a build gate that fails when any code lacks a message at any level in any locale.
+- **`hero-cloud plan`**: a reviewable plan at three levels. The planner chooses the lowest strategy that works (static or serverless today), explains why, applies the person's answers with strict validation, and turns anything it cannot do yet into a blocking warning. The AWS provider maps components to resources with safe defaults (private, encrypted, HTTPS-only, least privilege, backups, a budget alert) and estimates cost from public AWS prices, with a cache and a built-in fallback.
+- Plans are bound to the source that was reviewed, and a plan with a blocking warning cannot start an approval.
+- Exit code 3 for a plan that exists but cannot be approved yet.
 - Seven example applications used as regression fixtures.
 - Real tooling: Vitest, strict type-checked ESLint, an architecture test that enforces the package dependency table, CodeQL, dependency review, Scorecard, and actions pinned by commit SHA.
 

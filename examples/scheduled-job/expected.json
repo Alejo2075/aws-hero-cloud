@@ -11,7 +11,8 @@
         "runtime": "nodejs",
         "start": {
           "command": "pnpm start"
-        }
+        },
+        "schedule": "0 * * * *"
       }
     ],
     "environment": ["REPORT_EMAIL"],

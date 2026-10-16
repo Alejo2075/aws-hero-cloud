@@ -1,6 +1,8 @@
 import { analyzerQuestionCodes } from '@hero-cloud/analyzer';
-import { errorCodes } from '@hero-cloud/core';
+import { errorCodes, planWarningCodes } from '@hero-cloud/core';
 import { nodeQuestionCodes } from '@hero-cloud/plugin-node';
+import { plannerRationaleCodes } from '@hero-cloud/planner';
+import { awsCostLineCodes, awsRationaleCodes, awsResourceTypes } from '@hero-cloud/provider-aws';
 import { evidenceKinds, standardCapabilities } from '@hero-cloud/plugin-sdk';
 import { audienceLevels, defaultCatalogs, presentationCodes } from '@hero-cloud/presentation';
 import type { Message } from '@hero-cloud/presentation';
@@ -17,6 +19,11 @@ const REQUIRED: readonly (readonly [string, readonly string[]])[] = [
   ['question.', [...analyzerQuestionCodes, ...nodeQuestionCodes]],
   ['capability.', standardCapabilities],
   ['evidence.', evidenceKinds],
+  ['warning.', planWarningCodes],
+  ['rationale.', [...plannerRationaleCodes, ...awsRationaleCodes]],
+  ['resource.', awsResourceTypes],
+  ['cost.line.', awsCostLineCodes],
+  ['strategy.name.', ['static', 'serverless', 'container', 'virtual-machine']],
 ];
 
 const textAt = (message: Message, level: (typeof audienceLevels)[number]): string =>

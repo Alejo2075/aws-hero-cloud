@@ -91,6 +91,50 @@ describe('the hero-cloud binary', () => {
     }
   }, 120_000);
 
+  it('plans every example offline at every level and language, and never needs credentials', async () => {
+    for (const example of [
+      'static-site',
+      'spa',
+      'spa-api',
+      'api-only',
+      'api-dynamodb',
+      'scheduled-job',
+    ]) {
+      for (const level of ['simple', 'guided', 'expert']) {
+        for (const locale of ['en', 'es']) {
+          const result = await hero(
+            'plan',
+            join(examples, example),
+            '--offline',
+            '--account-id',
+            '123456789012',
+            '--level',
+            level,
+            '--locale',
+            locale,
+          );
+          expect(result.code, `${example} ${level} ${locale}: ${result.stderr}`).toBe(0);
+          expect(result.stderr).toBe('');
+          expect(result.stdout, `${example} ${level} ${locale}`).not.toMatch(
+            /\{[A-Za-z]+\}|\b(?:rationale|warning|resource|capability|question)\.[a-z]/,
+          );
+        }
+      }
+    }
+  }, 180_000);
+
+  it('plans a project whose plan is blocked with exit code 3', async () => {
+    const result = await hero(
+      'plan',
+      join(examples, 'monorepo'),
+      '--offline',
+      '--account-id',
+      '123456789012',
+    );
+    expect(result.code).toBe(3);
+    expect(result.stdout).toContain('Before this can go online');
+  });
+
   it('emits JSON that matches the SDK result', async () => {
     const result = await hero('analyze', join(examples, 'api-dynamodb'), '--json');
     const body = JSON.parse(result.stdout) as {

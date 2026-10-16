@@ -1,10 +1,12 @@
 import type { MessageCatalog } from '../types.js';
+import { enPlan } from './en-plan.js';
 
 const tri = (simple: string, guided: string, expert: string) => ({ simple, guided, expert });
 
 export const en: MessageCatalog = {
   locale: 'en',
   messages: {
+    ...enPlan,
     // ---- view labels -----------------------------------------------------------------------
     'view.analysis.title': 'What Hero understood about {name}',
     'view.section.summary': 'Summary',
@@ -400,6 +402,7 @@ export const en: MessageCatalog = {
 
 Usage:
   hero-cloud analyze <source> [options]
+  hero-cloud plan <source> [options]
 
 <source> is a folder, a .zip file, or an https:// Git repository.
 Hero reads it without running anything and tells you what it needs.
@@ -412,13 +415,20 @@ Options:
       --name <name>                   Name to use if the project has none
       --spec <file>                   Use a Hero Spec you provide instead of analyzing
       --kind <directory|zip|git>      Force the kind of source
+      --region <region>               AWS region for the plan (default: us-east-1)
+      --account-id <12 digits>        The AWS account the plan is for
+      --offline                       Never use the network, not even for public prices
+      --answer <question>=<answer>    Answer a question Hero asked (can be repeated)
       --no-color                      Do not use colors
   -h, --help                          Show this help
   -v, --version                       Show the version
 
 Environment: HERO_LEVEL, HERO_LOCALE, NO_COLOR, and HERO_DEBUG=1 (shows technical error details).
 
-More commands (plan, deploy) are being built. See docs/ROADMAP.md.`,
+More commands (deploy and others) are being built. See docs/ROADMAP.md.`,
+    'cli.hint.answer':
+      'To answer a question, run the command again with --answer <question>=<answer>. Questions to answer: {ids}',
+    'cli.progress.plan': 'Planning...',
     'cli.usage-hint': 'Run hero-cloud --help to see how to use it.',
     'cli.progress.load': 'Reading your project...',
     'cli.progress.analyze': 'Working out what it needs...',

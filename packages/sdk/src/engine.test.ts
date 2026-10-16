@@ -222,8 +222,6 @@ describe('createHero().requestApproval', () => {
 describe('operations that arrive in later phases', () => {
   it('fail with an explicit coded error instead of pretending', async () => {
     const hero = createHero();
-    const analysis = await hero.analyze({ kind: 'directory', location: await project() });
-    await expect(hero.plan(analysis)).rejects.toMatchObject({ code: 'internal.not-implemented' });
     await expect(hero.planDestroy('d')).rejects.toMatchObject({ code: 'internal.not-implemented' });
     await expect(hero.outputs('d')).rejects.toMatchObject({ code: 'internal.not-implemented' });
     await expect(hero.health('d')).rejects.toMatchObject({ code: 'internal.not-implemented' });

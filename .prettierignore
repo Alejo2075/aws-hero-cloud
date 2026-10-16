@@ -3,3 +3,4 @@ pnpm-lock.yaml
 **/dist/
 **/.astro/
 **/node_modules/
+packages/providers/aws/test-fixtures/

@@ -97,11 +97,11 @@ Fix the design problems in the contracts before anything depends on them.
 
 ### Phase 5: Planner for static and serverless (M) → 0.2
 
-- [ ] Strategy selection (`static`, `serverless`) with rationale codes and evidence.
-- [ ] Provider-neutral components → AWS mapping interface (implemented in Phase 6).
-- [ ] Required inputs, warnings, blocking open questions; deterministic output.
-- [ ] Cost model: AWS Price List data cached locally with fallback tables, confidence, and assumptions (D14).
-- [ ] `hero-cloud plan`, rendered at three levels.
+- [x] Strategy selection (`static`, `serverless`) with rationale codes and evidence.
+- [x] Provider-neutral components → AWS mapping interface (implemented in Phase 6).
+- [x] Required inputs, warnings, blocking open questions; deterministic output.
+- [x] Cost model: public AWS Price List data (no credentials needed) cached locally, with built-in fallback prices, confidence, and assumptions (D14).
+- [x] `hero-cloud plan`, rendered at three levels.
 
 **Done when:** each example yields a stable plan and cost estimate, and identical inputs give an identical digest. **Release 0.2.**
 

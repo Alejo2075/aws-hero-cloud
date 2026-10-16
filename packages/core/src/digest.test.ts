@@ -20,7 +20,10 @@ describe('sealPlan', () => {
       changes: body.changes,
       target: { accountId: body.target.accountId, region: body.target.region, provider: 'aws' },
       strategy: body.strategy,
+      strategyRationale: body.strategyRationale,
       specVersion: body.specVersion,
+      application: body.application,
+      sourceHash: body.sourceHash,
     };
     expect(computePlanDigest(shuffled)).toBe(computePlanDigest(body));
   });
@@ -39,7 +42,12 @@ describe('sealPlan', () => {
         target: { provider: 'aws', region: 'eu-west-1', accountId: '123456789012' },
       }),
     ],
+    ['the source that was reviewed', samplePlanBody({ sourceHash: 'c'.repeat(64) })],
     ['the strategy', samplePlanBody({ strategy: 'serverless' })],
+    [
+      'the reason for the strategy',
+      samplePlanBody({ strategyRationale: [{ code: 'strategy.serverless' }] }),
+    ],
     ['the changes', samplePlanBody({ changes: [] })],
     ['a warning', samplePlanBody({ warnings: [{ code: 'public-exposure', severity: 'warning' }] })],
   ])('changes the digest when %s changes', (_label, other) => {

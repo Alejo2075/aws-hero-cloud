@@ -12,6 +12,8 @@ const APP_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,62}$/;
 const ENV_NAME = /^[A-Z][A-Z0-9_]{0,127}$/;
 const RELATIVE_PATH = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._@/+-]{1,200}$/;
 // A path, never a URL: no scheme, no host, no query, no fragment, no backslashes.
+// Five space-separated cron fields made of digits and the characters `* , - /`.
+const CRON = /^(?:[0-9*,/-]{1,40}\s+){4}[0-9*,/-]{1,40}$/;
 const HEALTH_PATH = /^\/(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._~!$&'()*+,;=:@/%-]{0,199}$/;
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
@@ -51,6 +53,7 @@ const service = z.strictObject({
   start: commandSpec.optional(),
   port: z.number().int().min(1).max(65535).optional(),
   healthPath: z.string().regex(HEALTH_PATH, 'spec.invalid-health-path').optional(),
+  schedule: z.string().regex(CRON, 'spec.invalid-schedule').optional(),
 });
 
 const data = z.strictObject({

@@ -30,6 +30,7 @@ export const standardCapabilities = [
   'node-runtime',
   'monorepo',
   'declared-spec',
+  'cost-control',
 ] as const;
 
 export type StandardCapability = (typeof standardCapabilities)[number];
@@ -44,6 +45,7 @@ export const evidenceKinds = [
   'source',
   'absent',
   'default',
+  'capability',
 ] as const;
 
 export type EvidenceKind = (typeof evidenceKinds)[number];

@@ -21,12 +21,14 @@ export interface CliIo {
 }
 
 const JSON_SCHEMA_VERSION = 1;
+/** The plan was made but has a blocking issue, so it cannot be approved yet. */
+const EXIT_BLOCKED = 3;
 const presenter = createPresenter();
 
 function progressCode(event: HeroEvent): string | undefined {
   return event.type === 'phase' &&
     event.status === 'started' &&
-    (event.phase === 'load' || event.phase === 'analyze')
+    (event.phase === 'load' || event.phase === 'analyze' || event.phase === 'plan')
     ? `cli.progress.${event.phase}`
     : undefined;
 }
@@ -107,15 +109,43 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
       },
     );
 
-    if (args.json) {
-      const body = { schema: JSON_SCHEMA_VERSION, command: 'analyze', analysis };
-      io.stdout.write(`${JSON.stringify(body, null, 2)}\n`);
-      return 0;
-    }
     const color = args.color ?? (io.stdoutIsTTY && io.env.TERM !== 'dumb');
     const width = Math.min(Math.max(io.columns ?? 80, 40), 120);
-    io.stdout.write(renderText(presenter.analysis(analysis, render), { color, width }));
-    return 0;
+
+    if (args.command === 'analyze') {
+      if (args.json) {
+        const body = { schema: JSON_SCHEMA_VERSION, command: 'analyze', analysis };
+        io.stdout.write(`${JSON.stringify(body, null, 2)}\n`);
+        return 0;
+      }
+      io.stdout.write(renderText(presenter.analysis(analysis, render), { color, width }));
+      return 0;
+    }
+
+    const plan = await hero.plan(analysis, {
+      answers: args.answers,
+      offline: args.offline,
+      ...(args.region === undefined ? {} : { region: args.region }),
+      ...(args.accountId === undefined ? {} : { accountId: args.accountId }),
+      ...(args.name === undefined ? {} : { name: args.name }),
+    });
+    const blocked = plan.warnings.some((warning) => warning.severity === 'blocking');
+    if (args.json) {
+      const body = { schema: JSON_SCHEMA_VERSION, command: 'plan', analysis, plan };
+      io.stdout.write(`${JSON.stringify(body, null, 2)}\n`);
+      return blocked ? EXIT_BLOCKED : 0;
+    }
+    io.stdout.write(renderText(presenter.plan(plan, render), { color, width }));
+    const questions = plan.warnings
+      .filter((warning) => warning.code === 'plan.open-question')
+      .map((warning) => String(warning.params?.question ?? ''))
+      .filter((id) => id !== '');
+    if (questions.length > 0) {
+      io.stdout.write(
+        `\n${presenter.text('cli.hint.answer', render, { ids: questions.join(', ') })}\n`,
+      );
+    }
+    return blocked ? EXIT_BLOCKED : 0;
   } catch (error) {
     return fail(error);
   }

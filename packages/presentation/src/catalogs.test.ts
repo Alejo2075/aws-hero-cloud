@@ -6,7 +6,9 @@ import type { Message } from './types.js';
 
 /** Codes whose message is intentionally empty at some level (evidence is hidden from beginners). */
 const MAY_BE_EMPTY = (code: string): boolean =>
-  code.startsWith('evidence.') || code === 'view.analysis.ai';
+  code.startsWith('evidence.') ||
+  code === 'view.analysis.ai' ||
+  code === 'view.plan.cost.confidence';
 
 /** Codes that the simple view never renders. */
 const EXPERT_OR_GUIDED_ONLY = [

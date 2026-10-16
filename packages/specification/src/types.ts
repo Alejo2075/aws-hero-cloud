@@ -33,6 +33,8 @@ export interface ServiceSpec {
   readonly port?: number;
   /** Path Hero requests as a smoke check after deployment, e.g. `/health`. A path, never a URL. */
   readonly healthPath?: string;
+  /** When a `scheduled` service runs, as a five-field cron expression such as `0 * * * *`. */
+  readonly schedule?: string;
 }
 
 export type DataKind = 'key-value' | 'document' | 'relational' | 'cache' | 'search';

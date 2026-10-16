@@ -55,6 +55,15 @@ export interface AnalyzeOptions {
 
 export interface PlanOptions {
   readonly region?: string;
+  /**
+   * The AWS account the plan is for. Normally the engine asks the provider who you are; without
+   * an account the plan is a preview and carries a blocking warning, so it cannot be approved.
+   */
+  readonly accountId?: string;
+  /** Names the deployment. Defaults to the application name. */
+  readonly name?: string;
+  /** Never contact the network, not even for public prices. */
+  readonly offline?: boolean;
   /** Answers to `Analysis.openQuestions`, keyed by question id. */
   readonly answers?: Readonly<Record<string, string>>;
 }

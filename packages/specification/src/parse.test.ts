@@ -139,6 +139,24 @@ storage:
       expect(parseHeroSpec(base(`port: ${port}`)).ok).toBe(false);
     });
 
+    it.each(['0 * * * *', '*/5 * * * *', '0 9 * * 1-5', '15,45 * * * *'])(
+      'accepts the schedule %s',
+      (schedule) => {
+        expect(parseHeroSpec(base(`schedule: '${schedule}'`)).ok).toBe(true);
+      },
+    );
+
+    it.each([
+      'every day',
+      '0 * * *',
+      '0 * * * * *',
+      '0 * * * *; rm -rf /',
+      '@daily',
+      '$(whoami) * * * *',
+    ])('refuses the schedule %s', (schedule) => {
+      expect(parseHeroSpec(base(`schedule: '${schedule}'`)).ok).toBe(false);
+    });
+
     it('refuses commands with control characters', () => {
       const text = `version: '1'\napplication:\n  name: x\nfrontend:\n  framework: vite\n  build:\n    command: "npm run build\\nrm -rf /"\n    output: dist\n`;
       expect(parseHeroSpec(text).ok).toBe(false);

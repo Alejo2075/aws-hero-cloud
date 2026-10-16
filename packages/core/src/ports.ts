@@ -1,4 +1,5 @@
 import type { SourceRef } from './hero.js';
+import type { CloudProvider } from './provider.js';
 import type { DeploymentPlan, Rationale } from './plan.js';
 
 /**
@@ -45,6 +46,7 @@ export interface Logger {
  * defaults, none of which contact a Hero service.
  */
 export interface HeroPorts {
+  readonly cloud?: CloudProvider;
   readonly ai?: AIProvider;
   readonly state?: StateStore;
   readonly logger?: Logger;

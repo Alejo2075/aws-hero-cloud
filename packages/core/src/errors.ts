@@ -15,6 +15,8 @@ export const errorCodes = [
   'plan.unknown',
   'plan.tampered',
   'plan.blocking-warning',
+  'plan.invalid-answer',
+  'plan.no-provider',
   'plan.missing-input',
   'identity.root-refused',
   'identity.unknown',

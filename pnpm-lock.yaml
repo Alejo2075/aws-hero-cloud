@@ -19,6 +19,9 @@ importers:
       '@hero-cloud/core':
         specifier: workspace:*
         version: link:packages/core
+      '@hero-cloud/planner':
+        specifier: workspace:*
+        version: link:packages/planner
       '@hero-cloud/plugin-node':
         specifier: workspace:*
         version: link:plugins/node
@@ -28,6 +31,9 @@ importers:
       '@hero-cloud/presentation':
         specifier: workspace:*
         version: link:packages/presentation
+      '@hero-cloud/provider-aws':
+        specifier: workspace:*
+        version: link:packages/providers/aws
       '@hero-cloud/sdk':
         specifier: workspace:*
         version: link:packages/sdk
@@ -169,7 +175,24 @@ importers:
 
   packages/mcp: {}
 
-  packages/planner: {}
+  packages/planner:
+    dependencies:
+      '@hero-cloud/core':
+        specifier: workspace:*
+        version: link:../core
+      '@hero-cloud/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@hero-cloud/specification':
+        specifier: workspace:*
+        version: link:../specification
+    devDependencies:
+      '@hero-cloud/analyzer':
+        specifier: workspace:*
+        version: link:../analyzer
+      '@hero-cloud/plugin-node':
+        specifier: workspace:*
+        version: link:../../plugins/node
 
   packages/plugin-sdk:
     dependencies:
@@ -194,7 +217,17 @@ importers:
 
   packages/providers/ai: {}
 
-  packages/providers/aws: {}
+  packages/providers/aws:
+    dependencies:
+      '@hero-cloud/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@hero-cloud/shared':
+        specifier: workspace:*
+        version: link:../../shared
+      '@hero-cloud/specification':
+        specifier: workspace:*
+        version: link:../../specification
 
   packages/sdk:
     dependencies:
@@ -204,12 +237,18 @@ importers:
       '@hero-cloud/core':
         specifier: workspace:*
         version: link:../core
+      '@hero-cloud/planner':
+        specifier: workspace:*
+        version: link:../planner
       '@hero-cloud/plugin-node':
         specifier: workspace:*
         version: link:../../plugins/node
       '@hero-cloud/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk
+      '@hero-cloud/provider-aws':
+        specifier: workspace:*
+        version: link:../providers/aws
       '@hero-cloud/shared':
         specifier: workspace:*
         version: link:../shared

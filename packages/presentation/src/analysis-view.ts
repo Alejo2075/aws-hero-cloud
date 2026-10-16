@@ -75,16 +75,22 @@ export function componentsOf(spec: HeroSpec): Component[] {
   return components;
 }
 
-function evidencePhrase(
+/**
+ * Words for one piece of evidence such as `dependency:express`. A `capability:` reference names a
+ * need, which `nameCapability` turns into words for the reader.
+ */
+export function evidencePhrase(
   messages: Messages,
   evidence: string,
   level: AudienceLevel,
   locale: string,
+  nameCapability?: (capability: string) => string,
 ): string {
   const index = evidence.indexOf(':');
   const kind = index === -1 ? 'unknown' : evidence.slice(0, index);
-  const value = index === -1 ? evidence : evidence.slice(index + 1);
-  const specific = `evidence.${kind}.${value}`;
+  const raw = index === -1 ? evidence : evidence.slice(index + 1);
+  const value = kind === 'capability' && nameCapability !== undefined ? nameCapability(raw) : raw;
+  const specific = `evidence.${kind}.${raw}`;
   const code = messages.has(specific, 'en')
     ? specific
     : messages.has(`evidence.${kind}`, 'en')

@@ -65,7 +65,7 @@ describe('help, version, and usage errors', () => {
   });
 
   it.each([
-    [['plan', 'x']],
+    [['deploy', 'x']],
     [['analyze']],
     [['analyze', 'a', 'b']],
     [['analyze', 'a', '--level', 'nope']],
@@ -81,11 +81,11 @@ describe('help, version, and usage errors', () => {
 
   it('explains the reason at the guided level, and honours level and language even on a bad command', async () => {
     const guided = capture();
-    expect(await run(['plan', 'x', '-l', 'guided'], guided.io)).toBe(2);
-    expect(guided.err()).toContain('unknown command "plan"');
+    expect(await run(['deploy', 'x', '-l', 'guided'], guided.io)).toBe(2);
+    expect(guided.err()).toContain('unknown command "deploy"');
     const spanish = capture();
-    await run(['plan', 'x', '--level=expert', '--locale=es'], spanish.io);
-    expect(spanish.err()).toContain('Uso inválido: unknown command "plan"');
+    await run(['deploy', 'x', '--level=expert', '--locale=es'], spanish.io);
+    expect(spanish.err()).toContain('Uso inválido: unknown command "deploy"');
     const badLevel = capture();
     await run(['analyze', 'x', '--level', 'nope', '--locale', 'es'], badLevel.io);
     expect(badLevel.err()).toContain('Hero no entendió ese comando.');
@@ -333,5 +333,144 @@ describe('sanitizeForTerminal and wrap', () => {
     expect(wrap('aaa bbb ccc', 7)).toEqual(['aaa bbb', 'ccc']);
     expect(wrap('abcdefghij', 4)).toEqual(['abcd', 'efgh', 'ij']);
     expect(wrap('', 10)).toEqual(['']);
+  });
+});
+
+describe('plan', () => {
+  const spa = join(examples, 'spa');
+  const withAccount = ['plan', spa, '--account-id', '123456789012', '--offline', '--no-color'];
+
+  it.each([
+    ['simple', 'Your plan for hero-example-spa', 'Nothing is created until'],
+    ['guided', 'CloudFront distribution', 'Why this approach'],
+    ['expert', 'aws:cloudfront:Distribution', 'Plan digest'],
+  ])('shows the %s plan', async (level, ...expected) => {
+    const c = capture();
+    expect(await run([...withAccount, '--level', level], c.io)).toBe(0);
+    for (const text of expected) expect(c.out()).toContain(text);
+    expect(c.err()).toBe('');
+  });
+
+  it('exits 3 when the plan is made but cannot be approved yet, and says why', async () => {
+    const c = capture();
+    expect(await run(['plan', spa, '--offline', '--no-color'], c.io)).toBe(3);
+    expect(c.out()).toContain('Before this can go online');
+    // The terminal wraps long lines, so compare without line breaks.
+    expect(c.out().replace(/\s+/g, ' ')).toContain('only a preview');
+    expect(c.err()).toBe('');
+  });
+
+  it('prints the plan as versioned JSON, including a sealed digest', async () => {
+    const c = capture();
+    expect(await run([...withAccount, '--json'], c.io)).toBe(0);
+    const body = JSON.parse(c.out()) as {
+      schema: number;
+      command: string;
+      plan: { digest: string; id: string; target: { accountId: string } };
+    };
+    expect(body).toMatchObject({ schema: 1, command: 'plan' });
+    expect(body.plan.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(body.plan.id).toBe(`plan_${body.plan.digest.slice(0, 24)}`);
+    expect(body.plan.target.accountId).toBe('123456789012');
+  });
+
+  it('produces the same digest every time', async () => {
+    const digest = async (): Promise<string> => {
+      const c = capture();
+      await run([...withAccount, '--json'], c.io);
+      return (JSON.parse(c.out()) as { plan: { digest: string } }).plan.digest;
+    };
+    expect(await digest()).toBe(await digest());
+  });
+
+  it('takes answers with --answer and tells you which question ids exist', async () => {
+    const dir = await tempProject({
+      'package.json': JSON.stringify({ name: 'api', dependencies: { express: '5' } }),
+    });
+    const blocked = capture();
+    expect(
+      await run(
+        ['plan', dir, '--account-id', '123456789012', '--offline', '--no-color'],
+        blocked.io,
+      ),
+    ).toBe(3);
+    expect(blocked.out()).toContain('service.start-unknown');
+    expect(blocked.out()).toContain('--answer');
+
+    const answered = capture();
+    expect(
+      await run(
+        [
+          'plan',
+          dir,
+          '--account-id',
+          '123456789012',
+          '--offline',
+          '--no-color',
+          '--answer',
+          'service.start-unknown=npm run serve',
+        ],
+        answered.io,
+      ),
+    ).toBe(0);
+    expect(answered.out()).not.toContain('Before this can go online');
+  });
+
+  it('refuses a malformed or repeated --answer as a usage error', async () => {
+    for (const answer of [
+      ['--answer', 'noequals'],
+      ['--answer', '=x'],
+      ['--answer', 'Bad Id=x'],
+      ['--answer', 'a=1', '--answer', 'a=2'],
+    ]) {
+      const c = capture();
+      expect(await run(['plan', spa, ...answer], c.io)).toBe(2);
+    }
+  });
+
+  it('refuses an answer to a question that does not exist, with a clear message', async () => {
+    const c = capture();
+    expect(await run([...withAccount, '--answer', 'nope=1'], c.io)).toBe(1);
+    expect(c.err()).toContain('answers you gave is not valid');
+  });
+
+  it('refuses a bad account or region', async () => {
+    for (const extra of [
+      ['--account-id', 'abc'],
+      ['--region', '../x'],
+    ]) {
+      const c = capture();
+      expect(await run(['plan', spa, '--offline', ...extra], c.io)).toBe(1);
+    }
+  });
+
+  it('passes --offline to the engine, and asks for the network otherwise', async () => {
+    const seen: (boolean | undefined)[] = [];
+    const real = createHero();
+    const hero: Hero = {
+      ...real,
+      subscribe: real.subscribe.bind(real),
+      analyze: real.analyze.bind(real),
+      // Record what the CLI asked for, but never let a test reach the network.
+      plan: (analysis, options) => {
+        seen.push(options?.offline);
+        return real.plan(analysis, { ...options, offline: true });
+      },
+    };
+    await run(
+      ['plan', spa, '--account-id', '123456789012', '--offline'],
+      capture({ createHero: () => hero }).io,
+    );
+    await run(
+      ['plan', spa, '--account-id', '123456789012'],
+      capture({ createHero: () => hero }).io,
+    );
+    expect(seen).toEqual([true, false]);
+  });
+
+  it('renders Spanish', async () => {
+    const c = capture();
+    await run([...withAccount, '--locale', 'es'], c.io);
+    expect(c.out()).toContain('Tu plan para hero-example-spa');
   });
 });

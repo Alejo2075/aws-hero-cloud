@@ -17,6 +17,7 @@ export const nodeQuestionCodes = [
   'service.start-unknown',
   'service.port-unknown',
   'scheduled.inside-server',
+  'scheduled.schedule-unknown',
   'data.sqlite-persistence',
   'data.engine-unknown',
   'storage.uploads',
