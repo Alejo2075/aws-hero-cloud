@@ -1,6 +1,7 @@
 export { analysisView, componentsOf, evidencePhrase } from './analysis-view.js';
 export { planView } from './plan-view.js';
 export { healthView, resultView } from './result-view.js';
+export { setupView } from './setup-view.js';
 export { audienceLevels, defaultAudienceLevel } from './audience.js';
 export type { AudienceLevel } from './audience.js';
 export { defaultCatalogs, en, es } from './catalogs/index.js';
@@ -21,6 +22,9 @@ export const presentationCodes = [
   'cli.prompt.approve',
   'cli.prompt.budget-email',
   'cli.declined',
+  'cli.prompt.write-profile',
+  'cli.profile.written',
+  'cli.profile.exists',
   'cli.prompt.secret',
   'cli.secret.stored',
   'cli.hint.answer',

@@ -1,5 +1,11 @@
 import { analyzerQuestionCodes } from '@hero-cloud/analyzer';
-import { errorCodes, healthCheckCodes, nextStepCodes, planWarningCodes } from '@hero-cloud/core';
+import {
+  errorCodes,
+  healthCheckCodes,
+  nextStepCodes,
+  planWarningCodes,
+  setupNextCodes,
+} from '@hero-cloud/core';
 import { nodeQuestionCodes } from '@hero-cloud/plugin-node';
 import { plannerRationaleCodes } from '@hero-cloud/planner';
 import { awsCostLineCodes, awsRationaleCodes, awsResourceTypes } from '@hero-cloud/provider-aws';
@@ -22,6 +28,9 @@ const REQUIRED: readonly (readonly [string, readonly string[]])[] = [
   ['warning.', planWarningCodes],
   ['rationale.', [...plannerRationaleCodes, ...awsRationaleCodes, ...nextStepCodes]],
   ['check.', healthCheckCodes],
+  ['setup.next.', setupNextCodes],
+  ['setup.step.', ['credentials', 'not-root', 'account-prepared', 'deployer-role']],
+  ['setup.status.', ['done', 'todo', 'blocked', 'unknown']],
   ['resource.', awsResourceTypes],
   ['cost.line.', awsCostLineCodes],
   ['strategy.name.', ['static', 'serverless', 'container', 'virtual-machine']],

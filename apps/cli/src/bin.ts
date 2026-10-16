@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile } from 'node:fs/promises';
+import { appendFile, readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import { homedir } from 'node:os';
 import { isatty } from 'node:tty';
@@ -25,6 +25,8 @@ const code = await run(process.argv.slice(2), {
   // `isatty` looks at the file descriptor; touching `process.stdin` would keep the process alive
   // while a parent holds the pipe open.
   stdinIsTTY: isatty(0),
+  awsConfigPath: process.env.AWS_CONFIG_FILE ?? join(homedir(), '.aws', 'config'),
+  appendFile: (path, text) => appendFile(path, text, { mode: 0o600 }),
   ask: async (question) => {
     const lines = createInterface({ input: process.stdin, output: process.stderr });
     try {

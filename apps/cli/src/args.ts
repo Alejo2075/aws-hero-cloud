@@ -2,9 +2,19 @@ import { parseArgs } from 'node:util';
 import { audienceLevels } from '@hero-cloud/presentation';
 import { HeroError } from '@hero-cloud/sdk';
 import type { AudienceLevel } from '@hero-cloud/presentation';
+import { isProfileName } from './profile.js';
 
 export type Command =
-  'analyze' | 'plan' | 'deploy' | 'destroy' | 'health' | 'outputs' | 'secret' | 'help' | 'version';
+  | 'analyze'
+  | 'plan'
+  | 'deploy'
+  | 'destroy'
+  | 'health'
+  | 'outputs'
+  | 'secret'
+  | 'setup'
+  | 'help'
+  | 'version';
 
 export interface ParsedArguments {
   readonly command: Command;
@@ -21,6 +31,10 @@ export interface ParsedArguments {
   readonly region: string | undefined;
   readonly accountId: string | undefined;
   readonly offline: boolean;
+  /** For `setup`: prepare the account (an approved plan of its own). */
+  readonly prepare: boolean;
+  /** For `setup`: add a profile with this name that assumes the deployer role. */
+  readonly writeProfile: string | undefined;
   /** For `secret`: the name of the secret to store. */
   readonly secretName: string | undefined;
   /** The plan digest a script approves instead of answering a prompt. */
@@ -123,6 +137,8 @@ export function parseArguments(
         'account-id': { type: 'string' },
         offline: { type: 'boolean' },
         approve: { type: 'string' },
+        prepare: { type: 'boolean' },
+        'write-profile': { type: 'string' },
         'budget-email': { type: 'string' },
         profile: { type: 'string' },
         'state-dir': { type: 'string' },
@@ -170,6 +186,8 @@ export function parseArguments(
     offline: values.offline === true,
     approve: values.approve,
     secretName: undefined,
+    prepare: values.prepare === true,
+    writeProfile: values['write-profile'],
     budgetEmail: values['budget-email'],
     profile: values.profile,
     stateDir: values['state-dir'],
@@ -179,6 +197,13 @@ export function parseArguments(
   if (values.version === true || first === 'version') return { ...base, command: 'version' };
   if (values.help === true || first === 'help' || first === undefined) {
     return { ...base, command: 'help' };
+  }
+  if (first === 'setup') {
+    if (rest.length !== 0) throw usageError('setup takes no source');
+    if (values['write-profile'] !== undefined && !isProfileName(values['write-profile'])) {
+      throw usageError('--write-profile needs an ordinary profile name, such as hero');
+    }
+    return { ...base, command: 'setup', source: undefined, kind: undefined };
   }
   if (first === 'secret') {
     const [id, name] = rest;

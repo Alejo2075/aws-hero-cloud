@@ -478,6 +478,11 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'una alerta de presupuesto',
     'cost-control',
   ),
+  'capability.account-setup': tri(
+    'acceso seguro para Hero',
+    'permisos de despliegue limitados',
+    'account-setup',
+  ),
 
   // ---- errores y preguntas añadidos para los planes --------------------------------------
   'error.plan.invalid-answer': tri(

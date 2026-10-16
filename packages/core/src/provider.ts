@@ -137,8 +137,67 @@ export interface CloudProvider {
     readonly region: string;
     readonly fresh: readonly PlanChange[];
   }): Promise<readonly PlanChange[]>;
+  /**
+   * Looks at the person's setup (credentials, whether the account is prepared) and reports what is
+   * missing. Reads only; changes nothing. `profile` names an entry in their AWS configuration.
+   */
+  inspect?(options: { readonly region: string; readonly profile?: string }): Promise<SetupReport>;
+  /** What preparing an account will create, as a reviewable list. Needs no credentials. */
+  describeBootstrap?(target: { readonly accountId: string; readonly region: string }): {
+    readonly changes: readonly PlanChange[];
+    readonly artifactHash: string;
+  };
+  /** Prepares the account for an approved bootstrap plan. Returns the deployer role it created. */
+  bootstrap?(request: {
+    readonly plan: DeploymentPlan;
+    readonly emit: HeroEventListener;
+  }): Promise<{ readonly deployerRoleArn: string | undefined }>;
   /** Removes an approved destroy plan's deployment. */
   destroy?(request: ProviderApplyRequest): Promise<ProviderOutputs>;
   /** Observes the deployment and returns evidence; claims nothing beyond it. */
   health?(request: ProviderHealthRequest): Promise<Health>;
+}
+
+/** How a named credential profile signs in. Never holds a key, token, or secret. */
+export type ProfileKind = 'sso' | 'role' | 'keys' | 'process' | 'other';
+
+export interface CredentialProfile {
+  readonly name: string;
+  readonly kind: ProfileKind;
+}
+
+export type SetupStepId = 'credentials' | 'not-root' | 'account-prepared' | 'deployer-role';
+export type SetupStepStatus = 'done' | 'todo' | 'blocked' | 'unknown';
+
+export interface SetupStep {
+  readonly id: SetupStepId;
+  readonly status: SetupStepStatus;
+}
+
+/**
+ * What a person should do next to be ready to deploy. Words live in `presentation`; each code
+ * names one concrete action.
+ */
+export const setupNextCodes = [
+  'create-account',
+  'configure-sso',
+  'sign-in',
+  'stop-using-root',
+  'prepare-account',
+  'use-deployer-role',
+  'ready',
+] as const;
+
+export type SetupNextCode = (typeof setupNextCodes)[number];
+
+/** Where a person stands on the way to a first deployment, found by looking, not assuming. */
+export interface SetupReport {
+  readonly region: string;
+  /** Who the credentials belong to, when they could be verified. */
+  readonly identity?: CallerIdentity;
+  /** Profiles found in the person's AWS configuration (names and kinds only). */
+  readonly profiles: readonly CredentialProfile[];
+  readonly steps: readonly SetupStep[];
+  readonly deployerRoleArn?: string;
+  readonly next: readonly SetupNextCode[];
 }

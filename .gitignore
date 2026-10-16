@@ -15,4 +15,4 @@ coverage/
 .claude/
 hero-cloud-brand-final.zip
 .e2e-*/
-api/temp/
+**/api/temp/

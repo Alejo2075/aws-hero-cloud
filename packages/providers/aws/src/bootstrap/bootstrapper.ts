@@ -11,9 +11,12 @@ import type { PlanChange } from '@hero-cloud/core';
 import { canonicalJson, sha256Hex } from '@hero-cloud/shared';
 import { BOOTSTRAP_QUALIFIER, BOUNDARY_POLICY_NAME } from '../cdk/names.js';
 import {
+  DEPLOYER_POLICY_NAME,
+  DEPLOYER_ROLE_NAME,
   EXECUTION_POLICY_NAME,
   PREREQUISITES_STACK,
   boundaryPolicy,
+  deployerPolicy,
   executionPolicy,
   prerequisitesTemplate,
 } from './policies.js';
@@ -58,7 +61,7 @@ export function describeBootstrap(target: BootstrapTarget): BootstrapDescription
       'boundary',
       'iam-policy',
       BOUNDARY_POLICY_NAME,
-      'least-privilege',
+      'account-setup',
       ['guardrail.least-privilege'],
       { statements: boundary.Statement.map((s) => s.Sid) },
     ),
@@ -66,15 +69,31 @@ export function describeBootstrap(target: BootstrapTarget): BootstrapDescription
       'execution',
       'iam-policy',
       EXECUTION_POLICY_NAME,
-      'least-privilege',
+      'account-setup',
       ['guardrail.least-privilege'],
       { statements: execution.Statement.map((s) => s.Sid), replaces: 'AdministratorAccess' },
+    ),
+    change(
+      'deployer-policy',
+      'iam-policy',
+      DEPLOYER_POLICY_NAME,
+      'account-setup',
+      ['guardrail.least-privilege'],
+      { statements: deployerPolicy().Statement.map((s) => s.Sid) },
+    ),
+    change(
+      'deployer',
+      'iam-role',
+      DEPLOYER_ROLE_NAME,
+      'account-setup',
+      ['guardrail.least-privilege'],
+      { assumableBy: 'principals in this account that are allowed to assume it' },
     ),
     change(
       'toolkit',
       'cloudformation-stack',
       TOOLKIT_STACK,
-      'deployment-access',
+      'account-setup',
       ['guardrail.private-by-default', 'guardrail.encryption'],
       { qualifier: BOOTSTRAP_QUALIFIER },
     ),
@@ -127,7 +146,10 @@ async function stackStatus(cfn: CloudFormationPort, name: string): Promise<strin
 
 /** Creates the limited policies, then the CDK toolkit stack that uses them. */
 export function createBootstrapper(options: BootstrapperOptions): {
-  run(request: BootstrapRequest): Promise<{ readonly executionPolicyArn: string }>;
+  run(request: BootstrapRequest): Promise<{
+    readonly executionPolicyArn: string;
+    readonly deployerRoleArn: string | undefined;
+  }>;
 } {
   const cfn: CloudFormationPort =
     options.cloudFormation ??
@@ -182,7 +204,10 @@ export function createBootstrapper(options: BootstrapperOptions): {
           executionPolicyArns: [output],
           permissionsBoundaryName: BOUNDARY_POLICY_NAME,
         });
-        return { executionPolicyArn: output };
+        const deployerRoleArn = described.Stacks?.[0]?.Outputs?.find(
+          (o) => o.OutputKey === 'DeployerRoleArn',
+        )?.OutputValue;
+        return { executionPolicyArn: output, deployerRoleArn };
       } catch (error) {
         if (error instanceof Error && 'code' in error) throw error;
         throw heroError('deployment.failed', { stack: TOOLKIT_STACK }, error);

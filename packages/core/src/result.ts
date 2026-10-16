@@ -31,6 +31,8 @@ export const nextStepCodes = [
   'next.watch-cost',
   'next.destroy',
   'next.review-kept-data',
+  'next.use-deployer-role',
+  'next.deploy-first-app',
 ] as const;
 
 const REACHABILITY_FAILURES = [
@@ -116,6 +118,8 @@ export interface OperationLink {
 export interface DeploymentResult {
   readonly deploymentId: string;
   readonly planId: string;
+  /** Absent for a deployment. `removal` is a destroy; `setup` is the preparation of an account. */
+  readonly kind?: 'removal' | 'setup';
   readonly status: 'succeeded' | 'failed' | 'rolled-back' | 'partial';
   readonly endpoints: readonly Endpoint[];
   readonly health: Health;

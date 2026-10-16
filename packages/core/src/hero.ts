@@ -1,6 +1,6 @@
 import type { HeroSpec } from '@hero-cloud/specification';
 import type { Approval, ApprovalChallenge } from './approval.js';
-import type { CallerIdentity } from './provider.js';
+import type { CallerIdentity, SetupReport } from './provider.js';
 import type { HeroEventListener } from './events.js';
 import type { DeploymentPlan, PlanRef } from './plan.js';
 import type { SecretLocation, SkippedEntry } from './ports.js';
@@ -95,6 +95,17 @@ export interface PlanOptions {
 export interface Hero {
   analyze(source: SourceRef, options?: AnalyzeOptions): Promise<Analysis>;
   plan(analysis: Analysis, options?: PlanOptions): Promise<DeploymentPlan>;
+  /** Where the person stands on the way to a first deployment. Reads only. */
+  inspectSetup(options?: {
+    readonly region?: string;
+    readonly profile?: string;
+  }): Promise<SetupReport>;
+  /**
+   * The plan that prepares an account for Hero: a permission boundary, limited deployment
+   * permissions in place of administrator access, and a deployer role. It needs approval like any
+   * other plan.
+   */
+  planBootstrap(options?: { readonly region?: string }): Promise<DeploymentPlan>;
   /** Who the configured cloud credentials belong to. Refuses the account owner. */
   identity(options?: { readonly region?: string }): Promise<CallerIdentity>;
   /**

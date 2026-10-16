@@ -139,6 +139,7 @@ describe('result view', () => {
   it('a removal says what was kept and offers no address', () => {
     const removed: DeploymentResult = {
       ...result,
+      kind: 'removal',
       status: 'succeeded',
       endpoints: [],
       health: { status: 'unknown', checkedAt: result.completedAt, components: [], checks: [] },

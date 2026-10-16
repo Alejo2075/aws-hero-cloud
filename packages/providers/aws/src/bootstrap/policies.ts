@@ -4,6 +4,9 @@ import { BOOTSTRAP_QUALIFIER, BOUNDARY_POLICY_NAME } from '../cdk/names.js';
 export const EXECUTION_POLICY_NAME = 'hero-cfn-execution';
 /** The stack that holds the two policies, deployed before the CDK bootstrap stack. */
 export const PREREQUISITES_STACK = 'hero-prerequisites';
+/** The role a person's own identity assumes to run Hero's deployments with limited permissions. */
+export const DEPLOYER_ROLE_NAME = 'hero-deployer';
+export const DEPLOYER_POLICY_NAME = 'hero-deployer-access';
 
 export interface PolicyStatement {
   readonly Sid: string;
@@ -322,6 +325,80 @@ export function executionPolicy(): PolicyDocument {
   };
 }
 
+/**
+ * What the deployer role may do: drive the toolkit's own roles, read and write the deployment's
+ * stacks, buckets and parameters, start its builds, and clear the CDN. It cannot create users,
+ * keys, or roles of its own, and it cannot touch anything outside Hero's names.
+ */
+export function deployerPolicy(): PolicyDocument {
+  return {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Sid: 'UseTheToolkitRoles',
+        Effect: 'Allow',
+        Action: ['sts:AssumeRole'],
+        Resource: `${P}:iam::\${AWS::AccountId}:role/cdk-${BOOTSTRAP_QUALIFIER}-*`,
+      },
+      {
+        Sid: 'Stacks',
+        Effect: 'Allow',
+        Action: [
+          'cloudformation:DescribeStacks',
+          'cloudformation:ListStackResources',
+          'cloudformation:DescribeStackResources',
+          'cloudformation:DescribeStackEvents',
+          'cloudformation:GetTemplate',
+          'cloudformation:DetectStackDrift',
+          'cloudformation:DescribeStackDriftDetectionStatus',
+        ],
+        Resource: [
+          `${P}:cloudformation:*:\${AWS::AccountId}:stack/${OWN}/*`,
+          `${P}:cloudformation:*:\${AWS::AccountId}:stack/CDKToolkit-${BOOTSTRAP_QUALIFIER}/*`,
+          `${P}:cloudformation:*:\${AWS::AccountId}:stack/${PREREQUISITES_STACK}/*`,
+        ],
+      },
+      {
+        Sid: 'ToolkitVersion',
+        Effect: 'Allow',
+        Action: ['ssm:GetParameter'],
+        Resource: `${P}:ssm:*:\${AWS::AccountId}:parameter/cdk-bootstrap/${BOOTSTRAP_QUALIFIER}/version`,
+      },
+      {
+        Sid: 'DeploymentParameters',
+        Effect: 'Allow',
+        Action: ['ssm:PutParameter', 'ssm:GetParameter', 'ssm:GetParametersByPath'],
+        Resource: `${P}:ssm:*:\${AWS::AccountId}:parameter/hero/*`,
+      },
+      {
+        Sid: 'DeploymentFiles',
+        Effect: 'Allow',
+        Action: [
+          's3:PutObject',
+          's3:GetObject',
+          's3:DeleteObject',
+          's3:ListBucket',
+          's3:ListBucketVersions',
+          's3:DeleteObjectVersion',
+        ],
+        Resource: [`${P}:s3:::${OWN}`, `${P}:s3:::${OWN}/*`],
+      },
+      {
+        Sid: 'Builds',
+        Effect: 'Allow',
+        Action: ['codebuild:StartBuild', 'codebuild:BatchGetBuilds'],
+        Resource: `${P}:codebuild:*:\${AWS::AccountId}:project/${OWN}`,
+      },
+      {
+        Sid: 'ClearTheCdn',
+        Effect: 'Allow',
+        Action: ['cloudfront:CreateInvalidation'],
+        Resource: `${P}:cloudfront::\${AWS::AccountId}:distribution/*`,
+      },
+    ],
+  };
+}
+
 /** The CloudFormation template that creates the boundary and the execution policy. */
 export function prerequisitesTemplate(): Record<string, unknown> {
   return {
@@ -329,6 +406,35 @@ export function prerequisitesTemplate(): Record<string, unknown> {
     Description:
       'Hero Cloud: the permission boundary every Hero role carries, and the limited policy CloudFormation uses in place of administrator access. Safe to keep; remove only after every Hero deployment is destroyed.',
     Resources: {
+      DeployerPolicy: {
+        Type: 'AWS::IAM::ManagedPolicy',
+        Properties: {
+          ManagedPolicyName: DEPLOYER_POLICY_NAME,
+          PolicyDocument: { 'Fn::Sub': JSON.stringify(deployerPolicy()) },
+        },
+      },
+      DeployerRole: {
+        Type: 'AWS::IAM::Role',
+        Properties: {
+          RoleName: DEPLOYER_ROLE_NAME,
+          Description: 'Assumed by a person to run Hero deployments with limited permissions.',
+          MaxSessionDuration: 3600,
+          ManagedPolicyArns: [{ Ref: 'DeployerPolicy' }],
+          // Any principal in this account that has been allowed to assume it, and nobody outside it.
+          AssumeRolePolicyDocument: {
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Effect: 'Allow',
+                Principal: {
+                  AWS: { 'Fn::Sub': 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root' },
+                },
+                Action: 'sts:AssumeRole',
+              },
+            ],
+          },
+        },
+      },
       Boundary: {
         Type: 'AWS::IAM::ManagedPolicy',
         Properties: {
@@ -347,6 +453,7 @@ export function prerequisitesTemplate(): Record<string, unknown> {
     Outputs: {
       BoundaryArn: { Value: { Ref: 'Boundary' } },
       ExecutionPolicyArn: { Value: { Ref: 'Execution' } },
+      DeployerRoleArn: { Value: { 'Fn::GetAtt': ['DeployerRole', 'Arn'] } },
     },
   };
 }

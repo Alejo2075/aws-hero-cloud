@@ -136,8 +136,21 @@ export type CheckKind = 'reachability' | 'resource-state' | 'smoke' | 'drift';
 // @public
 export interface CloudProvider {
     apply?(request: ProviderApplyRequest): Promise<ProviderOutputs>;
+    bootstrap?(request: {
+        readonly plan: DeploymentPlan;
+        readonly emit: HeroEventListener;
+    }): Promise<{
+        readonly deployerRoleArn: string | undefined;
+    }>;
     // (undocumented)
     describe(request: ProviderPlanRequest): Promise<ProviderPlanResult>;
+    describeBootstrap?(target: {
+        readonly accountId: string;
+        readonly region: string;
+    }): {
+        readonly changes: readonly PlanChange[];
+        readonly artifactHash: string;
+    };
     destroy?(request: ProviderApplyRequest): Promise<ProviderOutputs>;
     diff?(request: {
         readonly deploymentId: string;
@@ -152,6 +165,10 @@ export interface CloudProvider {
     identity?(options?: {
         readonly region?: string;
     }): Promise<CallerIdentity>;
+    inspect?(options: {
+        readonly region: string;
+        readonly profile?: string;
+    }): Promise<SetupReport>;
 }
 
 // @public (undocumented)
@@ -211,6 +228,14 @@ export interface CostLine {
 }
 
 // @public (undocumented)
+export interface CredentialProfile {
+    // (undocumented)
+    readonly kind: ProfileKind;
+    // (undocumented)
+    readonly name: string;
+}
+
+// @public (undocumented)
 export interface DeployedResource {
     // (undocumented)
     readonly id: string;
@@ -248,6 +273,7 @@ export interface DeploymentResult {
     readonly endpoints: readonly Endpoint[];
     // (undocumented)
     readonly health: Health;
+    readonly kind?: 'removal' | 'setup';
     // (undocumented)
     readonly links: readonly OperationLink[];
     // (undocumented)
@@ -362,9 +388,16 @@ export interface Hero {
     identity(options?: {
         readonly region?: string;
     }): Promise<CallerIdentity>;
+    inspectSetup(options?: {
+        readonly region?: string;
+        readonly profile?: string;
+    }): Promise<SetupReport>;
     outputs(deploymentId: string): Promise<DeploymentResult>;
     // (undocumented)
     plan(analysis: Analysis, options?: PlanOptions): Promise<DeploymentPlan>;
+    planBootstrap(options?: {
+        readonly region?: string;
+    }): Promise<DeploymentPlan>;
     planDestroy(deploymentId: string): Promise<DeploymentPlan>;
     requestApproval(plan: PlanRef): Promise<ApprovalChallenge>;
     setSecret(deploymentId: string, name: string, value: string): Promise<SecretLocation>;
@@ -488,7 +521,7 @@ export interface Logger {
 }
 
 // @public
-export const nextStepCodes: readonly ["next.open-site", "next.check-health", "next.set-secrets", "next.watch-cost", "next.destroy", "next.review-kept-data"];
+export const nextStepCodes: readonly ["next.open-site", "next.check-health", "next.set-secrets", "next.watch-cost", "next.destroy", "next.review-kept-data", "next.use-deployer-role", "next.deploy-first-app"];
 
 // @public
 export interface OpenQuestion {
@@ -522,7 +555,7 @@ export interface PlanBody {
     readonly cost?: CostEstimate;
     // (undocumented)
     readonly deploymentId?: string;
-    readonly intent?: 'destroy';
+    readonly intent?: 'destroy' | 'bootstrap';
     // (undocumented)
     readonly requiredInputs: readonly RequiredInput[];
     readonly sourceHash: string;
@@ -595,6 +628,9 @@ export type PlanWarningCode = (typeof planWarningCodes)[number];
 
 // @public
 export const planWarningCodes: readonly ["plan.account-unverified", "plan.open-question", "plan.unsupported-capability", "plan.public-exposure", "plan.cost-low-confidence", "plan.ssr-cold-start", "plan.scheduled-inside-server", "plan.secrets-required", "plan.nothing-to-deploy", "plan.unsupported-schedule", "plan.destroy-keeps-data", "plan.update-unverified", "plan.destructive-changes"];
+
+// @public
+export type ProfileKind = 'sso' | 'role' | 'keys' | 'process' | 'other';
 
 // @public
 export interface ProjectSnapshot {
@@ -728,6 +764,40 @@ export interface SensitiveOutput {
     // (undocumented)
     readonly name: string;
 }
+
+// @public (undocumented)
+export type SetupNextCode = (typeof setupNextCodes)[number];
+
+// @public
+export const setupNextCodes: readonly ["create-account", "configure-sso", "sign-in", "stop-using-root", "prepare-account", "use-deployer-role", "ready"];
+
+// @public
+export interface SetupReport {
+    // (undocumented)
+    readonly deployerRoleArn?: string;
+    readonly identity?: CallerIdentity;
+    // (undocumented)
+    readonly next: readonly SetupNextCode[];
+    readonly profiles: readonly CredentialProfile[];
+    // (undocumented)
+    readonly region: string;
+    // (undocumented)
+    readonly steps: readonly SetupStep[];
+}
+
+// @public (undocumented)
+export interface SetupStep {
+    // (undocumented)
+    readonly id: SetupStepId;
+    // (undocumented)
+    readonly status: SetupStepStatus;
+}
+
+// @public (undocumented)
+export type SetupStepId = 'credentials' | 'not-root' | 'account-prepared' | 'deployer-role';
+
+// @public (undocumented)
+export type SetupStepStatus = 'done' | 'todo' | 'blocked' | 'unknown';
 
 // @public (undocumented)
 export interface SkippedEntry {

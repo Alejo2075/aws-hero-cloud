@@ -439,6 +439,7 @@ Uso:
   hero-cloud plan <fuente> [opciones]
   hero-cloud deploy <fuente> [opciones]
   hero-cloud health <despliegue>
+  hero-cloud setup [--prepare] [--write-profile <nombre>]
   hero-cloud outputs <despliegue>
   hero-cloud secret <despliegue> <NOMBRE>
   hero-cloud destroy <despliegue> [opciones]
@@ -461,6 +462,8 @@ Opciones:
       --approve <digest del plan>     Aprueba exactamente este plan sin preguntar (para scripts)
       --budget-email <dirección>      Adónde se envían las alertas de gasto
       --profile <nombre>              Usa este perfil de AWS
+      --prepare                       (setup) Prepara tu cuenta de AWS una vez, tras tu aprobación
+      --write-profile <nombre>        (setup) Agrega un perfil que usa el rol desplegador limitado
       --state-dir <carpeta>           Dónde Hero recuerda los despliegues (por defecto: .hero)
       --no-color                      No usa colores
   -h, --help                          Muestra esta ayuda
@@ -478,6 +481,9 @@ que Hero mostró, como hero-mi-app. Códigos de salida: 0 bien, 1 falló, 2 coma
       'Valor del secreto {name} (no se muestra lo que escribes; déjalo vacío para omitirlo):',
     'cli.secret.stored':
       'Se guardó {name} en tu propia cuenta de AWS en {location}. Hero no guardó el valor.',
+    'cli.prompt.write-profile': '¿Agregar este perfil a {path}? [s/N]',
+    'cli.profile.written': 'Se agregó el perfil {name} a {path}. Despliega con --profile {name}.',
+    'cli.profile.exists': 'Ya existe un perfil llamado {name} en {path}. No se cambió nada.',
     'cli.declined': 'No se aprobó. No se cambió nada.',
     'cli.progress.deploy': 'Preparando todo en AWS...',
     'cli.progress.verify': 'Comprobando que funciona...',

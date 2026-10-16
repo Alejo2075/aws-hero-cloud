@@ -23,7 +23,7 @@ npx @hero-cloud/cli analyze ./my-app     # what your app needs
 npx @hero-cloud/cli plan ./my-app --offline --account-id 123456789012   # a plan and a cost range, no network
 ```
 
-To deploy to your own account, sign in to AWS the usual way (a profile, SSO, or environment variables; never the account owner), then:
+To deploy to your own account, sign in to AWS the usual way (a profile, SSO, or environment variables; never the account owner). Not sure where you stand? `npx @hero-cloud/cli setup` checks your sign-in and what is missing, and `setup --prepare` readies the account once after you approve a plan. Then:
 
 ```bash
 npx @hero-cloud/cli deploy ./my-app      # shows the plan; creates nothing until you approve it

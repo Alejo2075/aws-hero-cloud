@@ -178,12 +178,14 @@ _Status: ready to publish but nothing has been published: that needs an npm acco
 
 ### Phase 12: Guided AWS onboarding (M) → 0.6
 
-- [ ] Detect existing credentials and explain what was found.
-- [ ] 🔒 For people with none: the path chosen in the Phase 0 spike, with no long-lived keys and no Hero-hosted template (quick-create links need a template in S3, which Hero cannot host) (D11).
-- [ ] Create the least-privilege deployer role from Phase 6 and switch to it.
-- [ ] Explain AWS account creation and billing honestly (Hero cannot do that for anyone).
+- [x] Detect existing credentials and explain what was found.
+- [x] 🔒 For people with none: IAM Identity Center with `aws configure sso` (short-lived credentials, nothing stored on disk), with no long-lived keys and no Hero-hosted template (quick-create links need a template in S3, which Hero cannot host) (D11).
+- [x] Create the least-privilege deployer role from Phase 6 and switch to it.
+- [x] Explain AWS account creation and billing honestly (Hero cannot do that for anyone).
 
 **Done when:** a beginner with only an AWS account and a browser reaches a healthy deployment. **Release 0.6 (beta for non-technical people).**
+
+_Status: `hero-cloud setup` (inspect), `setup --prepare` (an approved plan of its own: boundary, limited execution policy, deployer role, toolkit stack), and `setup --write-profile` (shows the text and adds it only when a person says yes) are implemented and tested with fakes. Studio screens for this are out of scope. The "beginner reaches a healthy deployment" bar and Release 0.6 need a real account and a real beginner, so they stay open._
 
 ### Phase 13: MCP server (M)
 

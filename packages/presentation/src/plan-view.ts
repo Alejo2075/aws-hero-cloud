@@ -27,6 +27,29 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
     messages.text(code, level, locale, params);
   const has = (code: string): boolean => messages.find(code, level, locale) !== undefined;
 
+  /** The wording that fits what the plan is for: a deployment, a removal, or preparing an account. */
+  const planKey = (part: 'summary' | 'title' | 'creates'): string => {
+    if (plan.intent === 'destroy') {
+      return {
+        summary: 'view.destroy.summary',
+        title: 'view.destroy.title',
+        creates: 'view.section.plan-removes',
+      }[part];
+    }
+    if (plan.intent === 'bootstrap') {
+      return {
+        summary: 'view.bootstrap.summary',
+        title: 'view.bootstrap.title',
+        creates: 'view.section.plan-setup-creates',
+      }[part];
+    }
+    return {
+      summary: 'view.plan.summary',
+      title: 'view.plan.title',
+      creates: 'view.section.plan-creates',
+    }[part];
+  };
+
   const blocking = plan.warnings.filter((w) => w.severity === 'blocking');
   const advice = plan.warnings.filter((w) => w.severity !== 'blocking');
 
@@ -71,7 +94,7 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
   const summary: Block[] = [
     {
       type: 'paragraph',
-      text: t(plan.intent === 'destroy' ? 'view.destroy.summary' : 'view.plan.summary', {
+      text: t(planKey('summary'), {
         name: plan.application,
         strategy: strategyName,
         account: plan.target.accountId,
@@ -141,9 +164,7 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
         .sort();
       sections.push({
         id: 'creates',
-        heading: t(
-          plan.intent === 'destroy' ? 'view.section.plan-removes' : 'view.section.plan-creates',
-        ),
+        heading: t(planKey('creates')),
         blocks: [
           { type: 'list', items: capabilities.map((c) => capitalize(t(`capability.${c}`))) },
         ],
@@ -151,9 +172,7 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
     } else if (level === 'guided') {
       sections.push({
         id: 'creates',
-        heading: t(
-          plan.intent === 'destroy' ? 'view.section.plan-removes' : 'view.section.plan-creates',
-        ),
+        heading: t(planKey('creates')),
         blocks: [
           {
             type: 'list',
@@ -367,7 +386,7 @@ export function planView(plan: DeploymentPlan, options: RenderOptions, messages:
   return {
     audience: level,
     locale,
-    title: t(plan.intent === 'destroy' ? 'view.destroy.title' : 'view.plan.title', {
+    title: t(planKey('title'), {
       name: plan.application,
     }),
     sections,

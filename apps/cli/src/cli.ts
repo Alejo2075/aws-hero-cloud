@@ -8,6 +8,7 @@ import {
 } from '@hero-cloud/sdk';
 import type { DeploymentPlan, Hero, HeroEvent, HeroSpec } from '@hero-cloud/sdk';
 import { parseArguments, peekRenderOptions, sourceKind } from './args.js';
+import { deployerProfileText, hasProfile } from './profile.js';
 import { renderText } from './render-text.js';
 import { sanitizeForTerminal } from './sanitize.js';
 
@@ -25,6 +26,9 @@ export interface CliIo {
   /** Builds the engine. `stateDirectory` is where `.hero/` lives; `profile` is a named AWS profile. */
   createHero(settings?: HeroSettings): Hero;
   readonly stdinIsTTY?: boolean;
+  /** Where the person's AWS configuration file is. Hero adds a profile there only when asked. */
+  readonly awsConfigPath?: string;
+  appendFile?(path: string, text: string): Promise<void>;
   /** Asks for a secret without showing what is typed. Only used when a person is at the terminal. */
   askHidden?(question: string): Promise<string>;
   /** Asks one question and returns the answer. Only used when a person is at the terminal. */
@@ -160,6 +164,78 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
   };
 
   try {
+    if (args.command === 'setup') {
+      const hero = io.createHero(settings);
+      watch(hero);
+      const region = args.region ?? 'us-east-1';
+      if (args.prepare) {
+        const plan = await hero.planBootstrap({ region });
+        const approval = await decide(hero, plan);
+        if (approval === undefined) return 0;
+        return finish('setup', await hero.deploy(plan, approval), plan);
+      }
+      const report = await hero.inspectSetup({
+        region,
+        ...(args.profile === undefined ? {} : { profile: args.profile }),
+      });
+      if (args.writeProfile !== undefined) {
+        const path = io.awsConfigPath;
+        const roleArn = report.deployerRoleArn;
+        if (roleArn === undefined || args.profile === undefined || path === undefined) {
+          throw new HeroError('usage', {
+            params: {
+              reason:
+                'to add a profile, the account must be prepared and you must say which profile you sign in with (--profile <name>)',
+            },
+          });
+        }
+        const text = deployerProfileText({
+          name: args.writeProfile,
+          roleArn,
+          sourceProfile: args.profile,
+          region,
+        });
+        const existing = await io.readFile(path).catch(() => '');
+        if (hasProfile(existing, args.writeProfile)) {
+          io.stdout.write(
+            `${presenter.text('cli.profile.exists', render, { name: args.writeProfile, path })}\n`,
+          );
+          return 0;
+        }
+        io.stdout.write(`\n${text}\n`);
+        if (io.ask === undefined || io.appendFile === undefined || io.stdinIsTTY !== true) {
+          throw new HeroError('usage', {
+            params: {
+              reason:
+                'adding a profile needs a person at the terminal; copy the text above instead',
+            },
+          });
+        }
+        const answer = await io.ask(
+          `${presenter.text('cli.prompt.write-profile', render, { path })} `,
+        );
+        if (!/^(y|yes|s|si|sí)$/i.test(answer.trim())) {
+          io.stdout.write(`${presenter.text('cli.declined', render)}\n`);
+          return 0;
+        }
+        await io.appendFile(
+          path,
+          `${existing === '' || existing.endsWith('\n') ? '' : '\n'}\n${text}`,
+        );
+        io.stdout.write(
+          `${presenter.text('cli.profile.written', render, { name: args.writeProfile, path })}\n`,
+        );
+        return 0;
+      }
+      if (args.json) {
+        io.stdout.write(
+          `${JSON.stringify({ schema: JSON_SCHEMA_VERSION, command: 'setup', report }, null, 2)}\n`,
+        );
+      } else {
+        show(presenter.setup(report, render));
+      }
+      return report.steps.every((step) => step.status === 'done') ? 0 : EXIT_BLOCKED;
+    }
     if (args.command === 'secret') {
       const hero = io.createHero(settings);
       const name = args.secretName ?? '';

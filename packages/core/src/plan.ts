@@ -103,9 +103,10 @@ export interface PlanBody {
   readonly artifactHash: string;
   /**
    * Absent for a deployment. `destroy` marks a plan whose changes are all removals; it needs
-   * approval like any other plan, and `deploymentId` names what it removes.
+   * approval like any other plan, and `deploymentId` names what it removes. `bootstrap` marks the
+   * plan that prepares an account (limited permissions for Hero's deployments).
    */
-  readonly intent?: 'destroy';
+  readonly intent?: 'destroy' | 'bootstrap';
   readonly deploymentId?: string;
 }
 

@@ -291,6 +291,9 @@ importers:
       '@hero-cloud/specification':
         specifier: workspace:*
         version: link:../../specification
+      '@smithy/shared-ini-file-loader':
+        specifier: ^4.7.2
+        version: 4.7.2
       aws-cdk-lib:
         specifier: ^2.273.0
         version: 2.273.0(constructs@10.8.1)

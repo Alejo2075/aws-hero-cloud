@@ -36,6 +36,7 @@ import type {
   ProjectSnapshot,
   Rationale,
   SecretLocation,
+  SetupReport,
   SecretSink,
   SourceLoader,
   StateStore,
@@ -407,6 +408,7 @@ class HeroEngine implements Hero {
     await this.#approvals.consume(plan, approval);
 
     if (plan.intent === 'destroy') return this.#destroy(plan);
+    if (plan.intent === 'bootstrap') return this.#prepareAccount(plan);
 
     const cloud = this.#cloud;
     const apply = cloud.apply?.bind(cloud);
@@ -511,6 +513,90 @@ class HeroEngine implements Hero {
     return plan;
   }
 
+  async inspectSetup(
+    options: { readonly region?: string; readonly profile?: string } = {},
+  ): Promise<SetupReport> {
+    const inspect = this.#cloud.inspect?.bind(this.#cloud);
+    if (inspect === undefined) throw heroError('provider.unavailable', { reason: 'no-inspect' });
+    const region = options.region ?? DEFAULT_REGION;
+    if (!REGION.test(region)) throw heroError('plan.invalid-answer', { question: 'region' });
+    return inspect({
+      region,
+      ...(options.profile === undefined ? {} : { profile: options.profile }),
+    });
+  }
+
+  async planBootstrap(options: { readonly region?: string } = {}): Promise<DeploymentPlan> {
+    const region = options.region ?? DEFAULT_REGION;
+    if (!REGION.test(region)) throw heroError('plan.invalid-answer', { question: 'region' });
+    const describe = this.#cloud.describeBootstrap?.bind(this.#cloud);
+    if (describe === undefined || this.#cloud.bootstrap === undefined) {
+      throw heroError('provider.unavailable', { reason: 'no-bootstrap' });
+    }
+    // Preparing an account is for the account the credentials belong to, and never the owner.
+    const who = await this.identity({ region });
+    const described = describe({ accountId: who.account, region });
+    const plan = sealPlan({
+      application: 'hero-account-setup',
+      specVersion: '1',
+      sourceHash: EMPTY_ARTIFACT_HASH,
+      strategy: 'static',
+      strategyRationale: [],
+      target: { provider: this.#cloud.id, region, accountId: who.account },
+      changes: described.changes,
+      warnings: [],
+      requiredInputs: [],
+      artifactHash: described.artifactHash,
+      intent: 'bootstrap',
+      deploymentId: 'hero-bootstrap',
+    });
+    await this.#plans.put(plan);
+    return plan;
+  }
+
+  async #prepareAccount(plan: DeploymentPlan): Promise<DeploymentResult> {
+    const bootstrap = this.#cloud.bootstrap?.bind(this.#cloud);
+    if (bootstrap === undefined)
+      throw heroError('provider.unavailable', { reason: 'no-bootstrap' });
+    await this.#assertAccount(plan);
+    return this.#locked('hero-bootstrap', async () => {
+      const outcome = await this.#phase('deploy', () =>
+        bootstrap({
+          plan,
+          emit: (event) => {
+            this.#emit(event);
+          },
+        }),
+      );
+      return {
+        deploymentId: 'hero-bootstrap',
+        planId: plan.id,
+        kind: 'setup',
+        status: 'succeeded',
+        endpoints: [],
+        health: {
+          status: 'unknown',
+          checkedAt: this.#clock.now().toISOString(),
+          components: [],
+          checks: [],
+        },
+        resources: [],
+        sensitiveOutputs: [],
+        links: [],
+        nextSteps: [
+          {
+            code: 'next.use-deployer-role',
+            ...(outcome.deployerRoleArn === undefined
+              ? {}
+              : { params: { role: outcome.deployerRoleArn } }),
+          },
+          { code: 'next.deploy-first-app' },
+        ],
+        completedAt: this.#clock.now().toISOString(),
+      };
+    });
+  }
+
   async outputs(deploymentId: string): Promise<DeploymentResult> {
     return (await this.#record(deploymentId)).result;
   }
@@ -556,6 +642,7 @@ class HeroEngine implements Hero {
       const result: DeploymentResult = {
         deploymentId,
         planId: plan.id,
+        kind: 'removal',
         status: 'succeeded',
         endpoints: [],
         health: {

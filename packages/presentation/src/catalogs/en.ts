@@ -407,6 +407,7 @@ Usage:
   hero-cloud plan <source> [options]
   hero-cloud deploy <source> [options]
   hero-cloud health <deployment>
+  hero-cloud setup [--prepare] [--write-profile <name>]
   hero-cloud outputs <deployment>
   hero-cloud secret <deployment> <NAME>
   hero-cloud destroy <deployment> [options]
@@ -429,6 +430,8 @@ Options:
       --approve <plan digest>         Approve exactly this plan without a prompt (for scripts)
       --budget-email <address>        Where spending alerts are sent
       --profile <name>                Use this AWS profile
+      --prepare                       (setup) Prepare your AWS account once, after you approve
+      --write-profile <name>          (setup) Add a profile that uses the limited deployer role
       --state-dir <folder>            Where Hero remembers deployments (default: .hero)
       --no-color                      Do not use colors
   -h, --help                          Show this help
@@ -446,6 +449,9 @@ Hero printed, such as hero-my-app. Exit codes: 0 ok, 1 failed, 2 wrong command, 
       'Value for the secret {name} (nothing you type is shown; leave empty to skip):',
     'cli.secret.stored':
       'Stored {name} in your own AWS account at {location}. Hero did not keep the value.',
+    'cli.prompt.write-profile': 'Add this profile to {path}? [y/N]',
+    'cli.profile.written': 'Added the profile {name} to {path}. Deploy with --profile {name}.',
+    'cli.profile.exists': 'A profile named {name} already exists in {path}. Nothing was changed.',
     'cli.declined': 'Not approved. Nothing was changed.',
     'cli.progress.deploy': 'Setting things up on AWS...',
     'cli.progress.verify': 'Checking that it works...',

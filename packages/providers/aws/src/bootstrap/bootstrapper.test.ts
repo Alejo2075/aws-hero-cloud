@@ -41,6 +41,8 @@ describe('describeBootstrap', () => {
     expect(changes.map((c) => c.resource.name)).toEqual([
       'hero-boundary',
       'hero-cfn-execution',
+      'hero-deployer-access',
+      'hero-deployer',
       'CDKToolkit-herocloud',
     ]);
     expect(changes.every((c) => !c.destructive && c.action === 'create')).toBe(true);

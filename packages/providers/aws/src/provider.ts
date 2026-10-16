@@ -20,7 +20,10 @@ import { createApplier } from './deploy/apply.js';
 import { defaultToolkit } from './deploy/deployer.js';
 import { diffAgainstDeployed } from './deploy/diff.js';
 import { createHealthChecker } from './deploy/health.js';
+import { describeBootstrap } from './bootstrap/bootstrapper.js';
+import { createBootstrapper } from './bootstrap/bootstrapper.js';
 import { getIdentity } from './identity.js';
+import { inspectSetup } from './onboarding.js';
 import { parameterChanges } from './parameters.js';
 import { builtInPriceBook } from './prices/book.js';
 import { loadPriceBook } from './prices/live.js';
@@ -115,6 +118,29 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
           ...(options.profile === undefined ? {} : { profile: options.profile }),
         }),
       })(request),
+    inspect: (inspectOptions) =>
+      inspectSetup({
+        region: inspectOptions.region,
+        ...(inspectOptions.profile === undefined ? {} : { profile: inspectOptions.profile }),
+        cloudFormationFor: (profile, region) =>
+          new CloudFormationClient({
+            region,
+            ...(profile === undefined ? {} : { profile }),
+          }),
+      }),
+    describeBootstrap: (target) => describeBootstrap(target),
+    bootstrap: async (request) => {
+      const outcome = await createBootstrapper({
+        region: request.plan.target.region,
+        ...(options.profile === undefined ? {} : { profile: options.profile }),
+      }).run({
+        accountId: request.plan.target.accountId,
+        region: request.plan.target.region,
+        artifactHash: request.plan.artifactHash,
+        approved: true,
+      });
+      return { deployerRoleArn: outcome.deployerRoleArn };
+    },
     identity: (identityOptions = {}) =>
       getIdentity({
         ...(identityOptions.region === undefined ? {} : { region: identityOptions.region }),

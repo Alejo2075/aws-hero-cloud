@@ -121,7 +121,8 @@ export function resultView(
   const t = (code: string, params?: MessageParams): string =>
     messages.text(code, level, locale, params);
   const sections: Section[] = [];
-  const removed = result.endpoints.length === 0 && result.health.checks.length === 0;
+  const removed = result.kind === 'removal';
+  const setup = result.kind === 'setup';
 
   sections.push({
     id: 'summary',
@@ -131,14 +132,18 @@ export function resultView(
         type: 'callout',
         tone: result.status === 'succeeded' ? 'info' : 'warning',
         text:
-          removed && result.status === 'succeeded'
-            ? t('view.result.removed')
-            : t(`view.result.status.${result.status}`),
+          result.status !== 'succeeded'
+            ? t(`view.result.status.${result.status}`)
+            : removed
+              ? t('view.result.removed')
+              : setup
+                ? t('view.result.setup')
+                : t(`view.result.status.${result.status}`),
       },
     ],
   });
 
-  if (!removed) {
+  if (!removed && !setup) {
     sections.push({
       id: 'reach',
       heading: t('view.section.result-reach'),

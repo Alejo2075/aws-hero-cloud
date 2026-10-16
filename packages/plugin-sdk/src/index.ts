@@ -31,6 +31,7 @@ export const standardCapabilities = [
   'monorepo',
   'declared-spec',
   'cost-control',
+  'account-setup',
 ] as const;
 
 export type StandardCapability = (typeof standardCapabilities)[number];

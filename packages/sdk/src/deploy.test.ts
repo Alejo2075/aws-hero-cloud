@@ -1,7 +1,13 @@
 import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { approvalFromChallenge, destroyArtifactHash, isHeroError } from '@hero-cloud/core';
+import {
+  approvalFromChallenge,
+  destroyArtifactHash,
+  heroError,
+  isHeroError,
+  isSealIntact,
+} from '@hero-cloud/core';
 import type { CloudProvider, DeploymentPlan, Health, ProviderApplyRequest } from '@hero-cloud/core';
 import { createAwsProvider } from '@hero-cloud/provider-aws';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -263,5 +269,67 @@ describe('destroy', () => {
     await expect(hero.deploy(destroyPlan, await approve(destroyPlan))).rejects.toSatisfy(
       (e: unknown) => isHeroError(e) && e.code === 'provider.unavailable',
     );
+  });
+});
+
+describe('preparing an account', () => {
+  it('needs a provider that can inspect and prepare, and a valid region', async () => {
+    const bare = createHero({
+      cloud: { id: 'x', describe: () => Promise.reject(new Error('n/a')) },
+    });
+    await expect(bare.inspectSetup()).rejects.toMatchObject({ code: 'provider.unavailable' });
+    await expect(bare.planBootstrap()).rejects.toMatchObject({ code: 'provider.unavailable' });
+    const { cloud } = fakeCloud({ inspect: () => Promise.reject(new Error('n/a')) });
+    await expect(createHero({ cloud }).inspectSetup({ region: '../x' })).rejects.toMatchObject({
+      code: 'plan.invalid-answer',
+    });
+    await expect(createHero({ cloud }).planBootstrap({ region: 'NOPE' })).rejects.toMatchObject({
+      code: 'plan.invalid-answer',
+    });
+  });
+
+  it('refuses the account owner before planning anything', async () => {
+    const { cloud } = fakeCloud({
+      describeBootstrap: () => ({ changes: [], artifactHash: 'a'.repeat(64) }),
+      bootstrap: () => Promise.resolve({ deployerRoleArn: undefined }),
+      identity: () => Promise.reject(heroError('identity.root-refused')),
+    });
+    await expect(createHero({ cloud }).planBootstrap()).rejects.toMatchObject({
+      code: 'identity.root-refused',
+    });
+  });
+
+  it('is a sealed plan that needs approval, and a person approving it prepares the account once', async () => {
+    const prepared: string[] = [];
+    const { cloud } = fakeCloud({
+      describeBootstrap: (target) => ({
+        changes: [],
+        artifactHash: `${target.accountId}${target.region}`.padEnd(64, '0'),
+      }),
+      bootstrap: (request) => {
+        prepared.push(request.plan.artifactHash);
+        return Promise.resolve({ deployerRoleArn: 'arn:aws:iam::123456789012:role/hero-deployer' });
+      },
+    });
+    const hero = createHero({ cloud });
+    const plan = await hero.planBootstrap({ region: 'eu-west-1' });
+    expect(plan).toMatchObject({
+      intent: 'bootstrap',
+      target: { region: 'eu-west-1', accountId: ACCOUNT },
+    });
+    expect(isSealIntact(plan)).toBe(true);
+
+    const approval = approvalFromChallenge(await hero.requestApproval(plan), 'test');
+    const result = await hero.deploy(plan, approval);
+    expect(prepared).toEqual([plan.artifactHash]);
+    expect(result).toMatchObject({ kind: 'setup', status: 'succeeded' });
+    expect(result.nextSteps[0]).toMatchObject({
+      code: 'next.use-deployer-role',
+      params: { role: 'arn:aws:iam::123456789012:role/hero-deployer' },
+    });
+    // The approval is single-use.
+    await expect(hero.deploy(plan, approval)).rejects.toMatchObject({
+      code: 'approval.unknown-challenge',
+    });
   });
 });

@@ -6,3 +6,4 @@ pnpm-lock.yaml
 packages/providers/aws/test-fixtures/
 **/.e2e-*/
 **/api/*.api.md
+**/api/temp/

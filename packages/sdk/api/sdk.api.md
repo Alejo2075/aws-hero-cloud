@@ -147,6 +147,7 @@ export interface DeploymentResult {
     readonly endpoints: readonly Endpoint[];
     // (undocumented)
     readonly health: Health;
+    readonly kind?: 'removal' | 'setup';
     // Warning: (ae-forgotten-export) The symbol "OperationLink" needs to be exported by the entry point index.d.ts
     //
     // (undocumented)
@@ -220,9 +221,17 @@ export interface Hero {
     identity(options?: {
         readonly region?: string;
     }): Promise<CallerIdentity>;
+    // Warning: (ae-forgotten-export) The symbol "SetupReport" needs to be exported by the entry point index.d.ts
+    inspectSetup(options?: {
+        readonly region?: string;
+        readonly profile?: string;
+    }): Promise<SetupReport>;
     outputs(deploymentId: string): Promise<DeploymentResult>;
     // (undocumented)
     plan(analysis: Analysis, options?: PlanOptions): Promise<DeploymentPlan>;
+    planBootstrap(options?: {
+        readonly region?: string;
+    }): Promise<DeploymentPlan>;
     planDestroy(deploymentId: string): Promise<DeploymentPlan>;
     requestApproval(plan: PlanRef): Promise<ApprovalChallenge>;
     // Warning: (ae-forgotten-export) The symbol "SecretLocation" needs to be exported by the entry point index.d.ts
