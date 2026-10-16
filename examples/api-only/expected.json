@@ -1,0 +1,27 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "hero-example-api"
+    },
+    "services": [
+      {
+        "id": "api",
+        "type": "http",
+        "runtime": "nodejs",
+        "start": {
+          "command": "npm start"
+        },
+        "port": 3000,
+        "healthPath": "/healthz"
+      }
+    ],
+    "extensions": {
+      "x-node": {
+        "packageManager": "npm"
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["http-service", "node-runtime"]
+}

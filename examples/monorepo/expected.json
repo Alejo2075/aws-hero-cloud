@@ -1,0 +1,15 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "hero-example-monorepo"
+    },
+    "extensions": {
+      "x-node": {
+        "packageManager": "npm"
+      }
+    }
+  },
+  "questions": ["monorepo.choose-package"],
+  "capabilities": ["monorepo", "node-runtime"]
+}

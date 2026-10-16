@@ -1,0 +1,18 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "static-site"
+    },
+    "frontend": {
+      "framework": "static"
+    },
+    "extensions": {
+      "x-static": {
+        "outputDirectory": "."
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["web-frontend"]
+}

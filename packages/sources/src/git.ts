@@ -152,6 +152,8 @@ export interface GitSourceOptions {
   /** Schemes accepted. `file` exists only so tests can use local repositories. Never enable it in a product. */
   readonly allowedSchemes?: readonly GitScheme[];
   readonly gitBinary?: string;
+  /** Where temporary files go. Defaults to the system temporary folder. */
+  readonly tempRoot?: string;
   /** Resolves a host name to every address it points to. Injectable for tests. */
   readonly resolve?: (hostname: string) => Promise<readonly string[]>;
 }
@@ -168,6 +170,7 @@ export class GitSource implements SourceLoader {
   readonly #timeoutMs: number;
   readonly #schemes: readonly GitScheme[];
   readonly #git: string;
+  readonly #tempRoot: string;
   readonly #resolve: (hostname: string) => Promise<readonly string[]>;
   #versionChecked = false;
 
@@ -176,6 +179,7 @@ export class GitSource implements SourceLoader {
     this.#timeoutMs = options.timeoutMs ?? 120_000;
     this.#schemes = options.allowedSchemes ?? ['https'];
     this.#git = options.gitBinary ?? 'git';
+    this.#tempRoot = options.tempRoot ?? tmpdir();
     this.#resolve =
       options.resolve ??
       (async (hostname) => (await lookup(hostname, { all: true })).map((entry) => entry.address));
@@ -186,7 +190,7 @@ export class GitSource implements SourceLoader {
     const pinned = await this.#pinAddresses(location);
     await this.#ensureSafeVersion();
 
-    const parent = await mkdtemp(join(tmpdir(), 'hero-git-'));
+    const parent = await mkdtemp(join(this.#tempRoot, 'hero-git-'));
     const cleanup = removeDirectory(parent);
     try {
       const home = join(parent, 'home');
@@ -262,6 +266,9 @@ export class GitSource implements SourceLoader {
   async #pinAddresses(location: GitLocation): Promise<string | undefined> {
     const url = new URL(location.url);
     if (url.protocol !== 'https:') return undefined;
+    // The pin below is for port 443 only. `URL` drops a default port, so any other value is refused
+    // here as well, independently of `parseGitLocation`.
+    if (url.port !== '') throw heroError('source.unsupported', { source: 'git', reason: 'port' });
     let addresses: readonly string[];
     try {
       addresses = await this.#resolve(url.hostname);

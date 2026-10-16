@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { zipSync } from 'fflate';
 import type { ZipOptions, Zippable } from 'fflate';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DirectorySource } from './directory.js';
 import { DEFAULT_LIMITS } from './policy.js';
-import { SAMPLE_APP, listTempDirs, makeTempDir, writeTree } from './testing.js';
+import { SAMPLE_APP, makeTempDir, writeTree } from './testing.js';
 import { ZipSource } from './zip.js';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -37,8 +37,17 @@ async function archive(
   return { path, dir };
 }
 
+let tempRoot = '';
+beforeEach(async () => {
+  const { dir, cleanup } = await makeTempDir('hero-ziproot-');
+  tempRoot = dir;
+  cleanups.push(cleanup);
+});
+
+const temps = (): Promise<string[]> => readdir(tempRoot);
+
 const load = (path: string, limits = DEFAULT_LIMITS) =>
-  new ZipSource(limits).load({ kind: 'zip', location: path });
+  new ZipSource({ limits, tempRoot }).load({ kind: 'zip', location: path });
 
 const SYMLINK_ATTRS = (0o120777 << 16) >>> 0;
 
@@ -93,12 +102,12 @@ describe('ZipSource: valid archives', () => {
   });
 
   it('removes its temporary files when disposed', async () => {
-    const before = (await listTempDirs('hero-zip-')).length;
+    const before = (await temps()).length;
     const { path } = await archive(zipFromText(SAMPLE_APP));
     const snapshot = await load(path);
-    expect((await listTempDirs('hero-zip-')).length).toBe(before + 1);
+    expect((await temps()).length).toBe(before + 1);
     await snapshot.dispose();
-    expect((await listTempDirs('hero-zip-')).length).toBe(before);
+    expect((await temps()).length).toBe(before);
   });
 });
 
@@ -110,10 +119,10 @@ describe('ZipSource: malicious archives are rejected', () => {
     patch?: (z: Uint8Array) => Uint8Array,
   ) => {
     const { path, dir } = await archive(entries, options, patch);
-    const before = await listTempDirs('hero-zip-');
+    const before = await temps();
     await expect(load(path)).rejects.toMatchObject({ name: 'HeroError', code });
     // Nothing is left behind, and nothing was written outside the temporary folder.
-    expect(await listTempDirs('hero-zip-')).toEqual(before);
+    expect(await temps()).toEqual(before);
     return dir;
   };
 

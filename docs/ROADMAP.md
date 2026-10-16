@@ -77,12 +77,12 @@ Fix the design problems in the contracts before anything depends on them.
 
 ### Phase 3: Deterministic analyzer for JS/TS (M)
 
-- [ ] Detectors written against the plugin interface from day one: `package.json`, lockfiles, React, Vite, Next.js static export, Express, Fastify, Hono, Node version, `.env.example`, AWS SDK imports, ports, health routes.
-- [ ] Evidence and confidence on every detection; open questions instead of guesses.
-- [ ] Output: Hero Spec + `Analysis`.
-- [ ] 🔒 A `hero.yaml` found inside the repository is **untrusted**: validated, compared with the analysis, and every field it adds is flagged for review. Only a spec the user supplies from outside the source skips analysis (D4).
-- [ ] `createHero()` with injectable ports; `examples/headless` runs `analyze` with only the SDK.
-- [ ] Examples: six small JS/TS apps (static site, SPA, SPA + API, API only, API + key-value data, scheduled job).
+- [x] Detectors written against the plugin interface from day one: `package.json`, lockfiles, React, Vite, Next.js static export, Express, Fastify, Hono, Node version, `.env.example`, AWS SDK imports, ports, health routes.
+- [x] Evidence and confidence on every detection; open questions instead of guesses.
+- [x] Output: Hero Spec + `Analysis`.
+- [x] 🔒 A `hero.yaml` found inside the repository is **untrusted**: validated, compared with the analysis, and every field it adds is flagged for review. Only a spec the user supplies from outside the source skips analysis (D4).
+- [x] `createHero()` with injectable ports; `examples/headless` runs `analyze` with only the SDK.
+- [x] Examples: seven small JS/TS apps (static site, SPA, SPA + API, API only, API + key-value data, scheduled job, monorepo), each with a reviewed `expected.json` checked by `tests/examples.test.ts`.
 
 **Done when:** every example produces the expected Hero Spec, and `examples/headless` works.
 

@@ -1,11 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { chmod, readFile, symlink, writeFile } from 'node:fs/promises';
+import { chmod, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { zipSync } from 'fflate';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DirectorySource } from './directory.js';
 import { GitSource, isPrivateAddress, parseGitLocation } from './git.js';
-import { SAMPLE_APP, listTempDirs, makeTempDir, writeTree } from './testing.js';
+import { SAMPLE_APP, makeTempDir, writeTree } from './testing.js';
 import { ZipSource } from './zip.js';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -36,9 +36,21 @@ async function repository(files: Readonly<Record<string, string>> = SAMPLE_APP):
 }
 
 // `file` is allowed here only so tests can use local repositories; products never enable it.
-const testSource = new GitSource({ allowedSchemes: ['https', 'file'], timeoutMs: 30_000 });
+let tempRoot = '';
+beforeEach(async () => {
+  const { dir, cleanup } = await makeTempDir('hero-gitroot-');
+  tempRoot = dir;
+  cleanups.push(cleanup);
+});
+
+const temps = (): Promise<string[]> => readdir(tempRoot);
+const testSource = (): GitSource =>
+  new GitSource({ allowedSchemes: ['https', 'file'], timeoutMs: 30_000, tempRoot });
 const loadRepo = (dir: string, ref?: string) =>
-  testSource.load({ kind: 'git', location: `file://${dir}${ref === undefined ? '' : `#${ref}`}` });
+  testSource().load({
+    kind: 'git',
+    location: `file://${dir}${ref === undefined ? '' : `#${ref}`}`,
+  });
 
 describe('parseGitLocation', () => {
   it('accepts normal HTTPS repositories and refs', () => {
@@ -182,18 +194,18 @@ describe('GitSource', () => {
   });
 
   it('reports a repository that does not exist and cleans up', async () => {
-    const before = await listTempDirs('hero-git-');
+    const before = await temps();
     await expect(loadRepo('/no/such/repo')).rejects.toMatchObject({ code: 'source.not-found' });
-    expect(await listTempDirs('hero-git-')).toEqual(before);
+    expect(await temps()).toEqual(before);
   });
 
   it('removes its temporary files when disposed', async () => {
     const repo = await repository();
-    const before = (await listTempDirs('hero-git-')).length;
+    const before = (await temps()).length;
     const snapshot = await loadRepo(repo);
-    expect((await listTempDirs('hero-git-')).length).toBe(before + 1);
+    expect((await temps()).length).toBe(before + 1);
     await snapshot.dispose();
-    expect((await listTempDirs('hero-git-')).length).toBe(before);
+    expect((await temps()).length).toBe(before);
   });
 
   it('reports a clear error when git is missing', async () => {

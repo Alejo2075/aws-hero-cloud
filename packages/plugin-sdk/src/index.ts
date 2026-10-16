@@ -1,1 +1,69 @@
-export {};
+import type { Detection, OpenQuestion, SnapshotFile } from '@hero-cloud/core';
+import type { DataSpec, FrontendSpec, ServiceSpec, StorageSpec } from '@hero-cloud/specification';
+
+/**
+ * The public contract for teaching Hero about a framework, runtime, or legacy stack. A detector
+ * reads a read-only view of the project and reports what it needs, with evidence. It never
+ * executes the project and never names cloud resources.
+ */
+
+/** A read-only view of the project handed to every detector. */
+export interface DetectionContext {
+  /** Every file in scope, sorted by path. Paths are relative and use `/`. */
+  readonly files: readonly SnapshotFile[];
+  has(path: string): boolean;
+  /** Paths that start with `prefix` (a folder, with or without a trailing `/`). Empty prefix lists all. */
+  list(prefix?: string): readonly string[];
+  /**
+   * File text, or `undefined` when the file is missing, unreadable, or larger than `maxBytes`
+   * (default 512 KiB). Never throws for ordinary missing files.
+   */
+  readText(path: string, maxBytes?: number): Promise<string | undefined>;
+  /** Parsed JSON, or `undefined` when the file is missing or is not valid JSON. */
+  readJson(path: string): Promise<unknown>;
+}
+
+/** One piece of the Hero Spec that a detector is confident about. */
+export type Contribution =
+  | { readonly kind: 'name'; readonly value: string; readonly confidence: number }
+  | { readonly kind: 'frontend'; readonly value: FrontendSpec; readonly confidence: number }
+  | { readonly kind: 'service'; readonly value: ServiceSpec; readonly confidence: number }
+  | { readonly kind: 'data'; readonly value: DataSpec; readonly confidence: number }
+  | { readonly kind: 'storage'; readonly value: StorageSpec; readonly confidence: number }
+  | { readonly kind: 'auth'; readonly required: boolean; readonly confidence: number }
+  | { readonly kind: 'environment'; readonly names: readonly string[] }
+  | { readonly kind: 'extension'; readonly key: `x-${string}`; readonly value: unknown };
+
+/**
+ * What a detector found. Evidence strings are short references such as `dependency:express` or
+ * `file:vite.config.ts`. They name where something was seen; they never copy file contents.
+ */
+export interface Finding {
+  readonly detections: readonly Detection[];
+  readonly contributions: readonly Contribution[];
+  readonly questions: readonly OpenQuestion[];
+}
+
+export const emptyFinding: Finding = { detections: [], contributions: [], questions: [] };
+
+export interface DetectorPlugin {
+  /** Stable identifier, e.g. `node/express`. */
+  readonly id: string;
+  readonly description?: string;
+  detect(context: DetectionContext): Promise<Finding>;
+}
+
+/** Identity helper that gives detector authors type checking and completion. */
+export function defineDetector(detector: DetectorPlugin): DetectorPlugin {
+  return detector;
+}
+
+/** A plugin bundles detectors. More extension points are added as they are needed. */
+export interface HeroPlugin {
+  readonly id: string;
+  readonly detectors: readonly DetectorPlugin[];
+}
+
+export function definePlugin(plugin: HeroPlugin): HeroPlugin {
+  return plugin;
+}

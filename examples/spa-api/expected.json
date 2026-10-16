@@ -1,0 +1,39 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "hero-example-spa-api"
+    },
+    "frontend": {
+      "framework": "vite",
+      "build": {
+        "command": "npm run build",
+        "output": "dist"
+      }
+    },
+    "services": [
+      {
+        "id": "api",
+        "type": "http",
+        "runtime": "nodejs",
+        "build": {
+          "command": "npm run build"
+        },
+        "start": {
+          "command": "npm start"
+        },
+        "port": 8080,
+        "healthPath": "/api/health"
+      }
+    ],
+    "environment": ["SESSION_SECRET"],
+    "extensions": {
+      "x-node": {
+        "packageManager": "npm",
+        "moduleType": "module"
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["environment-variables", "http-service", "node-runtime", "web-frontend"]
+}

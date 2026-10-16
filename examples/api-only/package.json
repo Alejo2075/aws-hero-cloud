@@ -1,0 +1,11 @@
+{
+  "name": "hero-example-api",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.0.0"
+  }
+}

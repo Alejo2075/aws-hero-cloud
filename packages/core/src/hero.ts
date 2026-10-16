@@ -2,6 +2,7 @@ import type { HeroSpec } from '@hero-cloud/specification';
 import type { Approval, ApprovalChallenge } from './approval.js';
 import type { HeroEventListener } from './events.js';
 import type { DeploymentPlan, PlanRef } from './plan.js';
+import type { SkippedEntry } from './ports.js';
 import type { DeploymentResult, Health } from './result.js';
 
 export interface SourceRef {
@@ -21,13 +22,18 @@ export interface Detection {
 export interface OpenQuestion {
   readonly id: string;
   readonly code: string;
+  readonly params?: Readonly<Record<string, string | number | boolean>>;
   readonly options?: readonly string[];
 }
 
 export interface Analysis {
   readonly spec: HeroSpec;
+  /** Hash of the source snapshot that was analyzed. Later steps reload the source and compare it. */
+  readonly sourceHash: string;
   readonly detections: readonly Detection[];
   readonly openQuestions: readonly OpenQuestion[];
+  /** What the source loader left out (secrets, dependencies, symlinks). Paths only, never contents. */
+  readonly skipped: readonly SkippedEntry[];
   /** Whether an AI provider contributed. False for deterministic-only runs. */
   readonly aiAssisted: boolean;
 }
@@ -35,6 +41,16 @@ export interface Analysis {
 export interface AnalyzeOptions {
   /** Deterministic analysis only; never contact an AI provider. */
   readonly noAi?: boolean;
+  /** Analyze only this folder inside the source, for monorepos. Relative, no `..`. */
+  readonly root?: string;
+  /** Application name to use when the source does not name itself. */
+  readonly name?: string;
+  /**
+   * A Hero Spec the user supplies from outside the source. It is validated and used as is,
+   * skipping analysis. A `hero.yaml` found inside the source never takes this path.
+   */
+  readonly spec?: HeroSpec;
+  readonly signal?: AbortSignal;
 }
 
 export interface PlanOptions {

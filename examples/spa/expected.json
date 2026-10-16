@@ -1,0 +1,24 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "hero-example-spa"
+    },
+    "frontend": {
+      "framework": "vite",
+      "build": {
+        "command": "pnpm run build",
+        "output": "dist"
+      }
+    },
+    "environment": ["VITE_API_URL"],
+    "extensions": {
+      "x-node": {
+        "packageManager": "pnpm",
+        "moduleType": "module"
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["environment-variables", "node-runtime", "web-frontend"]
+}

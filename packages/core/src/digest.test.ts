@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computePlanDigest, isSealIntact, sealPlan } from './digest.js';
-import { samplePlanBody } from './fixtures.js';
+import { samplePlanBody } from './testing.js';
 
 describe('sealPlan', () => {
   it('is deterministic: the same body gives the same digest and id', () => {

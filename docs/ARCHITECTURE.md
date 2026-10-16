@@ -150,6 +150,12 @@ Answers "what does this application need to run?" without executing it. It works
 4. AI-assisted interpretation when the user connected an AI. Output is schema-validated and marked `aiAssisted`.
 5. Anything still uncertain becomes an **open question** for the person instead of a guess.
 
+Detectors are plugins (`DetectorPlugin` in `plugin-sdk`). The official JavaScript and TypeScript detectors live in `plugins/node`, one file per concern: runtime, front end, server, scheduled jobs, data, storage, authentication, environment, monorepo, plain static sites, and unrecognized projects. Each returns detections, contributions to the Hero Spec, and open questions; the analyzer merges them deterministically, so the result does not depend on detector order. A detector that throws or hangs cannot break the analysis: it is reported as a question and the rest continues.
+
+Evidence is a short reference (`dependency:express`, `file:vite.config.ts`, `script:start`), never a copy of file contents, so evidence is safe to show to an AI or an agent.
+
+**A `hero.yaml` inside the source is untrusted.** It can ask for build commands or public exposure, so it is never applied. It is validated, compared with what analysis found, and every field analysis did not confirm becomes a question for a person. A spec is used as written only when the user supplies it from outside the source (`AnalyzeOptions.spec`), and even then it is validated.
+
 Every detection carries evidence and a confidence value, which is what lets a reviewer see why a plan was produced:
 
 ```json

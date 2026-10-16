@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ApprovalService, InMemoryChallengeStore, approvalFromChallenge } from './approval.js';
 import type { Approval } from './approval.js';
 import { sealPlan } from './digest.js';
-import { samplePlan, samplePlanBody } from './fixtures.js';
+import { samplePlan, samplePlanBody } from './testing.js';
 
 function setup(ttlMs = 60_000) {
   let now = new Date('2026-01-01T00:00:00Z');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { samplePlan } from './fixtures.js';
+import { samplePlan } from './testing.js';
 import { InMemoryPlanStore, InMemoryStateStore } from './stores.js';
 
 describe('InMemoryPlanStore', () => {

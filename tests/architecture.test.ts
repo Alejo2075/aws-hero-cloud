@@ -19,6 +19,7 @@ const ENGINE = [
   '@hero-cloud/provider-aws',
   '@hero-cloud/provider-ai',
   '@hero-cloud/plugin-sdk',
+  '@hero-cloud/plugin-node',
   '@hero-cloud/shared',
 ] as const;
 
@@ -38,7 +39,19 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
   '@hero-cloud/core': ['@hero-cloud/specification', '@hero-cloud/shared'],
   '@hero-cloud/plugin-sdk': ['@hero-cloud/core', '@hero-cloud/specification'],
   '@hero-cloud/sources': ['@hero-cloud/core', '@hero-cloud/shared'],
-  '@hero-cloud/analyzer': ['@hero-cloud/core', '@hero-cloud/specification', '@hero-cloud/shared'],
+  '@hero-cloud/plugin-node': [
+    '@hero-cloud/core',
+    '@hero-cloud/analyzer', // development only: its tests run detectors through the analyzer
+    '@hero-cloud/plugin-sdk',
+    '@hero-cloud/specification',
+    '@hero-cloud/shared',
+  ],
+  '@hero-cloud/analyzer': [
+    '@hero-cloud/core',
+    '@hero-cloud/plugin-sdk',
+    '@hero-cloud/specification',
+    '@hero-cloud/shared',
+  ],
   '@hero-cloud/planner': ['@hero-cloud/core', '@hero-cloud/specification', '@hero-cloud/shared'],
   '@hero-cloud/deployment': ['@hero-cloud/core', '@hero-cloud/shared'],
   '@hero-cloud/provider-aws': [
@@ -52,6 +65,8 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
     '@hero-cloud/specification',
     '@hero-cloud/sources',
     '@hero-cloud/analyzer',
+    '@hero-cloud/plugin-node',
+    '@hero-cloud/plugin-sdk',
     '@hero-cloud/planner',
     '@hero-cloud/deployment',
     '@hero-cloud/provider-aws',
@@ -107,6 +122,7 @@ function listPackageDirs(): string[] {
   };
   visit(join(root, 'apps'), 0);
   visit(join(root, 'packages'), 0);
+  visit(join(root, 'plugins'), 0);
   return dirs;
 }
 
@@ -116,8 +132,10 @@ function loadPackages(): WorkspacePackage[] {
       name: string;
       dependencies?: Record<string, string>;
       peerDependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
     };
-    const deps = { ...pkg.dependencies, ...pkg.peerDependencies };
+    // Development dependencies count too: tests must respect the same boundaries.
+    const deps = { ...pkg.dependencies, ...pkg.peerDependencies, ...pkg.devDependencies };
     return {
       name: pkg.name,
       dir,

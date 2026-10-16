@@ -13,6 +13,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.12.0(jiti@2.7.0))
+      '@hero-cloud/sdk':
+        specifier: workspace:*
+        version: link:packages/sdk
       '@types/node':
         specifier: ^22
         version: 22.20.5
@@ -97,7 +100,20 @@ importers:
         specifier: ~5.9.3
         version: 5.9.3
 
-  packages/analyzer: {}
+  packages/analyzer:
+    dependencies:
+      '@hero-cloud/core':
+        specifier: workspace:*
+        version: link:../core
+      '@hero-cloud/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+      '@hero-cloud/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@hero-cloud/specification':
+        specifier: workspace:*
+        version: link:../specification
 
   packages/core:
     dependencies:
@@ -123,7 +139,14 @@ importers:
 
   packages/planner: {}
 
-  packages/plugin-sdk: {}
+  packages/plugin-sdk:
+    dependencies:
+      '@hero-cloud/core':
+        specifier: workspace:*
+        version: link:../core
+      '@hero-cloud/specification':
+        specifier: workspace:*
+        version: link:../specification
 
   packages/presentation:
     dependencies:
@@ -137,12 +160,31 @@ importers:
 
   packages/sdk:
     dependencies:
+      '@hero-cloud/analyzer':
+        specifier: workspace:*
+        version: link:../analyzer
       '@hero-cloud/core':
         specifier: workspace:*
         version: link:../core
+      '@hero-cloud/plugin-node':
+        specifier: workspace:*
+        version: link:../../plugins/node
+      '@hero-cloud/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+      '@hero-cloud/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@hero-cloud/sources':
+        specifier: workspace:*
+        version: link:../sources
       '@hero-cloud/specification':
         specifier: workspace:*
         version: link:../specification
+    devDependencies:
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
 
   packages/server: {}
 
@@ -178,6 +220,25 @@ importers:
       zod:
         specifier: ^4.6.7
         version: 4.6.7
+
+  plugins/node:
+    dependencies:
+      '@hero-cloud/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@hero-cloud/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@hero-cloud/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@hero-cloud/specification':
+        specifier: workspace:*
+        version: link:../../packages/specification
+    devDependencies:
+      '@hero-cloud/analyzer':
+        specifier: workspace:*
+        version: link:../../packages/analyzer
 
 packages:
 

@@ -29,6 +29,7 @@ export const errorCodes = [
   'deployment.failed',
   'deployment.locked',
   'internal.unexpected',
+  'internal.not-implemented',
 ] as const;
 
 export type ErrorCode = (typeof errorCodes)[number];

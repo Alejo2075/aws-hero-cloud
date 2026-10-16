@@ -170,12 +170,20 @@ function stripCommonRoot(paths: readonly string[]): string | undefined {
  * archive can lie about its sizes. Files go to a private temporary folder and are re-scanned by
  * the same code that handles plain folders.
  */
+export interface ZipSourceOptions {
+  readonly limits?: SourceLimits;
+  /** Where temporary files go. Defaults to the system temporary folder. */
+  readonly tempRoot?: string;
+}
+
 export class ZipSource implements SourceLoader {
   readonly kind = 'zip';
   readonly #limits: SourceLimits;
+  readonly #tempRoot: string;
 
-  constructor(limits: SourceLimits = DEFAULT_LIMITS) {
-    this.#limits = limits;
+  constructor(options: ZipSourceOptions = {}) {
+    this.#limits = options.limits ?? DEFAULT_LIMITS;
+    this.#tempRoot = options.tempRoot ?? tmpdir();
   }
 
   async load(ref: SourceRef, options: LoadOptions = {}): Promise<ProjectSnapshot> {
@@ -192,7 +200,7 @@ export class ZipSource implements SourceLoader {
 
     const planned = await this.#plan(ref.location, archiveSize, options.signal);
 
-    const temp = await mkdtemp(join(tmpdir(), 'hero-zip-'));
+    const temp = await mkdtemp(join(this.#tempRoot, 'hero-zip-'));
     const cleanup = removeDirectory(temp);
     try {
       const skipped: SkippedEntry[] = [];

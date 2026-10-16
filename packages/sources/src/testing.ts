@@ -30,9 +30,3 @@ export const SAMPLE_APP: Readonly<Record<string, string>> = {
   'src/util/helper.ts': 'export const helper = () => 1;\n',
   'README.md': '# Sample\n',
 };
-
-/** Counts leftover temporary directories created by the sources, to prove cleanup. */
-export async function listTempDirs(prefix: string): Promise<string[]> {
-  const { readdir } = await import('node:fs/promises');
-  return (await readdir(tmpdir())).filter((name) => name.startsWith(prefix));
-}

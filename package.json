@@ -28,7 +28,8 @@
     "prettier-plugin-astro": "^0.14.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.71.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "@hero-cloud/sdk": "workspace:*"
   },
   "license": "Apache-2.0",
   "homepage": "https://github.com/Alejo2075/aws-hero-cloud#readme",

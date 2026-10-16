@@ -1,0 +1,27 @@
+{
+  "root": "apps/api",
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "api"
+    },
+    "services": [
+      {
+        "id": "api",
+        "type": "http",
+        "runtime": "nodejs",
+        "start": {
+          "command": "npm start"
+        },
+        "port": 5000,
+        "healthPath": "/health"
+      }
+    ],
+    "extensions": {
+      "x-node": {
+        "packageManager": "npm"
+      }
+    }
+  },
+  "questions": []
+}

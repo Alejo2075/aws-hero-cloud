@@ -18,7 +18,15 @@
   },
   "types": "./src/index.ts",
   "dependencies": {
+    "@hero-cloud/analyzer": "workspace:*",
     "@hero-cloud/core": "workspace:*",
+    "@hero-cloud/plugin-node": "workspace:*",
+    "@hero-cloud/plugin-sdk": "workspace:*",
+    "@hero-cloud/shared": "workspace:*",
+    "@hero-cloud/sources": "workspace:*",
     "@hero-cloud/specification": "workspace:*"
+  },
+  "devDependencies": {
+    "fflate": "^0.8.2"
   }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "hero-example-report-job",
+  "private": true,
+  "scripts": {
+    "start": "node src/job.js"
+  },
+  "dependencies": {
+    "node-cron": "^3.0.0"
+  }
+}

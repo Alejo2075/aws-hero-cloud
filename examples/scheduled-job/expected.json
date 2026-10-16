@@ -1,0 +1,26 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "hero-example-report-job"
+    },
+    "services": [
+      {
+        "id": "jobs",
+        "type": "scheduled",
+        "runtime": "nodejs",
+        "start": {
+          "command": "pnpm start"
+        }
+      }
+    ],
+    "environment": ["REPORT_EMAIL"],
+    "extensions": {
+      "x-node": {
+        "packageManager": "pnpm"
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["environment-variables", "node-runtime", "scheduled-job"]
+}
