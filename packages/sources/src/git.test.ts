@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { symlink, writeFile } from 'node:fs/promises';
+import { chmod, readFile, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { zipSync } from 'fflate';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DirectorySource } from './directory.js';
-import { GitSource, parseGitLocation } from './git.js';
+import { GitSource, isPrivateAddress, parseGitLocation } from './git.js';
 import { SAMPLE_APP, listTempDirs, makeTempDir, writeTree } from './testing.js';
 import { ZipSource } from './zip.js';
 
@@ -201,5 +201,123 @@ describe('GitSource', () => {
     await expect(
       missing.load({ kind: 'git', location: 'https://github.com/acme/app' }),
     ).rejects.toMatchObject({ code: 'source.unsupported' });
+  });
+});
+
+describe('isPrivateAddress', () => {
+  it.each([
+    '0.0.0.0',
+    '10.1.2.3',
+    '127.0.0.1',
+    '100.64.0.1',
+    '169.254.169.254',
+    '172.16.0.1',
+    '172.31.255.255',
+    '192.168.1.1',
+    '198.18.0.1',
+    '224.0.0.1',
+    '255.255.255.255',
+    '::',
+    '::1',
+    'fc00::1',
+    'fd12:3456::1',
+    'fe80::1',
+    'ff02::1',
+    '::ffff:127.0.0.1',
+    '::ffff:7f00:1',
+    '64:ff9b::1',
+    'not-an-address',
+  ])('treats %s as private', (address) => {
+    expect(isPrivateAddress(address)).toBe(true);
+  });
+
+  it.each(['8.8.8.8', '140.82.112.3', '172.32.0.1', '100.63.0.1', '2606:4700:4700::1111'])(
+    'treats %s as public',
+    (address) => {
+      expect(isPrivateAddress(address)).toBe(false);
+    },
+  );
+});
+
+describe.skipIf(process.platform === 'win32')('GitSource DNS pinning (SSRF)', () => {
+  /** A fake `git` that answers --version and records the arguments of every other call. */
+  async function fakeGit(): Promise<{ binary: string; calls: () => Promise<string[][]> }> {
+    const { dir, cleanup } = await makeTempDir('hero-fakegit-');
+    cleanups.push(cleanup);
+    const log = join(dir, 'calls.jsonl');
+    const binary = join(dir, 'git');
+    await writeFile(
+      binary,
+      `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "git version 2.52.0"; exit 0; fi\nnode -e 'require("fs").appendFileSync(process.argv[1], JSON.stringify(process.argv.slice(2))+"\\n")' "${log}" "$@"\nexit 1\n`,
+    );
+    await chmod(binary, 0o755);
+    return {
+      binary,
+      calls: async () => {
+        try {
+          return (await readFile(log, 'utf8'))
+            .trim()
+            .split('\n')
+            .filter(Boolean)
+            .map((line) => JSON.parse(line) as string[]);
+        } catch {
+          return [];
+        }
+      },
+    };
+  }
+
+  const location = { kind: 'git', location: 'https://repo.example.com/acme/app.git' } as const;
+
+  it('refuses a host that resolves to a private address, without running git', async () => {
+    const { binary, calls } = await fakeGit();
+    const source = new GitSource({
+      gitBinary: binary,
+      resolve: () => Promise.resolve(['10.0.0.8']),
+    });
+    await expect(source.load(location)).rejects.toMatchObject({ code: 'source.unsupported' });
+    expect(await calls()).toEqual([]);
+  });
+
+  it('refuses a host if ANY of its addresses is private', async () => {
+    const { binary, calls } = await fakeGit();
+    const source = new GitSource({
+      gitBinary: binary,
+      resolve: () => Promise.resolve(['140.82.112.3', '169.254.169.254']),
+    });
+    await expect(source.load(location)).rejects.toMatchObject({ code: 'source.unsupported' });
+    expect(await calls()).toEqual([]);
+  });
+
+  it('refuses a host that does not resolve', async () => {
+    const { binary } = await fakeGit();
+    const source = new GitSource({ gitBinary: binary, resolve: () => Promise.resolve([]) });
+    await expect(source.load(location)).rejects.toMatchObject({ code: 'source.unsupported' });
+    const failing = new GitSource({
+      gitBinary: binary,
+      resolve: () => Promise.reject(new Error('ENOTFOUND')),
+    });
+    await expect(failing.load(location)).rejects.toMatchObject({ code: 'source.not-found' });
+  });
+
+  it('pins git to the validated addresses and never follows redirects', async () => {
+    const { binary, calls } = await fakeGit();
+    const source = new GitSource({
+      gitBinary: binary,
+      resolve: () => Promise.resolve(['140.82.112.3', '2606:4700:4700::1111']),
+    });
+    await expect(source.load(location)).rejects.toMatchObject({ code: 'source.not-found' });
+    const [clone] = await calls();
+    expect(clone).toBeDefined();
+    const config = (clone ?? []).filter((_arg, index, all) => all[index - 1] === '-c');
+    expect(config).toContain(
+      'http.curloptResolve=repo.example.com:443:140.82.112.3,2606:4700:4700::1111',
+    );
+    expect(config).toContain('http.followRedirects=false');
+    expect(config).toContain('protocol.file.allow=never');
+    expect(config).toContain('core.symlinks=false');
+    // The URL goes after `--` so it can never be read as an option.
+    const separator = (clone ?? []).indexOf('--');
+    expect((clone ?? [])[separator + 1]).toBe('https://repo.example.com/acme/app.git');
   });
 });

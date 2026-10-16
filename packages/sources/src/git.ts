@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, unlink, writeFile } from 'node:fs/promises';
+import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -33,33 +34,54 @@ export interface GitLocation {
   readonly ref: string | undefined;
 }
 
-function isPrivateIPv4(host: string): boolean {
-  const [a = 0, b = 0] = host.split('.').map(Number);
+/** True for any IPv4 address that is not a routable public address. */
+export function isPrivateIPv4(address: string): boolean {
+  const [a = 0, b = 0, c = 0] = address.split('.').map(Number);
   return (
-    a === 0 ||
+    a === 0 || // "this" network
     a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
+    a === 127 || // loopback
+    (a === 100 && b >= 64 && b <= 127) || // carrier-grade NAT
+    (a === 169 && b === 254) || // link-local, including cloud metadata
     (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 0 && c === 0) || // IETF protocol assignments
+    (a === 192 && b === 0 && c === 2) || // documentation
     (a === 192 && b === 168) ||
-    (a === 100 && b >= 64 && b <= 127)
+    (a === 198 && (b === 18 || b === 19)) || // benchmarking
+    (a === 198 && b === 51 && c === 100) || // documentation
+    (a === 203 && b === 0 && c === 113) || // documentation
+    a >= 224 // multicast, reserved, broadcast
   );
+}
+
+/** True for any IPv6 address that is not a routable public address. */
+export function isPrivateIPv6(address: string): boolean {
+  const host = address.toLowerCase();
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(host);
+  if (mapped?.[1] !== undefined) return isPrivateIPv4(mapped[1]);
+  if (host.startsWith('::ffff:')) return true; // hex form of an IPv4-mapped address
+  return (
+    host === '::' ||
+    host === '::1' ||
+    /^f[cd]/.test(host) || // unique local fc00::/7
+    /^fe[89ab]/.test(host) || // link-local fe80::/10
+    host.startsWith('ff') || // multicast
+    host.startsWith('64:ff9b:') || // NAT64
+    host.startsWith('2001:db8') || // documentation
+    host.startsWith('100::') // discard prefix
+  );
+}
+
+export function isPrivateAddress(address: string): boolean {
+  const version = isIP(address);
+  if (version === 4) return isPrivateIPv4(address);
+  if (version === 6) return isPrivateIPv6(address);
+  return true; // anything that is not a valid address is refused
 }
 
 function isPrivateHost(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  const version = isIP(host);
-  if (version === 4) return isPrivateIPv4(host);
-  if (version === 6) {
-    return (
-      host === '::1' ||
-      host === '::' ||
-      host.startsWith('fc') ||
-      host.startsWith('fd') ||
-      host.startsWith('fe80') ||
-      host.startsWith('::ffff:')
-    );
-  }
+  if (isIP(host) !== 0) return isPrivateAddress(host);
   return (
     host === 'localhost' ||
     host.endsWith('.localhost') ||
@@ -130,6 +152,8 @@ export interface GitSourceOptions {
   /** Schemes accepted. `file` exists only so tests can use local repositories. Never enable it in a product. */
   readonly allowedSchemes?: readonly GitScheme[];
   readonly gitBinary?: string;
+  /** Resolves a host name to every address it points to. Injectable for tests. */
+  readonly resolve?: (hostname: string) => Promise<readonly string[]>;
 }
 
 /**
@@ -144,6 +168,7 @@ export class GitSource implements SourceLoader {
   readonly #timeoutMs: number;
   readonly #schemes: readonly GitScheme[];
   readonly #git: string;
+  readonly #resolve: (hostname: string) => Promise<readonly string[]>;
   #versionChecked = false;
 
   constructor(options: GitSourceOptions = {}) {
@@ -151,10 +176,14 @@ export class GitSource implements SourceLoader {
     this.#timeoutMs = options.timeoutMs ?? 120_000;
     this.#schemes = options.allowedSchemes ?? ['https'];
     this.#git = options.gitBinary ?? 'git';
+    this.#resolve =
+      options.resolve ??
+      (async (hostname) => (await lookup(hostname, { all: true })).map((entry) => entry.address));
   }
 
   async load(ref: SourceRef, options: LoadOptions = {}): Promise<ProjectSnapshot> {
     const location = parseGitLocation(ref.location, this.#schemes);
+    const pinned = await this.#pinAddresses(location);
     await this.#ensureSafeVersion();
 
     const parent = await mkdtemp(join(tmpdir(), 'hero-git-'));
@@ -169,7 +198,7 @@ export class GitSource implements SourceLoader {
       await writeFile(emptyConfig, '');
 
       const env = this.#environment(home, emptyConfig);
-      const hardening = this.#hardeningFlags(hooks);
+      const hardening = this.#hardeningFlags(hooks, pinned);
       const args = [
         ...hardening,
         'clone',
@@ -225,7 +254,27 @@ export class GitSource implements SourceLoader {
     this.#versionChecked = true;
   }
 
-  #hardeningFlags(hooksDirectory: string): string[] {
+  /**
+   * Resolves the host once, refuses it if ANY address is private, and returns the validated
+   * addresses so git connects to exactly those. A second lookup by git cannot change the target
+   * (DNS rebinding).
+   */
+  async #pinAddresses(location: GitLocation): Promise<string | undefined> {
+    const url = new URL(location.url);
+    if (url.protocol !== 'https:') return undefined;
+    let addresses: readonly string[];
+    try {
+      addresses = await this.#resolve(url.hostname);
+    } catch (error) {
+      throw heroError('source.not-found', undefined, error);
+    }
+    if (addresses.length === 0 || addresses.some((address) => isPrivateAddress(address))) {
+      throw heroError('source.unsupported', { source: 'git', reason: 'private-address' });
+    }
+    return `${url.hostname}:443:${addresses.join(',')}`;
+  }
+
+  #hardeningFlags(hooksDirectory: string, pinned?: string): string[] {
     const allowFile = this.#schemes.includes('file') ? 'always' : 'never';
     const config: readonly string[] = [
       'protocol.allow=never',
@@ -247,6 +296,9 @@ export class GitSource implements SourceLoader {
       'filter.lfs.required=false',
       'http.lowSpeedLimit=1000',
       'http.lowSpeedTime=30',
+      // A redirect target would not be validated or pinned, so redirects are never followed.
+      'http.followRedirects=false',
+      ...(pinned === undefined ? [] : [`http.curloptResolve=${pinned}`]),
     ];
     return config.flatMap((entry) => ['-c', entry]);
   }
