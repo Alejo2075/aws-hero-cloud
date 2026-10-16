@@ -15,6 +15,8 @@ const EFFECTS: Readonly<Record<string, QuestionEffect>> = {
   'scheduled.schedule-unknown': 'blocks',
   'data.sqlite-persistence': 'blocks',
   'data.engine-unknown': 'blocks',
+  'data.keys-unknown': 'blocks',
+  'data.keys-confirm': 'advises',
   'storage.uploads': 'blocks',
   'storage.writes-to-disk': 'blocks',
   'monorepo.choose-package': 'blocks',

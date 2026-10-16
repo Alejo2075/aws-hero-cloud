@@ -39,11 +39,27 @@ export interface ServiceSpec {
 
 export type DataKind = 'key-value' | 'document' | 'relational' | 'cache' | 'search';
 
+export type KeyAttributeType = 'string' | 'number' | 'binary';
+
+/** One attribute of a table key, such as `id` of type `string`. */
+export interface KeyAttribute {
+  readonly name: string;
+  readonly type: KeyAttributeType;
+}
+
+/** The key of a key-value table. A table cannot be created without one, and cannot change it later. */
+export interface TableKey {
+  readonly partition: KeyAttribute;
+  readonly sort?: KeyAttribute;
+}
+
 export interface DataSpec {
   readonly id: string;
   readonly type: DataKind;
   /** Engine hint when the application needs a specific one, e.g. `postgres` or `mysql`. */
   readonly engine?: string;
+  /** For `key-value` data: how items are addressed. */
+  readonly key?: TableKey;
 }
 
 export type StorageKind = 'object' | 'file-system';

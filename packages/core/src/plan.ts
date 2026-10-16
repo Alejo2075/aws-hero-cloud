@@ -129,6 +129,7 @@ export const planWarningCodes = [
   'plan.scheduled-inside-server',
   'plan.secrets-required',
   'plan.nothing-to-deploy',
+  'plan.unsupported-schedule',
 ] as const;
 
 export type PlanWarningCode = (typeof planWarningCodes)[number];

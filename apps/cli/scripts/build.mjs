@@ -10,12 +10,14 @@ await build({
   entryPoints: [new URL('../src/bin.ts', import.meta.url).pathname],
   outfile,
   bundle: true,
+  // Infrastructure libraries read their own files at run time, so they stay installed packages.
+  external: ['aws-cdk-lib', 'constructs', 'cdk-nag', '@aws-cdk/toolkit-lib'],
   platform: 'node',
   format: 'esm',
   target: 'node22',
   // Some bundled dependencies are CommonJS and call require().
   banner: {
-    js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);",
+    js: "import { createRequire as __createRequire } from 'node:module';\nimport { fileURLToPath as __fileURLToPath } from 'node:url';\nimport { dirname as __dirname_of } from 'node:path';\nconst require = __createRequire(import.meta.url);\nconst __filename = __fileURLToPath(import.meta.url);\nconst __dirname = __dirname_of(__filename);",
   },
   define: { __HERO_VERSION__: JSON.stringify(version) },
   legalComments: 'none',

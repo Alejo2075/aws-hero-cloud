@@ -1,7 +1,14 @@
 import { heroError } from '@hero-cloud/core';
 import type { OpenQuestion } from '@hero-cloud/core';
 import { validateHeroSpec } from '@hero-cloud/specification';
-import type { DataSpec, HeroSpec, ServiceSpec, StorageSpec } from '@hero-cloud/specification';
+import type {
+  DataSpec,
+  HeroSpec,
+  KeyAttribute,
+  ServiceSpec,
+  StorageSpec,
+  TableKey,
+} from '@hero-cloud/specification';
 
 const CRON = /^(?:[0-9*,/-]{1,40}\s+){4}[0-9*,/-]{1,40}$/;
 // eslint-disable-next-line no-control-regex
@@ -33,6 +40,33 @@ function withService(
 function withStorage(spec: HeroSpec, storage: StorageSpec): HeroSpec {
   const others = (spec.storage ?? []).filter((item) => item.id !== storage.id);
   return { ...spec, storage: [...others, storage].sort((a, b) => (a.id < b.id ? -1 : 1)) };
+}
+
+const KEY_TYPES: Readonly<Record<string, KeyAttribute['type']>> = {
+  string: 'string',
+  s: 'string',
+  number: 'number',
+  n: 'number',
+  binary: 'binary',
+  b: 'binary',
+};
+
+/** Parses `id`, `id:number`, or `pk:string,sk:string` into a table key. */
+function tableKey(value: string, question: string): TableKey {
+  const parts = value.split(',').map((part) => part.trim());
+  if (parts.length < 1 || parts.length > 2) return invalid(question);
+  const attributes = parts.map((part): KeyAttribute => {
+    const [name = '', rawType = 'string', ...extra] = part.split(':').map((piece) => piece.trim());
+    const type = KEY_TYPES[rawType.toLowerCase()];
+    if (extra.length > 0 || type === undefined || !/^[A-Za-z_][A-Za-z0-9_.-]{0,254}$/.test(name)) {
+      return invalid(question);
+    }
+    return { name, type };
+  });
+  const [partition, sort] = attributes;
+  if (partition === undefined || (sort !== undefined && sort.name === partition.name))
+    return invalid(question);
+  return { partition, ...(sort === undefined ? {} : { sort }) };
 }
 
 function command(value: string, question: string): string {
@@ -109,6 +143,18 @@ export function applyAnswers(
             item.type === 'relational' && item.engine === undefined
               ? { ...item, engine: raw }
               : item,
+          ),
+        };
+        break;
+      }
+      case 'data.keys-unknown':
+      case 'data.keys-confirm': {
+        const table = typeof question.params?.table === 'string' ? question.params.table : 'kv';
+        const key = tableKey(raw, id);
+        current = {
+          ...current,
+          data: (current.data ?? []).map((item): DataSpec =>
+            item.id === table ? { ...item, key } : item,
           ),
         };
         break;

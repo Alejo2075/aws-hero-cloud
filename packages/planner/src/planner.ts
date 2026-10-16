@@ -129,7 +129,19 @@ function componentsOf(spec: HeroSpec, analysis: Analysis): Component[] {
         id: item.id,
         kind: 'key-value-table',
         capability: 'key-value-data',
-        settings: { billing: 'on-demand', pointInTimeRecovery: true },
+        settings: {
+          billing: 'on-demand',
+          pointInTimeRecovery: true,
+          ...(item.key === undefined
+            ? {}
+            : {
+                partitionKey: item.key.partition.name,
+                partitionKeyType: item.key.partition.type,
+                ...(item.key.sort === undefined
+                  ? {}
+                  : { sortKey: item.key.sort.name, sortKeyType: item.key.sort.type }),
+              }),
+        },
         rationale: [rationale(analysis, 'data.key-value.on-demand', 'key-value-data')],
       });
     }

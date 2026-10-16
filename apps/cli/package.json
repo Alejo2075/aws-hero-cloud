@@ -18,8 +18,12 @@
   },
   "description": "The hero-cloud command line: put any application on your own AWS account.",
   "dependencies": {
+    "@aws-cdk/toolkit-lib": "^1.43.0",
     "@hero-cloud/presentation": "workspace:*",
-    "@hero-cloud/sdk": "workspace:*"
+    "@hero-cloud/sdk": "workspace:*",
+    "aws-cdk-lib": "^2.273.0",
+    "cdk-nag": "^3.0.2",
+    "constructs": "^10.8.1"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"

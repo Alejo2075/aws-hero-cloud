@@ -4,10 +4,17 @@
  */
 export const awsResourceTypes = [
   's3-bucket',
+  's3-bucket-policy',
   'cloudfront-distribution',
+  'cloudfront-access-control',
   'apigatewayv2-api',
+  'apigatewayv2-stage',
+  'apigatewayv2-integration',
+  'apigatewayv2-route',
   'lambda-function',
+  'lambda-permission',
   'iam-role',
+  'iam-policy',
   'logs-log-group',
   'scheduler-schedule',
   'dynamodb-table',
@@ -15,6 +22,7 @@ export const awsResourceTypes = [
   'cognito-user-pool-client',
   'budgets-budget',
   'ssm-parameter',
+  'other-resource',
 ] as const;
 
 export type AwsResourceType = (typeof awsResourceTypes)[number];

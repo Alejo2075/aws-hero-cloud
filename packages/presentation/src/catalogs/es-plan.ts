@@ -223,6 +223,48 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'aws:ssm:Parameter',
   ),
 
+  'resource.s3-bucket-policy': tri(
+    'Reglas que mantienen la carpeta privada',
+    'Política del bucket de S3 (solo conexiones seguras)',
+    'aws:s3:BucketPolicy',
+  ),
+  'resource.cloudfront-access-control': tri(
+    'Una llave para que solo tu dirección web pueda abrir los archivos',
+    'Control de acceso al origen de CloudFront',
+    'aws:cloudfront:OriginAccessControl',
+  ),
+  'resource.apigatewayv2-stage': tri(
+    'La versión en vivo de la dirección pública',
+    'Etapa de API Gateway (registros de acceso y límites de peticiones)',
+    'aws:apigatewayv2:Stage',
+  ),
+  'resource.apigatewayv2-integration': tri(
+    'El enlace entre la dirección y tu programa',
+    'Integración de API Gateway',
+    'aws:apigatewayv2:Integration',
+  ),
+  'resource.apigatewayv2-route': tri(
+    'El camino que envía a los visitantes a tu programa',
+    'Ruta de API Gateway',
+    'aws:apigatewayv2:Route',
+  ),
+  'resource.lambda-permission': tri(
+    'Permiso para que la dirección arranque tu programa',
+    'Permiso de invocación de Lambda',
+    'aws:lambda:Permission',
+  ),
+  'resource.iam-policy': tri(
+    'La lista de lo que tu programa puede hacer',
+    'Política de IAM (mínimo privilegio)',
+    'aws:iam:Policy',
+  ),
+  'resource.other-resource': tri('Una pieza de apoyo', 'Recurso de apoyo', 'aws:other'),
+  'warning.plan.unsupported-schedule': tri(
+    'Hero no pudo fijar ese horario con exactitud, así que no programó {job}.',
+    'El horario de "{job}" no se puede expresar con exactitud en AWS (por ejemplo, mezcla un día del mes con un día de la semana), así que no se creó ninguna programación.',
+    'El horario de {job} no tiene equivalente exacto en EventBridge; no se planificó ningún recurso de programación.',
+  ),
+
   // ---- líneas de costo -------------------------------------------------------------------
   'cost.line.static-storage': tri(
     'Guardar tu sitio web',
@@ -427,6 +469,31 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'Hero no tiene una nube para la que planificar.',
     'No hay ningún proveedor de nube configurado.',
     'No se proporcionó un puerto CloudProvider.',
+  ),
+  'question.data.keys-unknown': tri(
+    'Hero necesita saber cómo se organizan tus datos antes de crear el lugar donde guardarlos.',
+    'Una tabla debe crearse con una clave y el código no muestra cuál. Indica cómo se identifican los elementos, por ejemplo "id" o "pk:string,sk:string".',
+    'No se encontró KeySchema, definición de esquema ni uso de Key para la tabla {table}. Responde nombre[:tipo][,nombre[:tipo]].',
+  ),
+  'question.data.keys-confirm': tri(
+    'Hero dedujo cómo se organizan tus datos. Por favor comprueba que sea correcto.',
+    'El código lee elementos por "{partition}", así que Hero creará la tabla con esa clave. La clave de una tabla no se puede cambiar después, así que confírmala.',
+    'Clave deducida del uso para la tabla {table}: partición {partition}. Confirma o responde nombre[:tipo][,nombre[:tipo]].',
+  ),
+  'evidence.source.key-schema': tri(
+    '',
+    'el código declara la clave de la tabla',
+    'source key-schema',
+  ),
+  'evidence.source.schema-definition': tri(
+    '',
+    'el modelo de datos declara la clave',
+    'source schema-definition',
+  ),
+  'evidence.source.key-usage': tri(
+    '',
+    'el código lee los elementos por esa clave',
+    'source key-usage',
   ),
   'question.scheduled.schedule-unknown': tri(
     'Hero no pudo saber cada cuánto debe correr tu trabajo programado.',

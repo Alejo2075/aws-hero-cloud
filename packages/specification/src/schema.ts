@@ -56,10 +56,16 @@ const service = z.strictObject({
   schedule: z.string().regex(CRON, 'spec.invalid-schedule').optional(),
 });
 
+const keyAttribute = z.strictObject({
+  name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_.-]{0,254}$/, 'spec.invalid-key-name'),
+  type: z.enum(['string', 'number', 'binary']),
+});
+
 const data = z.strictObject({
   id,
   type: z.enum(['key-value', 'document', 'relational', 'cache', 'search']),
   engine: identifier.optional(),
+  key: z.strictObject({ partition: keyAttribute, sort: keyAttribute.optional() }).optional(),
 });
 
 const storage = z.strictObject({

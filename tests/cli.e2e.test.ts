@@ -29,7 +29,8 @@ async function hero(...args: string[]): Promise<{ code: number; stdout: string; 
 }
 
 beforeAll(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'hero-e2e-'));
+  // Inside the CLI package so the bundle can find the infrastructure libraries it leaves external.
+  directory = await mkdtemp(join(root, 'apps', 'cli', '.e2e-'));
   binary = join(directory, 'hero-cloud.js');
   const manifest = JSON.parse(
     await readFile(join(root, 'apps', 'cli', 'package.json'), 'utf8'),
@@ -38,11 +39,12 @@ beforeAll(async () => {
     entryPoints: [join(root, 'apps', 'cli', 'src', 'bin.ts')],
     outfile: binary,
     bundle: true,
+    external: ['aws-cdk-lib', 'constructs', 'cdk-nag', '@aws-cdk/toolkit-lib'],
     platform: 'node',
     format: 'esm',
     target: 'node22',
     banner: {
-      js: "import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);",
+      js: "import { createRequire as __createRequire } from 'node:module';\nimport { fileURLToPath as __fileURLToPath } from 'node:url';\nimport { dirname as __dirname_of } from 'node:path';\nconst require = __createRequire(import.meta.url);\nconst __filename = __fileURLToPath(import.meta.url);\nconst __dirname = __dirname_of(__filename);",
     },
     define: { __HERO_VERSION__: JSON.stringify(manifest.version) },
     logLevel: 'silent',

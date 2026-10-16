@@ -30,3 +30,53 @@ describe('cronRunsPerMonth', () => {
     expect(cronRunsPerMonth(expression)).toBeUndefined();
   });
 });
+
+import { toAwsCron } from './cron.js';
+
+describe('toAwsCron', () => {
+  it.each([
+    ['0 * * * *', 'cron(0 * * * ? *)'],
+    ['*/5 * * * *', 'cron(*/5 * * * ? *)'],
+    ['30 2 * * *', 'cron(30 2 * * ? *)'],
+    ['0,30 8-17 * * *', 'cron(0,30 8-17 * * ? *)'],
+    ['0 9 * * 1', 'cron(0 9 ? * 2 *)'],
+    ['0 9 * * 0', 'cron(0 9 ? * 1 *)'],
+    ['0 9 * * 7', 'cron(0 9 ? * 1 *)'],
+    ['0 9 * * 6', 'cron(0 9 ? * 7 *)'],
+    ['0 9 * * 1-5', 'cron(0 9 ? * 2,3,4,5,6 *)'],
+    ['0 9 * * 0,6', 'cron(0 9 ? * 1,7 *)'],
+    ['0 9 1 * *', 'cron(0 9 1 * ? *)'],
+    ['0 0 1 1 *', 'cron(0 0 1 1 ? *)'],
+    ['0-30/10 * * * *', 'cron(0,10,20,30 * * * ? *)'],
+    ['  5   4  *  *  *  ', 'cron(5 4 * * ? *)'],
+  ])('converts %s', (unix, aws) => {
+    expect(toAwsCron(unix)).toBe(aws);
+  });
+
+  it.each([
+    ['', 'empty'],
+    ['0 * * *', 'four fields'],
+    ['0 * * * * *', 'six fields'],
+    ['60 * * * *', 'minute out of range'],
+    ['* 24 * * *', 'hour out of range'],
+    ['* * 0 * *', 'day of month zero'],
+    ['* * 32 * *', 'day of month out of range'],
+    ['* * * 13 *', 'month out of range'],
+    ['* * * * 8', 'weekday out of range'],
+    ['0 9 1 * 1', 'both day fields set (Unix means either, AWS cannot)'],
+    ['*/0 * * * *', 'zero step'],
+    ['5-1 * * * *', 'descending range'],
+    ['@daily', 'a nickname'],
+    ['0 9 * * MON', 'a weekday name'],
+  ])('refuses %j (%s)', (expression) => {
+    expect(toAwsCron(expression)).toBeUndefined();
+  });
+
+  it('never schedules something different from what was written: every result has six fields with one ?', () => {
+    for (const expression of ['0 * * * *', '0 9 * * 1', '0 9 1 * *', '*/15 */2 * * 1-5']) {
+      const aws = toAwsCron(expression);
+      expect(aws).toMatch(/^cron\(\S+ \S+ \S+ \S+ \S+ \*\)$/);
+      expect(aws?.split('?').length).toBe(2);
+    }
+  });
+});

@@ -14,3 +14,4 @@ coverage/
 .pnpm-store/
 .claude/
 hero-cloud-brand-final.zip
+.e2e-*/

@@ -219,6 +219,48 @@ export const enPlan: Readonly<Record<string, Message>> = {
     'aws:ssm:Parameter',
   ),
 
+  'resource.s3-bucket-policy': tri(
+    'Rules that keep the folder private',
+    'S3 bucket policy (secure connections only)',
+    'aws:s3:BucketPolicy',
+  ),
+  'resource.cloudfront-access-control': tri(
+    'A key so only your web address can open the files',
+    'CloudFront origin access control',
+    'aws:cloudfront:OriginAccessControl',
+  ),
+  'resource.apigatewayv2-stage': tri(
+    'The live version of the public address',
+    'API Gateway stage (access logs and request limits)',
+    'aws:apigatewayv2:Stage',
+  ),
+  'resource.apigatewayv2-integration': tri(
+    'The link from the address to your program',
+    'API Gateway integration',
+    'aws:apigatewayv2:Integration',
+  ),
+  'resource.apigatewayv2-route': tri(
+    'The path that sends visitors to your program',
+    'API Gateway route',
+    'aws:apigatewayv2:Route',
+  ),
+  'resource.lambda-permission': tri(
+    'Permission for the address to start your program',
+    'Lambda invoke permission',
+    'aws:lambda:Permission',
+  ),
+  'resource.iam-policy': tri(
+    'The list of what your program may do',
+    'IAM policy (least privilege)',
+    'aws:iam:Policy',
+  ),
+  'resource.other-resource': tri('A supporting piece', 'Supporting resource', 'aws:other'),
+  'warning.plan.unsupported-schedule': tri(
+    'Hero could not set that timetable exactly, so it did not schedule {job}.',
+    'The schedule of "{job}" cannot be expressed exactly in AWS (for example, it mixes a day of the month with a weekday), so no schedule was created.',
+    'Schedule of {job} has no exact EventBridge equivalent; no scheduler resource was planned.',
+  ),
+
   // ---- cost lines ------------------------------------------------------------------------
   'cost.line.static-storage': tri('Keeping your website', 'Website storage (S3)', 'S3 storage'),
   'cost.line.static-origin-requests': tri(
@@ -412,6 +454,23 @@ export const enPlan: Readonly<Record<string, Message>> = {
     'No cloud provider is configured.',
     'No CloudProvider port was supplied.',
   ),
+  'question.data.keys-unknown': tri(
+    'Hero needs to know how your data is organized before it can create the place to keep it.',
+    'A table must be created with a key, and the code does not show which one. Say how items are addressed, for example "id" or "pk:string,sk:string".',
+    'No KeySchema, schema definition, or Key usage found for table {table}. Answer name[:type][,name[:type]].',
+  ),
+  'question.data.keys-confirm': tri(
+    'Hero guessed how your data is organized. Please check that it is right.',
+    'The code reads items by "{partition}", so Hero will create the table with that key. A table\'s key cannot be changed later, so confirm it.',
+    'Key inferred from usage for table {table}: partition {partition}. Confirm or answer name[:type][,name[:type]].',
+  ),
+  'evidence.source.key-schema': tri('', 'the code declares the table key', 'source key-schema'),
+  'evidence.source.schema-definition': tri(
+    '',
+    'the data model declares the key',
+    'source schema-definition',
+  ),
+  'evidence.source.key-usage': tri('', 'the code reads items by that key', 'source key-usage'),
   'question.scheduled.schedule-unknown': tri(
     'Hero could not tell how often your scheduled work should run.',
     'The schedule for the scheduled job could not be read from the code. Say when it should run, in cron form such as "0 * * * *".',

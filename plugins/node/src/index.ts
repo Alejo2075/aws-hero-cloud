@@ -20,6 +20,8 @@ export const nodeQuestionCodes = [
   'scheduled.schedule-unknown',
   'data.sqlite-persistence',
   'data.engine-unknown',
+  'data.keys-unknown',
+  'data.keys-confirm',
   'storage.uploads',
   'storage.writes-to-disk',
   'monorepo.choose-package',

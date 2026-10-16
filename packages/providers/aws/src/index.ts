@@ -1,7 +1,9 @@
-export { cronRunsPerMonth } from './cron.js';
+export { cronRunsPerMonth, toAwsCron } from './cron.js';
 export { estimateCost } from './cost.js';
 export type { CostInputs } from './cost.js';
-export { resourcesFor } from './mapping.js';
+export { changesFromTemplate } from './changes.js';
+export { synthesize } from './cdk/synth.js';
+export type { Synthesized } from './cdk/synth.js';
 export {
   BUILT_IN_AS_OF,
   BUILT_IN_PRICES,

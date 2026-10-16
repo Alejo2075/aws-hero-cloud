@@ -254,6 +254,73 @@ describe('open questions', () => {
   });
 });
 
+describe('table keys', () => {
+  const files = (code: string) => ({
+    'package.json': pkg({
+      dependencies: { express: '5', '@aws-sdk/lib-dynamodb': '3' },
+      scripts: { start: 'node .' },
+    }),
+    'a.js': `app.listen(3000); ${code}`,
+  });
+
+  it('blocks the plan when the key cannot be known', async () => {
+    const plan = planApplication({ analysis: await analyze(files('')) });
+    expect(blocking(plan).join()).toContain('data.keys-unknown');
+  });
+
+  it('only advises when the key was inferred, and uses it', async () => {
+    const plan = planApplication({ analysis: await analyze(files('Get({ Key: { id } })')) });
+    expect(blocking(plan)).toEqual([]);
+    expect(plan.warnings.find((w) => w.params?.kind === 'data.keys-confirm')?.severity).toBe(
+      'warning',
+    );
+    expect(plan.spec.data?.[0]?.key?.partition.name).toBe('id');
+  });
+
+  it.each([
+    ['id', { partition: { name: 'id', type: 'string' } }],
+    ['id:number', { partition: { name: 'id', type: 'number' } }],
+    [
+      'pk:string,sk:number',
+      { partition: { name: 'pk', type: 'string' }, sort: { name: 'sk', type: 'number' } },
+    ],
+    [
+      ' pk : S , sk : N ',
+      { partition: { name: 'pk', type: 'string' }, sort: { name: 'sk', type: 'number' } },
+    ],
+  ])('accepts the answer %j', async (answer, expected) => {
+    const plan = planApplication({
+      analysis: await analyze(files('')),
+      answers: { 'data.keys-unknown': answer },
+    });
+    expect(plan.spec.data?.[0]?.key).toEqual(expected);
+    expect(blocking(plan)).toEqual([]);
+  });
+
+  it.each(['', 'a:b:c', 'x y', 'id:float', 'a,b,c', 'id,id', 'id; drop', '1bad'])(
+    'refuses the answer %j',
+    async (answer) => {
+      const analysis = await analyze(files(''));
+      expect(() => planApplication({ analysis, answers: { 'data.keys-unknown': answer } })).toThrow(
+        expect.objectContaining({ code: 'plan.invalid-answer' }),
+      );
+    },
+  );
+
+  it('puts the key into the table component', async () => {
+    const plan = planApplication({
+      analysis: await analyze(files('')),
+      answers: { 'data.keys-unknown': 'pk:string,sk:number' },
+    });
+    expect(plan.components.find((c) => c.kind === 'key-value-table')?.settings).toMatchObject({
+      partitionKey: 'pk',
+      partitionKeyType: 'string',
+      sortKey: 'sk',
+      sortKeyType: 'number',
+    });
+  });
+});
+
 describe('required inputs', () => {
   it('lists the environment names, classifies secrets, and always asks for the budget email', async () => {
     const plan = planApplication({

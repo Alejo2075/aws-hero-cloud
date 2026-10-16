@@ -152,7 +152,7 @@ describe('createHero().plan', () => {
     expect(
       plan.changes.find((c) => c.resource.type === 'scheduler-schedule')?.details,
     ).toMatchObject({
-      cron: '0 * * * *',
+      expression: 'cron(0 * * * ? *)',
     });
   });
 

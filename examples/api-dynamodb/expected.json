@@ -22,7 +22,13 @@
     "data": [
       {
         "id": "kv",
-        "type": "key-value"
+        "type": "key-value",
+        "key": {
+          "partition": {
+            "name": "id",
+            "type": "string"
+          }
+        }
       }
     ],
     "environment": ["API_KEY", "TABLE_NAME"],
@@ -32,6 +38,6 @@
       }
     }
   },
-  "questions": [],
+  "questions": ["data.keys-confirm"],
   "capabilities": ["environment-variables", "http-service", "key-value-data", "node-runtime"]
 }

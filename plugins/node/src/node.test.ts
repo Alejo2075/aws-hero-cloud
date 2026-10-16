@@ -309,6 +309,72 @@ describe('data', () => {
   });
 });
 
+describe('data: the key of a key-value table', () => {
+  const dynamo = (code: string) =>
+    analyze({
+      'package.json': pkg({ dependencies: { '@aws-sdk/lib-dynamodb': '3' } }),
+      'db.js': code,
+    });
+  const key = (a: Awaited<ReturnType<typeof dynamo>>) => a.spec.data?.[0]?.key;
+
+  it('trusts a declared KeySchema, with its types, and does not ask', async () => {
+    const a = await dynamo(`
+      new CreateTableCommand({
+        KeySchema: [{ AttributeName: 'pk', KeyType: 'HASH' }, { AttributeName: 'created', KeyType: 'RANGE' }],
+        AttributeDefinitions: [{ AttributeName: 'pk', AttributeType: 'S' }, { AttributeName: 'created', AttributeType: 'N' }],
+      });`);
+    expect(key(a)).toEqual({
+      partition: { name: 'pk', type: 'string' },
+      sort: { name: 'created', type: 'number' },
+    });
+    expect(questionIds(a)).not.toContain('data.keys-unknown');
+    expect(questionIds(a)).not.toContain('data.keys-confirm');
+  });
+
+  it('trusts a Dynamoose schema', async () => {
+    const a = await dynamo(
+      'new Schema({ userId: { type: String, hashKey: true }, at: { type: Number, rangeKey: true } })',
+    );
+    expect(key(a)).toEqual({
+      partition: { name: 'userId', type: 'string' },
+      sort: { name: 'at', type: 'number' },
+    });
+    expect(questionIds(a)).not.toContain('data.keys-confirm');
+  });
+
+  it('infers the key from how items are read, and asks for confirmation', async () => {
+    const a = await dynamo('client.send(new GetCommand({ TableName: t, Key: { id } }))');
+    expect(key(a)).toEqual({ partition: { name: 'id', type: 'string' } });
+    expect(questionIds(a)).toContain('data.keys-confirm');
+    const two = await dynamo('send(new GetCommand({ Key: { pk: a, sk: b } }))');
+    expect(key(two)).toEqual({
+      partition: { name: 'pk', type: 'string' },
+      sort: { name: 'sk', type: 'string' },
+    });
+  });
+
+  it('asks instead of guessing when the usages disagree or there are none', async () => {
+    const tie = await dynamo('Get({ Key: { id } }); Get({ Key: { name } });');
+    expect(key(tie)).toBeUndefined();
+    expect(questionIds(tie)).toContain('data.keys-unknown');
+    const none = await dynamo('export const x = 1;');
+    expect(key(none)).toBeUndefined();
+    expect(questionIds(none)).toContain('data.keys-unknown');
+  });
+
+  it('prefers the most common usage', async () => {
+    const a = await dynamo('Get({ Key: { id } }); Put({ Key: { id } }); Get({ Key: { other } });');
+    expect(key(a)?.partition.name).toBe('id');
+  });
+
+  it('refuses names that are not plain identifiers', async () => {
+    const a = await dynamo(
+      "new CreateTableCommand({ KeySchema: [{ AttributeName: 'a; DROP', KeyType: 'HASH' }] })",
+    );
+    expect(key(a)).toBeUndefined();
+  });
+});
+
 describe('storage and auth', () => {
   it('detects object storage and asks about uploads that have no destination', async () => {
     const s3 = await analyze({

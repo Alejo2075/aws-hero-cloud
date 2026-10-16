@@ -2,7 +2,9 @@ import { defineDetector, emptyFinding } from '@hero-cloud/plugin-sdk';
 import type { Contribution } from '@hero-cloud/plugin-sdk';
 import type { Detection, OpenQuestion } from '@hero-cloud/core';
 import type { DataSpec } from '@hero-cloud/specification';
+import { findTableKey } from '../dynamodb-keys.js';
 import { dependencyEvidence, readPackageJson } from '../package-json.js';
+import { sourceFiles } from '../sources.js';
 
 interface Rule {
   readonly dependencies: readonly string[];
@@ -94,12 +96,30 @@ export const dataDetector = defineDetector({
     for (const rule of RULES) {
       const found = rule.dependencies.filter((name) => info.dependencies.has(name));
       if (found.length === 0) continue;
-      detections.push({
-        capability: rule.capability,
-        confidence: rule.confidence,
-        evidence: found.map((name) => dependencyEvidence(info, name)),
-      });
-      contributions.push({ kind: 'data', value: rule.data, confidence: rule.confidence });
+      const evidence = found.map((name) => dependencyEvidence(info, name));
+      let data: DataSpec = rule.data;
+      if (rule.data.type === 'key-value') {
+        const table = findTableKey(await sourceFiles(context));
+        if (table === undefined) {
+          questions.push({
+            id: 'data.keys-unknown',
+            code: 'data.keys-unknown',
+            params: { table: rule.data.id },
+          });
+        } else {
+          data = { ...rule.data, key: table.key };
+          evidence.push(`source:${table.evidence}`);
+          if (table.needsConfirmation) {
+            questions.push({
+              id: 'data.keys-confirm',
+              code: 'data.keys-confirm',
+              params: { table: rule.data.id, partition: table.key.partition.name },
+            });
+          }
+        }
+      }
+      detections.push({ capability: rule.capability, confidence: rule.confidence, evidence });
+      contributions.push({ kind: 'data', value: data, confidence: rule.confidence });
       if (rule.data.engine === 'sqlite') {
         // A file database lives on disk; whether it must survive a restart is the person's call.
         questions.push({ id: 'data.sqlite-persistence', code: 'data.sqlite-persistence' });

@@ -159,6 +159,59 @@
           "engine": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9._+-]{0,40}$"
+          },
+          "key": {
+            "type": "object",
+            "properties": {
+              "partition": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,254}$"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "number",
+                      "binary"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "type"
+                ],
+                "additionalProperties": false
+              },
+              "sort": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,254}$"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "number",
+                      "binary"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "type"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "partition"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
