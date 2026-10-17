@@ -467,6 +467,11 @@ Opciones:
       --prepare                       (setup) Prepara tu cuenta de AWS una vez, tras tu aprobación
       --write-profile <nombre>        (setup) Agrega un perfil que usa el rol desplegador limitado
       --allow <carpeta>               (mcp) Una carpeta que un asistente puede analizar (se puede repetir)
+      --ai <anthropic|openai|openai-compatible|ollama|bedrock>  Pide ayuda a tu propio modelo de IA con lo que el análisis no puede saber
+      --ai-model <nombre>             El modelo a usar (obligatorio con --ai)
+      --ai-key-env <NOMBRE>           Nombre de la variable de entorno que contiene tu llave
+      --ai-base-url <url>             Dirección de un servidor Ollama o compatible con OpenAI
+      --ai-scope <file-names|snippets|full-files>  Qué aceptas compartir con él
       --state-dir <carpeta>           Dónde Hero recuerda los despliegues (por defecto: .hero)
       --no-color                      No usa colores
   -h, --help                          Muestra esta ayuda
@@ -489,6 +494,17 @@ que Hero mostró, como hero-mi-app. Códigos de salida: 0 bien, 1 falló, 2 coma
     'cli.profile.exists': 'Ya existe un perfil llamado {name} en {path}. No se cambió nada.',
     'cli.approve.expired': 'Esta solicitud venció. Pídele al asistente que haga una nueva.',
     'cli.approve.recorded': 'Registrado. La solicitud del asistente continuará ahora.',
+    'cli.ai.consent':
+      'Hero puede pedirle a {destination} que ayude a entender tu proyecto. Enviaría {what}. Todo lo que parezca un secreto se elimina antes, y el modelo solo puede completar datos, nunca comandos ni permisos. ¿Lo permites? [s/N]',
+    'cli.ai.scope.file-names': 'los nombres de tus archivos',
+    'cli.ai.scope.snippets':
+      'los nombres de tus archivos y fragmentos cortos de los que describen tu proyecto (listas de paquetes, archivos de entrada)',
+    'cli.ai.scope.full-files': 'los nombres de tus archivos y hasta 20 archivos completos',
+    'cli.ai.no-consent':
+      'No se consulta al modelo de IA: no aceptaste compartir nada con él. Se continúa sin él.',
+    'cli.ai.consulted':
+      'Se consultó a tu modelo de IA: se enviaron {files} nombres de archivo y {snippets} fragmentos, se quitaron {redactions} elementos que parecían secretos y se completaron {filled} datos.',
+    'cli.ai.unavailable': 'No se pudo usar tu modelo de IA ({reason}). Se continúa sin él.',
     'cli.declined': 'No se aprobó. No se cambió nada.',
     'cli.progress.deploy': 'Preparando todo en AWS...',
     'cli.progress.verify': 'Comprobando que funciona...',

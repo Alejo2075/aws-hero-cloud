@@ -18,6 +18,7 @@
   "description": "The hero-cloud command line: put any application on your own AWS account.",
   "dependencies": {
     "@aws-cdk/toolkit-lib": "^1.43.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1152.0",
     "@aws-sdk/client-cloudformation": "^3.1152.0",
     "@aws-sdk/client-cloudfront": "^3.1152.0",
     "@aws-sdk/client-codebuild": "^3.1152.0",

@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { audienceLevels } from '@hero-cloud/presentation';
-import { HeroError } from '@hero-cloud/sdk';
+import { HeroError, aiKinds } from '@hero-cloud/sdk';
 import type { AudienceLevel } from '@hero-cloud/presentation';
 import { isProfileName } from './profile.js';
 
@@ -33,6 +33,13 @@ export interface ParsedArguments {
   readonly region: string | undefined;
   readonly accountId: string | undefined;
   readonly offline: boolean;
+  /** The AI model to ask for help with what analysis cannot tell: its kind, model, key variable. */
+  readonly ai: string | undefined;
+  readonly aiModel: string | undefined;
+  readonly aiKeyEnv: string | undefined;
+  readonly aiBaseUrl: string | undefined;
+  /** What the person agrees to share: `file-names`, `snippets`, or `full-files`. */
+  readonly aiScope: string | undefined;
   /** For `mcp`: the folders an assistant may analyze. */
   readonly allow: readonly string[];
   /** For `setup`: prepare the account (an approved plan of its own). */
@@ -143,6 +150,11 @@ export function parseArguments(
         approve: { type: 'string' },
         prepare: { type: 'boolean' },
         allow: { type: 'string', multiple: true },
+        ai: { type: 'string' },
+        'ai-model': { type: 'string' },
+        'ai-key-env': { type: 'string' },
+        'ai-base-url': { type: 'string' },
+        'ai-scope': { type: 'string' },
         'write-profile': { type: 'string' },
         'budget-email': { type: 'string' },
         profile: { type: 'string' },
@@ -171,6 +183,18 @@ export function parseArguments(
   if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(locale))
     throw usageError('--locale is not a valid language tag');
 
+  if (values.ai !== undefined && !(aiKinds as readonly string[]).includes(values.ai)) {
+    throw usageError(`--ai must be one of: ${aiKinds.join(', ')}`);
+  }
+  if (
+    values['ai-scope'] !== undefined &&
+    !['file-names', 'snippets', 'full-files'].includes(values['ai-scope'])
+  ) {
+    throw usageError('--ai-scope must be one of: file-names, snippets, full-files');
+  }
+  if (values['ai-key-env'] !== undefined && !/^[A-Z][A-Z0-9_]{0,63}$/.test(values['ai-key-env'])) {
+    throw usageError('--ai-key-env must be the NAME of an environment variable, not the key');
+  }
   const [first, ...rest] = positionals;
   if (values.approve !== undefined && !/^[0-9a-f]{64}$/.test(values.approve)) {
     throw usageError('--approve must be the 64-character digest of the plan');
@@ -193,6 +217,11 @@ export function parseArguments(
     secretName: undefined,
     prepare: values.prepare === true,
     allow: values.allow ?? [],
+    ai: values.ai,
+    aiModel: values['ai-model'],
+    aiKeyEnv: values['ai-key-env'],
+    aiBaseUrl: values['ai-base-url'],
+    aiScope: values['ai-scope'],
     writeProfile: values['write-profile'],
     budgetEmail: values['budget-email'],
     profile: values.profile,

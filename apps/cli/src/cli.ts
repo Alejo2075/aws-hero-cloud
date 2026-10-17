@@ -3,10 +3,21 @@ import type { RenderOptions } from '@hero-cloud/presentation';
 import {
   BUDGET_EMAIL_INPUT,
   HeroError,
+  aiDestination,
   approvalFromChallenge,
+  createAiProvider,
+  isLocalAi,
   parseHeroSpec,
 } from '@hero-cloud/sdk';
-import type { DeploymentPlan, Hero, HeroEvent, HeroSpec } from '@hero-cloud/sdk';
+import type {
+  AIProvider,
+  AiConfig,
+  ConsentScope,
+  DeploymentPlan,
+  Hero,
+  HeroEvent,
+  HeroSpec,
+} from '@hero-cloud/sdk';
 import type { ApprovalInbox } from '@hero-cloud/mcp';
 import { parseArguments, peekRenderOptions, sourceKind } from './args.js';
 import { join } from 'node:path';
@@ -30,6 +41,11 @@ export interface CliIo {
   readonly stdinIsTTY?: boolean;
   /** Where the person's AWS configuration file is. Hero adds a profile there only when asked. */
   readonly awsConfigPath?: string;
+  /** Where the record of what was agreed to share with an AI model is kept. */
+  openConsent?(path: string): {
+    read(): Promise<ConsentRecord | undefined>;
+    write(record: ConsentRecord): Promise<void>;
+  };
   /** Opens the folder where assistants' approval requests wait for a person. */
   openInbox?(directory: string): ApprovalInbox;
   /** Serves the assistant tools over standard input and output until the assistant disconnects. */
@@ -48,6 +64,15 @@ export interface CliIo {
 export interface HeroSettings {
   readonly stateDirectory: string;
   readonly profile?: string;
+  /** The AI model the person chose and what they agreed to share with it. */
+  readonly ai?: { readonly provider: AIProvider; readonly scope: ConsentScope };
+}
+
+/** What a person agreed to share, and with whom. Holds no keys and no project content. */
+export interface ConsentRecord {
+  readonly provider: string;
+  readonly scope: ConsentScope;
+  readonly grantedAt: string;
 }
 
 const JSON_SCHEMA_VERSION = 1;
@@ -125,7 +150,97 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
     hero.subscribe((event) => {
       const code = progressCode(event);
       if (code !== undefined) io.stderr.write(`${presenter.text(code, render)}\n`);
+      if (event.type === 'notice' && event.code === 'ai.consulted') {
+        io.stderr.write(`${presenter.text('cli.ai.consulted', render, event.params)}\n`);
+      }
+      if (event.type === 'notice' && event.code === 'ai.unavailable') {
+        io.stderr.write(`${presenter.text('cli.ai.unavailable', render, event.params)}\n`);
+      }
     });
+  };
+
+  const DEFAULT_KEY_VARIABLE = {
+    anthropic: 'ANTHROPIC_API_KEY',
+    openai: 'OPENAI_API_KEY',
+  } as const;
+
+  /**
+   * Turns `--ai ...` into a model and a decision about what may be shared. Nothing leaves the
+   * machine unless the person agreed: a model on this computer needs no consent; any other needs a
+   * recorded yes to this destination and scope, a prompt, or an explicit `--ai-scope`.
+   */
+  const resolveAi = async (): Promise<Pick<HeroSettings, 'ai'>> => {
+    if (args.ai === undefined || args.noAi) return {};
+    const model = args.aiModel;
+    if (model === undefined)
+      throw new HeroError('usage', { params: { reason: '--ai needs --ai-model <name>' } });
+    const kind = args.ai as AiConfig['kind'];
+    let apiKey: string | undefined;
+    if (kind === 'anthropic' || kind === 'openai' || kind === 'openai-compatible') {
+      const variable =
+        args.aiKeyEnv ?? (kind === 'openai-compatible' ? undefined : DEFAULT_KEY_VARIABLE[kind]);
+      apiKey = variable === undefined ? undefined : io.env[variable];
+      if (apiKey === undefined && kind !== 'openai-compatible') {
+        throw new HeroError('usage', {
+          params: {
+            reason: `put your key in the ${variable ?? 'environment'} variable (--ai-key-env <NAME> picks another)`,
+          },
+        });
+      }
+    }
+    const config: AiConfig =
+      kind === 'bedrock'
+        ? {
+            kind,
+            model,
+            region: args.region ?? 'us-east-1',
+            ...(args.profile === undefined ? {} : { profile: args.profile }),
+          }
+        : kind === 'ollama'
+          ? { kind, model, ...(args.aiBaseUrl === undefined ? {} : { baseUrl: args.aiBaseUrl }) }
+          : kind === 'openai-compatible'
+            ? {
+                kind,
+                model,
+                baseUrl: args.aiBaseUrl ?? 'http://127.0.0.1:8000/v1',
+                ...(apiKey === undefined ? {} : { apiKey }),
+              }
+            : {
+                kind,
+                model,
+                apiKey: apiKey ?? '',
+                ...(args.aiBaseUrl === undefined ? {} : { baseUrl: args.aiBaseUrl }),
+              };
+    const provider = createAiProvider(config);
+    const scope = (args.aiScope as ConsentScope | undefined) ?? 'snippets';
+    if (isLocalAi(config)) return { ai: { provider, scope } };
+
+    const who = `${kind}:${aiDestination(config)}`;
+    const consent = io.openConsent?.(join(settings.stateDirectory, 'ai-consent.json'));
+    const stored = await consent?.read();
+    const rank = { 'file-names': 0, snippets: 1, 'full-files': 2 } as const;
+    if (stored?.provider === who && args.aiScope === undefined) {
+      return { ai: { provider, scope: stored.scope } };
+    }
+    if (stored?.provider === who && rank[stored.scope] >= rank[scope]) {
+      return { ai: { provider, scope } };
+    }
+    let agreed = args.aiScope !== undefined;
+    if (!agreed && io.ask !== undefined && io.stdinIsTTY === true) {
+      const answer = await io.ask(
+        `${presenter.text('cli.ai.consent', render, {
+          destination: aiDestination(config),
+          what: presenter.text(`cli.ai.scope.${scope}`, render),
+        })} `,
+      );
+      agreed = /^(y|yes|s|si|sí)$/i.test(answer.trim());
+    }
+    if (!agreed) {
+      io.stderr.write(`${presenter.text('cli.ai.no-consent', render)}\n`);
+      return {};
+    }
+    await consent?.write({ provider: who, scope, grantedAt: new Date().toISOString() });
+    return { ai: { provider, scope } };
   };
   const show = (view: ReturnType<typeof presenter.plan>): void => {
     io.stdout.write(renderText(view, { color, width }));
@@ -359,7 +474,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
       spec = parsed.spec;
     }
 
-    const hero = io.createHero(settings);
+    const hero = io.createHero({ ...settings, ...(await resolveAi()) });
     watch(hero);
     const analysis = await hero.analyze(
       { kind, location },

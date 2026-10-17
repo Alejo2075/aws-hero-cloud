@@ -5,6 +5,8 @@
  */
 export { createHero } from './engine.js';
 export { BUDGET_EMAIL_INPUT } from '@hero-cloud/planner';
+export { aiDestination, aiKinds, createAiProvider, isLocalAi } from '@hero-cloud/provider-ai';
+export type { AiConfig, AiLimits, ConsentScope } from '@hero-cloud/provider-ai';
 export type { CreateHeroOptions } from './engine.js';
 export {
   ApprovalService,

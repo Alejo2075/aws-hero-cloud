@@ -4,7 +4,7 @@ import { createInterface } from 'node:readline/promises';
 import { homedir } from 'node:os';
 import { isatty } from 'node:tty';
 import { join, resolve } from 'node:path';
-import { FileDeploymentLock, FileStateStore } from '@hero-cloud/local';
+import { FileAiConsentStore, FileDeploymentLock, FileStateStore } from '@hero-cloud/local';
 import { FileApprovalInbox, createRootGuard, serveStdio } from '@hero-cloud/mcp';
 import { createHero } from '@hero-cloud/sdk';
 import { run } from './cli.js';
@@ -36,6 +36,7 @@ const code = await run(process.argv.slice(2), {
       lines.close();
     }
   },
+  openConsent: (path) => new FileAiConsentStore(path),
   openInbox: (directory) => new FileApprovalInbox(directory),
   serveMcp: async ({ hero, roots, inboxDirectory }) => {
     await serveStdio({
@@ -55,6 +56,9 @@ const code = await run(process.argv.slice(2), {
         : {
             state: new FileStateStore(join(settings.stateDirectory, 'state')),
             locks: new FileDeploymentLock(join(settings.stateDirectory, 'locks')),
+            ...(settings.ai === undefined
+              ? {}
+              : { ai: settings.ai.provider, aiConsent: { scope: settings.ai.scope } }),
             assemblyDirectory: join(settings.stateDirectory, 'assemblies'),
             ...(settings.profile === undefined ? {} : { awsProfile: settings.profile }),
           }),

@@ -9,6 +9,7 @@ export const PUBLISHED = [
   'plugins/node',
   'packages/planner',
   'packages/providers/aws',
+  'packages/providers/ai',
   'packages/presentation',
   'packages/local',
   'packages/sdk',

@@ -47,6 +47,7 @@ export const evidenceKinds = [
   'absent',
   'default',
   'capability',
+  'ai',
 ] as const;
 
 export type EvidenceKind = (typeof evidenceKinds)[number];

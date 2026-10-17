@@ -5,6 +5,50 @@
 ```ts
 
 // @public
+export type AiConfig = {
+    readonly kind: 'anthropic';
+    readonly model: string;
+    readonly apiKey: string;
+    readonly baseUrl?: string;
+} | {
+    readonly kind: 'openai';
+    readonly model: string;
+    readonly apiKey: string;
+    readonly baseUrl?: string;
+} | {
+    readonly kind: 'openai-compatible';
+    readonly model: string;
+    readonly baseUrl: string;
+    readonly apiKey?: string;
+} | {
+    readonly kind: 'ollama';
+    readonly model: string;
+    readonly baseUrl?: string;
+} | {
+    readonly kind: 'bedrock';
+    readonly model: string;
+    readonly region: string;
+    readonly profile?: string;
+};
+
+// @public
+export function aiDestination(config: AiConfig): string;
+
+// @public (undocumented)
+export const aiKinds: readonly ["anthropic", "openai", "openai-compatible", "ollama", "bedrock"];
+
+// @public (undocumented)
+export interface AiLimits {
+    readonly maxCalls: number;
+    readonly maxCostUsd: number;
+    readonly maxInputChars: number;
+    readonly maxOutputTokens: number;
+    readonly pricePerMillionInput: number;
+    // (undocumented)
+    readonly pricePerMillionOutput: number;
+}
+
+// @public
 export interface AIProvider {
     // (undocumented)
     generate<T>(request: AIRequest): Promise<T>;
@@ -97,10 +141,23 @@ export class ApprovalService {
 export const BUDGET_EMAIL_INPUT = "BUDGET_ALERT_EMAIL";
 
 // @public
+export type ConsentScope = 'file-names' | 'snippets' | 'full-files';
+
+// @public (undocumented)
+export function createAiProvider(config: AiConfig, options?: {
+    fetch?: Fetch;
+}): AIProvider;
+
+// @public
 export function createHero(options?: CreateHeroOptions): Hero;
 
 // @public (undocumented)
 export interface CreateHeroOptions extends HeroPorts {
+    readonly aiConsent?: {
+        readonly scope: ConsentScope;
+    };
+    // (undocumented)
+    readonly aiLimits?: Partial<AiLimits>;
     readonly approvalTtlMs?: number;
     readonly assemblyDirectory?: string;
     readonly awsProfile?: string;
@@ -344,6 +401,9 @@ export interface HeroSpec {
 export function isHeroError(value: unknown): value is HeroError;
 
 // @public
+export function isLocalAi(config: AiConfig): boolean;
+
+// @public
 export interface Logger {
     // (undocumented)
     debug(entry: Rationale): void;
@@ -456,6 +516,7 @@ export function validateHeroSpec(value: unknown): ParseResult;
 // Warnings were encountered during analysis:
 //
 // /Users/alejandrosantana/WebstormProjects/aws-hero-cloud/packages/core/dist/events.d.ts:8:5 - (ae-forgotten-export) The symbol "HeroPhase" needs to be exported by the entry point index.d.ts
+// /Users/alejandrosantana/WebstormProjects/aws-hero-cloud/packages/providers/ai/dist/factory.d.ts:35:5 - (ae-forgotten-export) The symbol "Fetch" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

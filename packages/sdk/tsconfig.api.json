@@ -14,6 +14,7 @@
       "@hero-cloud/plugin-node": ["../../plugins/node/dist/index.d.ts"],
       "@hero-cloud/planner": ["../planner/dist/index.d.ts"],
       "@hero-cloud/provider-aws": ["../providers/aws/dist/index.d.ts"],
+      "@hero-cloud/provider-ai": ["../providers/ai/dist/index.d.ts"],
       "@hero-cloud/presentation": ["../presentation/dist/index.d.ts"],
       "@hero-cloud/local": ["../local/dist/index.d.ts"],
       "@hero-cloud/sdk": ["./dist/index.d.ts"],

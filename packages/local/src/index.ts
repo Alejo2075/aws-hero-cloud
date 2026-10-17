@@ -50,3 +50,4 @@ export interface AiConsent {
 
 export { FileStateStore } from './state-store.js';
 export { FileDeploymentLock } from './lock.js';
+export { FileAiConsentStore } from './consent.js';

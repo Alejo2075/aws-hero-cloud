@@ -473,6 +473,7 @@ export const esPlan: Readonly<Record<string, Message>> = {
 
   // ---- evidencia y capacidades añadidas para los planes ----------------------------------
   'evidence.capability': tri('', 'necesita {value}', 'capability {value}'),
+  'evidence.ai': tri('', 'sugerido por un modelo de IA ({value})', 'ai:{value}'),
   'capability.cost-control': tri(
     'una alerta de gasto',
     'una alerta de presupuesto',

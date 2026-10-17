@@ -199,12 +199,14 @@ _Status: implemented and tested. A status tool (`hero_request_status`) was added
 
 ### Phase 14: AI providers and AI-assisted analysis (M) → 0.7
 
-- [ ] Adapters: Anthropic, OpenAI, Amazon Bedrock, Ollama, OpenAI-compatible.
-- [ ] 🔒 Consent screen and record; context minimization; secret redaction before sending; token and cost limits.
-- [ ] AI may only fill or refine the Hero Spec. Its output is schema-validated and never chooses AWS resources or permissions.
-- [ ] An evaluation set of ambiguous apps and a prompt-injection corpus, run in CI with a local model or recorded responses.
+- [x] Adapters: Anthropic, OpenAI, Amazon Bedrock, Ollama, OpenAI-compatible.
+- [x] 🔒 Consent screen and record; context minimization; secret redaction before sending; token and cost limits.
+- [x] AI may only fill or refine the Hero Spec. Its output is schema-validated and never chooses AWS resources or permissions.
+- [x] An evaluation set of ambiguous apps and a prompt-injection corpus, run in CI with recorded responses (`tests/ai.test.ts`). Real models have not been run against it yet.
 
 **Done when:** an app the deterministic analyzer cannot classify gets a correct spec with AI, the result is marked `aiAssisted`, and the injection corpus changes nothing. **Release 0.7.**
+
+_Status: implemented and tested with recorded answers and fake HTTP; no real model has been called. The "done when" bar (an app the analyzer cannot classify gets a correct spec) holds for the recorded cases; accuracy with real models is unmeasured, so Release 0.7 stays open. The AI-filled spec of a non-Node app (for example Python) still ends in a blocked plan until the container and virtual-machine strategies arrive._
 
 ### Phase 15: Container strategy (L) → 0.8
 

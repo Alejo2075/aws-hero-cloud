@@ -461,6 +461,7 @@ export const enPlan: Readonly<Record<string, Message>> = {
 
   // ---- evidence and capabilities added for plans ------------------------------------------
   'evidence.capability': tri('', 'needs {value}', 'capability {value}'),
+  'evidence.ai': tri('', 'suggested by an AI model ({value})', 'ai:{value}'),
   'capability.cost-control': tri('a spending alert', 'a budget alert', 'cost-control'),
   'capability.account-setup': tri(
     'safe access for Hero',

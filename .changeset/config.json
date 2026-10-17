@@ -13,6 +13,7 @@
       "@hero-cloud/plugin-node",
       "@hero-cloud/planner",
       "@hero-cloud/provider-aws",
+      "@hero-cloud/provider-ai",
       "@hero-cloud/presentation",
       "@hero-cloud/local",
       "@hero-cloud/sdk",

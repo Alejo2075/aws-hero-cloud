@@ -435,6 +435,11 @@ Options:
       --prepare                       (setup) Prepare your AWS account once, after you approve
       --write-profile <name>          (setup) Add a profile that uses the limited deployer role
       --allow <folder>                (mcp) A folder an assistant may analyze (can be repeated)
+      --ai <anthropic|openai|openai-compatible|ollama|bedrock>  Ask your own AI model for help with what analysis cannot tell
+      --ai-model <name>               The model to use (needed with --ai)
+      --ai-key-env <NAME>             Name of the environment variable that holds your key
+      --ai-base-url <url>             Address of an Ollama or OpenAI-compatible server
+      --ai-scope <file-names|snippets|full-files>  What you agree to share with it
       --state-dir <folder>            Where Hero remembers deployments (default: .hero)
       --no-color                      Do not use colors
   -h, --help                          Show this help
@@ -457,6 +462,17 @@ Hero printed, such as hero-my-app. Exit codes: 0 ok, 1 failed, 2 wrong command, 
     'cli.profile.exists': 'A profile named {name} already exists in {path}. Nothing was changed.',
     'cli.approve.expired': 'This request has expired. Ask the assistant to make a new one.',
     'cli.approve.recorded': "Recorded. The assistant's request will go ahead now.",
+    'cli.ai.consent':
+      'Hero can ask {destination} to help understand your project. It would send {what}. Anything that looks like a secret is removed first, and the model can only fill in facts, never commands or permissions. Allow this? [y/N]',
+    'cli.ai.scope.file-names': 'the names of your files',
+    'cli.ai.scope.snippets':
+      'the names of your files and short pieces of the files that describe your project (package lists, entry files)',
+    'cli.ai.scope.full-files': 'the names of your files and up to 20 whole files',
+    'cli.ai.no-consent':
+      'Not asking the AI model: you did not agree to share anything with it. Continuing without it.',
+    'cli.ai.consulted':
+      'Asked your AI model for help: {files} file names and {snippets} pieces of files were sent, {redactions} secret-looking items removed, {filled} facts filled in.',
+    'cli.ai.unavailable': 'Could not use your AI model ({reason}). Continuing without it.',
     'cli.declined': 'Not approved. Nothing was changed.',
     'cli.progress.deploy': 'Setting things up on AWS...',
     'cli.progress.verify': 'Checking that it works...',

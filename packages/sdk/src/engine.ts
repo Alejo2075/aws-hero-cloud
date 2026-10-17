@@ -45,6 +45,8 @@ import type {
 import { nodePlugin } from '@hero-cloud/plugin-node';
 import { BUDGET_EMAIL_INPUT, planApplication } from '@hero-cloud/planner';
 import { createAwsProvider, createParameterSink } from '@hero-cloud/provider-aws';
+import { needsHelp, refineWithAi, withLimits } from '@hero-cloud/provider-ai';
+import type { AiLimits, ConsentScope } from '@hero-cloud/provider-ai';
 import type { DetectorPlugin } from '@hero-cloud/plugin-sdk';
 import { sha256Hex } from '@hero-cloud/shared';
 import { validateHeroSpec } from '@hero-cloud/specification';
@@ -58,6 +60,12 @@ export interface CreateHeroOptions extends HeroPorts {
   readonly challenges?: ChallengeStore;
   /** Where downloaded public prices are cached. Without one, prices are fetched each time. */
   readonly cacheDirectory?: string;
+  /**
+   * What the person agreed to share with the AI model (the `ai` port). Without it the model is
+   * never contacted, even if one is configured: consent is a decision, not a default.
+   */
+  readonly aiConsent?: { readonly scope: ConsentScope };
+  readonly aiLimits?: Partial<AiLimits>;
   /** Where approved assemblies are kept so deploying later applies exactly what was approved. */
   readonly assemblyDirectory?: string;
   /** A named AWS profile for credentials. Without one the standard AWS chain is used. */
@@ -109,6 +117,12 @@ class InProcessLock implements DeploymentLock {
   }
 }
 
+/** The short reason a coded error carries, or `failed`. */
+function reasonOf(error: unknown): string {
+  const reason = (error as { params?: { reason?: unknown } } | null)?.params?.reason;
+  return typeof reason === 'string' ? reason : 'failed';
+}
+
 /** Whether something stored is the record of a deployment that currently exists. */
 function isDeployedRecord(value: unknown): boolean {
   return (
@@ -150,6 +164,9 @@ class HeroEngine implements Hero {
   readonly #secrets: SecretSink | undefined;
   readonly #awsProfile: string | undefined;
   readonly #defaultSecrets: boolean;
+  readonly #ai: HeroPorts['ai'];
+  readonly #aiConsent: CreateHeroOptions['aiConsent'];
+  readonly #aiLimits: Partial<AiLimits> | undefined;
   readonly #approvals: ApprovalService;
   readonly #listeners = new Set<HeroEventListener>();
   readonly #clock: { now(): Date };
@@ -177,6 +194,9 @@ class HeroEngine implements Hero {
     this.#state = options.state ?? new InMemoryStateStore();
     this.#locks = options.locks ?? new InProcessLock();
     this.#awsProfile = options.awsProfile;
+    this.#ai = options.ai;
+    this.#aiConsent = options.aiConsent;
+    this.#aiLimits = options.aiLimits;
     // Without a sink of their own, secrets go to the AWS parameter store, but only when the cloud
     // is the built-in AWS provider; a custom cloud must bring its own sink.
     this.#secrets = options.secrets;
@@ -248,17 +268,59 @@ class HeroEngine implements Hero {
             aiAssisted: false,
           };
         }
-        const analysis = await analyzeSnapshot(snapshot, {
+        const deterministic = await analyzeSnapshot(snapshot, {
           detectors: this.#detectors,
           name,
           ...(options.root === undefined ? {} : { root: options.root }),
           ...(options.signal === undefined ? {} : { signal: options.signal }),
         });
+        const analysis = await this.#withAi(deterministic, snapshot, options.noAi === true);
         this.#sourceRefs.set(analysis.sourceHash, { source, root: options.root });
         return analysis;
       });
     } finally {
       await snapshot.dispose();
+    }
+  }
+
+  /**
+   * Asks the person's own AI model to fill what the analysis could not find, when they have
+   * allowed it. A model that is unavailable, over its limits, or answers badly never breaks
+   * analysis: the deterministic result stands and the person is told.
+   */
+  async #withAi(analysis: Analysis, snapshot: ProjectSnapshot, noAi: boolean): Promise<Analysis> {
+    if (noAi || this.#ai === undefined || this.#aiConsent === undefined) return analysis;
+    if (!needsHelp(analysis)) return analysis;
+    try {
+      const outcome = await refineWithAi({
+        analysis,
+        snapshot,
+        ai: withLimits(this.#ai, this.#aiLimits),
+        scope: this.#aiConsent.scope,
+      });
+      this.#emit({
+        type: 'notice',
+        level: 'info',
+        code: 'ai.consulted',
+        params: {
+          files: outcome.sent.files,
+          snippets: outcome.sent.snippets,
+          redactions: outcome.sent.redactions,
+          filled: outcome.applied.length,
+          rejected: outcome.rejected.length,
+        },
+      });
+      return outcome.analysis;
+    } catch (error) {
+      this.#emit({
+        type: 'notice',
+        level: 'warning',
+        code: 'ai.unavailable',
+        params: {
+          reason: reasonOf(error),
+        },
+      });
+      return analysis;
     }
   }
 

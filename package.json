@@ -37,6 +37,7 @@
     "@hero-cloud/plugin-node": "workspace:*",
     "@hero-cloud/plugin-sdk": "workspace:*",
     "@hero-cloud/presentation": "workspace:*",
+    "@hero-cloud/provider-ai": "workspace:*",
     "@hero-cloud/provider-aws": "workspace:*",
     "@hero-cloud/sdk": "workspace:*",
     "@hero-cloud/shared": "workspace:*",

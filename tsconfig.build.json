@@ -29,6 +29,9 @@
       "path": "./packages/providers/aws/tsconfig.build.json"
     },
     {
+      "path": "./packages/providers/ai/tsconfig.build.json"
+    },
+    {
       "path": "./packages/presentation/tsconfig.build.json"
     },
     {

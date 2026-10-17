@@ -70,7 +70,7 @@ Dependencies point down; a package never imports from a row above it.
 | **Engine API** | `sdk`                                                                      | `core`, `specification`, stages, default providers |
 | **Engine**     | `core`                                                                     | `specification`, `shared`; defines the ports       |
 | **Stages**     | `sources`, `analyzer`, `planner`, `deployment`                             | `core` contracts, `specification`, `shared`        |
-| **Edges**      | `providers/aws`, `providers/ai`, `plugins/*`                               | `core` contracts, `shared`                         |
+| **Edges**      | `providers/aws`, `providers/ai`, `plugins/*`                               | `core` contracts, `specification`, `shared`        |
 | Foundations    | `specification`, `shared`, `plugin-sdk`                                    | nothing else in the repo                           |
 
 Bold rows are the engine. No bold row may import a non-bold row above it.
@@ -330,7 +330,15 @@ interface AIProvider {
 }
 ```
 
-Planned adapters: Anthropic, OpenAI, Amazon Bedrock, Ollama (local), and any OpenAI-compatible endpoint. Hero minimizes the context it sends and keeps secrets out of it. Output is validated against schemas before use.
+Adapters: Anthropic, OpenAI, Amazon Bedrock, Ollama (local), and any OpenAI-compatible endpoint. Keys come from the caller (the CLI reads a named environment variable); Hero never stores them.
+
+How AI is allowed to help:
+
+- **Only when the person agrees.** The engine contacts a model only if a model is configured _and_ a consent scope (`file-names`, `snippets`, or `full-files`) was granted. The CLI shows what will be sent and to whom, and records the decision in `.hero/`. A model on this computer needs no consent.
+- **Only what is needed.** Context is built from file names and, if allowed, short pieces of manifests and entry files. Files that look like secrets are never included, and everything is redacted for keys, tokens, private keys, and credentials in addresses before it is sent. Calls, context size, output size, and estimated cost are capped per run.
+- **Only to fill gaps.** The model is asked for a small, fixed shape (what kind of program, runtime, port, health path, schedule, kind of data, framework of a website). It can add what the deterministic analysis did not find; it cannot change or remove anything found, name commands, addresses, secrets, permissions, or cloud resources. Every value is checked against a pattern and the result must be a valid Hero Spec, or the whole answer is discarded.
+- **Visible.** The analysis is marked `aiAssisted`, each filled field carries `ai:` evidence, and a notice says how much was sent and how much was redacted. If the model is unavailable or misbehaves, analysis continues without it.
+- Project text is treated as data in the prompt, and a corpus of prompt-injection fixtures runs in CI against recorded worst-case answers.
 
 ## Extension points
 
