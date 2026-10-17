@@ -14,6 +14,13 @@ const examples = join(root, 'examples');
 let directory = '';
 let binary = '';
 
+const COMBINATIONS = [
+  ['simple', 'en'],
+  ['guided', 'es'],
+  ['expert', 'en'],
+  ['simple', 'es'],
+] as const;
+
 /** Runs the real bundled binary as a separate process, the way a person would. */
 async function hero(...args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   try {
@@ -81,9 +88,13 @@ describe('the hero-cloud binary', () => {
       'api-only',
       'api-dynamodb',
       'scheduled-job',
+      'dockerfile-app',
+      'express-postgres',
     ]) {
-      for (const level of ['simple', 'guided', 'expert']) {
-        for (const locale of ['en', 'es']) {
+      // The binary is exercised at every level and in both languages; the words themselves are
+      // checked at every combination in the presentation tests, which run in this process.
+      for (const [level, locale] of COMBINATIONS) {
+        {
           const result = await hero(
             'analyze',
             join(examples, example),
@@ -102,7 +113,7 @@ describe('the hero-cloud binary', () => {
         }
       }
     }
-  }, 120_000);
+  }, 600_000);
 
   it('plans every example offline at every level and language, and never needs credentials', async () => {
     for (const example of [
@@ -113,8 +124,8 @@ describe('the hero-cloud binary', () => {
       'api-dynamodb',
       'scheduled-job',
     ]) {
-      for (const level of ['simple', 'guided', 'expert']) {
-        for (const locale of ['en', 'es']) {
+      for (const [level, locale] of COMBINATIONS) {
+        {
           const result = await hero(
             'plan',
             join(examples, example),

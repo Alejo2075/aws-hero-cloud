@@ -25,6 +25,7 @@ import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import { Construct } from 'constructs';
 import type { Component } from '@hero-cloud/core';
 import { toAwsCron } from '../cron.js';
+import { ContainerParts } from './container.js';
 import {
   BOUNDARY_POLICY_NAME,
   WEB_ADAPTER_ACCOUNT,
@@ -58,6 +59,8 @@ export class HeroStack extends Stack {
   readonly #buckets = new Map<string, s3.Bucket>();
   #artifactBucket: s3.IBucket | undefined;
   readonly #deploymentId: string;
+  readonly #container: ContainerParts;
+  #platformReady: ReturnType<ContainerParts['createPlatform']> | undefined;
 
   constructor(scope: Construct, id: string, props: HeroStackProps) {
     super(scope, id, {
@@ -66,6 +69,9 @@ export class HeroStack extends Stack {
       permissionsBoundary: PermissionsBoundary.fromName(BOUNDARY_POLICY_NAME),
     });
     this.#deploymentId = props.deploymentId;
+    this.#container = new ContainerParts(this, props.deploymentId, (component, thing, value) => {
+      this.#output(component, thing, value);
+    });
 
     Tags.of(this).add('hero:deployment-id', props.deploymentId);
 
@@ -73,9 +79,12 @@ export class HeroStack extends Stack {
     const order: Record<Component['kind'], number> = {
       'object-bucket': 0,
       'key-value-table': 0,
+      'relational-database': 1,
+      'file-system': 1,
       identity: 1,
       'static-site': 2,
       'http-service': 3,
+      'container-service': 3,
       'scheduled-job': 3,
       'budget-alert': 4,
     };
@@ -112,7 +121,35 @@ export class HeroStack extends Stack {
       case 'budget-alert':
         this.#budget(group, component);
         break;
+      case 'relational-database':
+        this.#container.database(group, component, this.#platform(component));
+        break;
+      case 'file-system':
+        this.#container.fileSystem(group, component, this.#platform(component));
+        break;
+      case 'container-service':
+        this.#container.service(group, component, this.#platform(component), {
+          tables: this.#tables,
+          buckets: this.#buckets,
+        });
+        break;
     }
+  }
+
+  /** The shared network, load balancer and CDN, created for the first component that needs them. */
+  #platform(component: Component): ReturnType<ContainerParts['createPlatform']> {
+    if (this.#platformReady !== undefined) return this.#platformReady;
+    const shared = new Construct(this, 'ContainerPlatform');
+    const pseudo: Component = {
+      id: 'platform',
+      kind: 'container-service',
+      capability: 'http-service',
+      settings: {},
+      rationale: component.rationale,
+    };
+    this.#platformReady = this.#container.createPlatform(shared, pseudo);
+    this.#mark(shared, pseudo);
+    return this.#platformReady;
   }
 
   /** Marks every resource in a component's scope with that component, for plans and removal. */

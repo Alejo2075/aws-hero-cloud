@@ -16,8 +16,9 @@ describe('the permission boundary', () => {
     const open = boundaryPolicy().Statement.filter((s) =>
       resources({ ...boundaryPolicy(), Statement: [s] }).includes('*'),
     );
-    expect(open.map((s) => s.Sid)).toEqual(['DecryptParametersOnly']);
-    expect(open[0]?.Condition).toBeDefined();
+    expect(open.map((s) => s.Sid).sort()).toEqual(['DecryptParametersOnly', 'ImageLogin']);
+    expect(open.find((s) => s.Sid === 'DecryptParametersOnly')?.Condition).toBeDefined();
+    expect(open.find((s) => s.Sid === 'ImageLogin')?.Action).toEqual(['ecr:GetAuthorizationToken']);
   });
 
   it('grants no identity, network, or account-level action', () => {
@@ -67,6 +68,16 @@ describe('the execution policy', () => {
           'HttpApis',
           'CdkAssets',
           'WebAdapterLayer',
+          // Services that cannot be limited by name when something is created, or only by account.
+          'Network',
+          'Containers',
+          'LoadBalancing',
+          'Databases',
+          'SharedFiles',
+          'Logins',
+          'RandomPasswords',
+          'ServiceRoles',
+          'Images',
         ].includes(s.Sid)
       )
         continue;
@@ -79,6 +90,27 @@ describe('the execution policy', () => {
     expect(deny?.Action).toEqual(
       expect.arrayContaining(['iam:DeleteRolePermissionsBoundary', 'iam:CreatePolicyVersion']),
     );
+  });
+});
+
+describe('what can be reached beyond one deployment', () => {
+  it('limits secrets to those named for Hero and file systems to those tagged by Hero, in the boundary and the execution policy', () => {
+    for (const policy of [boundaryPolicy(), executionPolicy()]) {
+      for (const s of policy.Statement.filter((x) =>
+        x.Action.some(
+          (a) => a.startsWith('secretsmanager:') && a !== 'secretsmanager:GetRandomPassword',
+        ),
+      )) {
+        expect(
+          [s.Resource].flat().every((r) => r.endsWith(':secret:hero-*')),
+          s.Sid,
+        ).toBe(true);
+      }
+    }
+    const files = boundaryPolicy().Statement.find((s) => s.Sid === 'OwnFileSystems');
+    expect(files?.Condition).toEqual({
+      StringLike: { 'aws:ResourceTag/hero:deployment-id': 'hero-*' },
+    });
   });
 });
 
@@ -95,7 +127,7 @@ describe('the deployer policy', () => {
 
   it('only reaches resources named for Hero, apart from clearing the CDN', () => {
     for (const s of policy.Statement) {
-      if (s.Sid === 'ClearTheCdn') continue;
+      if (s.Sid === 'ClearTheCdn' || s.Sid === 'ReadHealth') continue;
       for (const r of [s.Resource].flat()) {
         expect(r, s.Sid).toMatch(
           /hero-\*|cdk-herocloud|CDKToolkit-herocloud|hero-prerequisites|\/hero\/|cdk-bootstrap\/herocloud/,

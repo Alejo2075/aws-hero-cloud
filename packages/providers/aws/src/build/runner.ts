@@ -9,7 +9,7 @@ import { heroError } from '@hero-cloud/core';
 import type { HeroEvent, ProjectSnapshot } from '@hero-cloud/core';
 import { zipSync } from 'fflate';
 import { generateBuildspec } from './buildspec.js';
-import { artifactKey, sourceKey } from './plan.js';
+import { artifactKey, imageTag, sourceKey } from './plan.js';
 import type { BuildPlan } from './plan.js';
 
 /** The parts of the AWS clients Hero uses, so tests can use mocks. */
@@ -34,6 +34,9 @@ export interface BuildRequest {
   /** The bucket and project created by the build stack. */
   readonly bucket: string;
   readonly project: string;
+  /** For image builds: the privileged project and the repository address of the build stack. */
+  readonly imageProject?: string;
+  readonly repositoryUri?: string;
   readonly plan: BuildPlan;
   readonly snapshot: ProjectSnapshot;
   /** The source hash the person approved. The snapshot must match it. */
@@ -42,7 +45,7 @@ export interface BuildRequest {
 }
 
 export interface BuildResult {
-  /** Component id to the key of its artifact in the bucket. */
+  /** Component id to the key of its artifact in the bucket, or the tag of its image. */
   readonly artifacts: Readonly<Record<string, string>>;
 }
 
@@ -118,24 +121,48 @@ export function createBuilder(options: BuilderOptions): {
       const artifacts: Record<string, string> = {};
       const maxWait = options.maxWaitMs ?? (request.plan.timeoutMinutes + 5) * 60_000;
       for (const job of request.plan.jobs) {
-        const target = artifactKey(request.deploymentId, job, request.sourceHash);
+        const isImage = job.kind === 'image';
+        if (
+          isImage &&
+          (request.imageProject === undefined || request.repositoryUri === undefined)
+        ) {
+          throw heroError('deployment.failed', { step: 'image-build-inputs', job: job.id });
+        }
+        const target = isImage
+          ? imageTag(request.sourceHash)
+          : artifactKey(request.deploymentId, job, request.sourceHash);
         const slash = target.lastIndexOf('/');
         let id: string | undefined;
         try {
           const started = await codeBuild.send(
             new StartBuildCommand({
-              projectName: request.project,
+              projectName: isImage ? request.imageProject : request.project,
               buildspecOverride: generateBuildspec(job),
               sourceTypeOverride: 'S3',
               sourceLocationOverride: `${request.bucket}/${key}`,
-              artifactsOverride: {
-                type: 'S3',
-                location: request.bucket,
-                path: target.slice(0, slash),
-                name: target.slice(slash + 1),
-                namespaceType: 'NONE',
-                packaging: 'ZIP',
-              },
+              artifactsOverride: isImage
+                ? { type: 'NO_ARTIFACTS' }
+                : {
+                    type: 'S3',
+                    location: request.bucket,
+                    path: target.slice(0, slash),
+                    name: target.slice(slash + 1),
+                    namespaceType: 'NONE',
+                    packaging: 'ZIP',
+                  },
+              // The address and the tag are set by Hero; nothing from the project reaches them.
+              ...(isImage
+                ? {
+                    environmentVariablesOverride: [
+                      {
+                        name: 'HERO_REPOSITORY_URI',
+                        value: request.repositoryUri ?? '',
+                        type: 'PLAINTEXT' as const,
+                      },
+                      { name: 'HERO_IMAGE_TAG', value: target, type: 'PLAINTEXT' as const },
+                    ],
+                  }
+                : {}),
               timeoutInMinutesOverride: request.plan.timeoutMinutes,
             }),
           );

@@ -27,7 +27,10 @@ export type ComponentKind =
   | 'key-value-table'
   | 'object-bucket'
   | 'identity'
-  | 'budget-alert';
+  | 'budget-alert'
+  | 'container-service'
+  | 'relational-database'
+  | 'file-system';
 
 export interface Component {
   /** Stable within a plan. Usually the Hero Spec id it comes from, such as `api` or `kv`. */

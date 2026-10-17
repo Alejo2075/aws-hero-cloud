@@ -25,6 +25,16 @@ export const awsResourceTypes = [
   'cloudformation-stack',
   'codebuild-project',
   'codebuild-build',
+  'vpc',
+  'ecs-cluster',
+  'ecs-service',
+  'ecs-task-definition',
+  'load-balancer',
+  'load-balancer-target-group',
+  'rds-instance',
+  'efs-file-system',
+  'ecr-repository',
+  'secrets-manager-secret',
   'other-resource',
 ] as const;
 
@@ -46,6 +56,7 @@ export const awsRationaleCodes = [
   'cost.assumption.free-tier',
   'cost.assumption.no-domain',
   'cost.assumption.region-prices',
+  'cost.assumption.container-prices',
 ] as const;
 
 /** Cost line codes, under `cost.line.<code>`. */
@@ -60,4 +71,12 @@ export const awsCostLineCodes = [
   'file-storage',
   'sign-in',
   'logs',
+  'load-balancer',
+  'container-compute',
+  'public-addresses',
+  'managed-database',
+  'managed-database-storage',
+  'shared-files',
+  'container-registry',
+  'secrets',
 ] as const;

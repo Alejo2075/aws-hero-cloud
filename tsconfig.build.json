@@ -23,6 +23,9 @@
       "path": "./plugins/node/tsconfig.build.json"
     },
     {
+      "path": "./plugins/container/tsconfig.build.json"
+    },
+    {
       "path": "./packages/planner/tsconfig.build.json"
     },
     {

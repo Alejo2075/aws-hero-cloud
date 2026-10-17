@@ -9,6 +9,7 @@ import {
 } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -18,6 +19,8 @@ import { BOUNDARY_POLICY_NAME } from './names.js';
 
 export interface BuildStackProps extends StackProps {
   readonly deploymentId: string;
+  /** Also create the repository and the privileged project that build container images. */
+  readonly containers?: boolean;
 }
 
 /** The key prefixes inside the build bucket. The role can touch nothing else. */
@@ -148,6 +151,107 @@ export class BuildStack extends Stack {
       reason:
         'Build artifacts are encrypted with the AWS-managed S3 key; a customer-managed key would add cost and a shared key to manage for a short-lived build.',
     });
+
+    if (props.containers === true) {
+      const repository = new ecr.Repository(this, 'Images', {
+        repositoryName: props.deploymentId,
+        imageScanOnPush: true,
+        imageTagMutability: ecr.TagMutability.IMMUTABLE,
+        encryption: ecr.RepositoryEncryption.AES_256,
+        // The images are rebuilt from the source; they are emptied and removed with the deployment.
+        removalPolicy: RemovalPolicy.DESTROY,
+        lifecycleRules: [{ maxImageCount: 5, description: 'Keep the five newest images' }],
+      });
+      const imageRole = new iam.Role(this, 'ImageBuildRole', {
+        assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
+        description:
+          'Reads the uploaded source, pushes to this deployment repository, writes logs.',
+      });
+      imageRole.addToPolicy(
+        new iam.PolicyStatement({
+          actions: ['s3:GetObject', 's3:GetObjectVersion'],
+          resources: [bucket.arnForObjects(`${SOURCE_PREFIX}*`)],
+        }),
+      );
+      imageRole.addToPolicy(
+        new iam.PolicyStatement({
+          actions: [
+            'ecr:BatchCheckLayerAvailability',
+            'ecr:InitiateLayerUpload',
+            'ecr:UploadLayerPart',
+            'ecr:CompleteLayerUpload',
+            'ecr:PutImage',
+            'ecr:BatchGetImage',
+            'ecr:GetDownloadUrlForLayer',
+          ],
+          resources: [repository.repositoryArn],
+        }),
+      );
+      imageRole.addToPolicy(
+        new iam.PolicyStatement({ actions: ['ecr:GetAuthorizationToken'], resources: ['*'] }),
+      );
+      imageRole.addToPolicy(
+        new iam.PolicyStatement({
+          actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+          resources: [logGroup.logGroupArn, `${logGroup.logGroupArn}:*`],
+        }),
+      );
+      const imageProjectName = `${props.deploymentId}-image-build`;
+      const imageProject = new codebuild.CfnProject(this, 'ImageProject', {
+        name: imageProjectName,
+        description:
+          'Builds the container image of this application in this account. Its commands are part of the approved plan.',
+        serviceRole: imageRole.roleArn,
+        timeoutInMinutes: BUILD_TIMEOUT_MINUTES,
+        source: { type: 'S3', location: `${bucket.bucketName}/${SOURCE_PREFIX}placeholder.zip` },
+        artifacts: { type: 'NO_ARTIFACTS' },
+        environment: {
+          type: 'ARM_CONTAINER',
+          image: BUILD_IMAGE,
+          computeType: 'BUILD_GENERAL1_SMALL',
+          // Building an image needs a container engine, which CodeBuild only provides this way. The
+          // project runs only the approved image build, with a role that can push to one repository.
+          privilegedMode: true,
+        },
+        logsConfig: { cloudWatchLogs: { status: 'ENABLED', groupName: logGroup.logGroupName } },
+      });
+      imageProject.addPropertyOverride(
+        'Source.BuildSpec',
+        JSON.stringify({ version: '0.2', phases: { build: { commands: ['true'] } } }),
+      );
+      const bucketId = this.getLogicalId(bucket.node.defaultChild as never);
+      const logId = this.getLogicalId(logGroup.node.defaultChild as never);
+      const ack = (finding: string, reason: string): void => {
+        Validations.of(imageRole).acknowledge({
+          id: `AwsSolutions::AwsSolutions-IAM5[${finding}]`,
+          reason,
+        });
+      };
+      ack(
+        `Resource::<${bucketId}.Arn>/${SOURCE_PREFIX}*`,
+        'The role may read only the source objects uploaded for this deployment.',
+      );
+      ack(
+        `Resource::<${logId}.Arn>:*`,
+        "The role may write the log streams of this deployment's build log group.",
+      );
+      ack(
+        'Resource::*',
+        'Logging in to the image registry needs a token that AWS lets no single resource scope.',
+      );
+      Validations.of(imageProject).acknowledge({
+        id: 'AwsSolutions::AwsSolutions-CB3',
+        reason:
+          'Building a container image needs a container engine, which CodeBuild offers only in privileged mode. This project runs only the approved image build, holds no credentials beyond its role, and the role can push to this deployment’s repository only.',
+      });
+      Validations.of(imageProject).acknowledge({
+        id: 'AwsSolutions::AwsSolutions-CB4',
+        reason: 'Build output is an image in a repository encrypted with an AWS-managed key.',
+      });
+      new CfnOutput(this, 'ImageProjectName', { value: imageProjectName });
+      new CfnOutput(this, 'RepositoryName', { value: repository.repositoryName });
+      new CfnOutput(this, 'RepositoryUri', { value: repository.repositoryUri });
+    }
 
     new CfnOutput(this, 'BucketName', { value: bucket.bucketName });
     new CfnOutput(this, 'ProjectName', { value: projectName });

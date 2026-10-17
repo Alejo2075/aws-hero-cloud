@@ -193,7 +193,7 @@ export interface ComponentHealth {
 }
 
 // @public
-export type ComponentKind = 'static-site' | 'http-service' | 'scheduled-job' | 'key-value-table' | 'object-bucket' | 'identity' | 'budget-alert';
+export type ComponentKind = 'static-site' | 'http-service' | 'scheduled-job' | 'key-value-table' | 'object-bucket' | 'identity' | 'budget-alert' | 'container-service' | 'relational-database' | 'file-system';
 
 // @public
 export function computePlanDigest(body: PlanBody): string;
@@ -374,7 +374,7 @@ export interface HealthCheck {
 }
 
 // @public
-export const healthCheckCodes: readonly ["health.resource-state", "health.drift", "health.drift.drifted", "health.drift.unavailable", "health.reachability", ...string[]];
+export const healthCheckCodes: readonly ["health.resource-state", "health.targets", "health.targets.unhealthy", "health.targets.unavailable", "health.drift", "health.drift.drifted", "health.drift.unavailable", "health.reachability", ...string[]];
 
 // @public (undocumented)
 export type HealthStatus = 'healthy' | 'degraded' | 'down' | 'unknown';
@@ -627,7 +627,7 @@ export interface PlanWarning {
 export type PlanWarningCode = (typeof planWarningCodes)[number];
 
 // @public
-export const planWarningCodes: readonly ["plan.account-unverified", "plan.open-question", "plan.unsupported-capability", "plan.public-exposure", "plan.cost-low-confidence", "plan.ssr-cold-start", "plan.scheduled-inside-server", "plan.secrets-required", "plan.nothing-to-deploy", "plan.unsupported-schedule", "plan.destroy-keeps-data", "plan.update-unverified", "plan.destructive-changes"];
+export const planWarningCodes: readonly ["plan.account-unverified", "plan.open-question", "plan.unsupported-capability", "plan.public-exposure", "plan.cost-low-confidence", "plan.ssr-cold-start", "plan.scheduled-inside-server", "plan.secrets-required", "plan.nothing-to-deploy", "plan.unsupported-schedule", "plan.destroy-keeps-data", "plan.update-unverified", "plan.privileged-build", "plan.cdn-origin-http", "plan.single-database", "plan.destructive-changes"];
 
 // @public
 export type ProfileKind = 'sso' | 'role' | 'keys' | 'process' | 'other';

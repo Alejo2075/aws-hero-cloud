@@ -1,0 +1,34 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "hero-example-express-postgres"
+    },
+    "services": [
+      {
+        "id": "api",
+        "type": "http",
+        "runtime": "nodejs",
+        "start": {
+          "command": "npm start"
+        },
+        "healthPath": "/health"
+      }
+    ],
+    "data": [
+      {
+        "id": "database",
+        "type": "relational",
+        "engine": "postgres"
+      }
+    ],
+    "environment": ["DB_HOST", "DB_NAME", "DB_PASSWORD", "DB_PORT", "DB_USER"],
+    "extensions": {
+      "x-node": {
+        "packageManager": "npm"
+      }
+    }
+  },
+  "questions": ["service.port-unknown"],
+  "capabilities": ["environment-variables", "http-service", "node-runtime", "relational-data"]
+}

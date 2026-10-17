@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CloudFormationClient } from '@aws-sdk/client-cloudformation';
 import { CloudFrontClient, CreateInvalidationCommand } from '@aws-sdk/client-cloudfront';
+import { BatchDeleteImageCommand, ECRClient, ListImagesCommand } from '@aws-sdk/client-ecr';
 import {
   DeleteObjectsCommand,
   GetObjectCommand,
@@ -42,6 +43,7 @@ export interface ApplierOptions {
   readonly cloudFormation?: CloudFormationPort;
   readonly s3?: S3Port;
   readonly cloudFront?: Pick<CloudFrontClient, 'send'>;
+  readonly ecr?: Pick<ECRClient, 'send'>;
   readonly builder?: ReturnType<typeof createBuilder>;
   readonly sleep?: (ms: number) => Promise<void>;
 }
@@ -101,6 +103,7 @@ export function createApplier(options: ApplierOptions): {
   };
   const cfn: CloudFormationPort = options.cloudFormation ?? new CloudFormationClient(auth);
   const s3: S3Port = options.s3 ?? new S3Client(auth);
+  const registry: Pick<ECRClient, 'send'> = options.ecr ?? new ECRClient(auth);
   const cloudFront: Pick<CloudFrontClient, 'send'> =
     options.cloudFront ?? new CloudFrontClient(auth);
 
@@ -219,6 +222,7 @@ export function createApplier(options: ApplierOptions): {
         });
         buildBucket = buildStack.outputs.BucketName;
         const project = buildStack.outputs.ProjectName;
+        const repositoryName = buildStack.outputs.RepositoryName;
         if (buildBucket === undefined || project === undefined) {
           throw heroError('deployment.failed', { step: 'build-stack-outputs' });
         }
@@ -234,6 +238,12 @@ export function createApplier(options: ApplierOptions): {
           deploymentId: request.deploymentId,
           bucket: buildBucket,
           project,
+          ...(buildStack.outputs.ImageProjectName === undefined
+            ? {}
+            : { imageProject: buildStack.outputs.ImageProjectName }),
+          ...(buildStack.outputs.RepositoryUri === undefined
+            ? {}
+            : { repositoryUri: buildStack.outputs.RepositoryUri }),
           plan: bundle.buildPlan,
           snapshot: request.snapshot,
           sourceHash: plan.sourceHash,
@@ -244,6 +254,10 @@ export function createApplier(options: ApplierOptions): {
         for (const job of bundle.buildPlan.jobs) {
           if (job.kind === 'function') {
             parameters[`Code${pascal(job.id)}Key`] = built.artifacts[job.id] ?? '';
+          }
+          if (job.kind === 'image') {
+            parameters.ImageRepository = repositoryName ?? '';
+            parameters[`Image${pascal(job.id)}Tag`] = built.artifacts[job.id] ?? '';
           }
         }
       }
@@ -282,7 +296,12 @@ export function createApplier(options: ApplierOptions): {
 
       const components = plan.changes
         .map((change) => change.id.split(':')[0] ?? '')
-        .filter((id) => id.startsWith('static-site.') || id.startsWith('http-service.'));
+        .filter(
+          (id) =>
+            id.startsWith('static-site.') ||
+            id.startsWith('http-service.') ||
+            id.startsWith('container-service.'),
+        );
       const ids = [...new Set(components)].map((entry) => {
         const [kind = '', id = ''] = entry.split('.');
         return { kind, id };
@@ -332,6 +351,8 @@ export function createApplier(options: ApplierOptions): {
           `${request.deploymentId}-build`,
         ).catch(() => ({}));
         if (outputs.BucketName !== undefined) await emptyBucket(s3, outputs.BucketName);
+        if (outputs.RepositoryName !== undefined)
+          await emptyRepository(registry, outputs.RepositoryName);
         await deployer.destroy({
           assemblyDirectory: bundle.buildDirectory,
           artifactHash: bundle.buildHash,
@@ -345,6 +366,29 @@ export function createApplier(options: ApplierOptions): {
       } satisfies ProviderOutputs;
     },
   };
+}
+
+/** Removes every image, so the stack that owns the repository can be deleted. */
+export async function emptyRepository(
+  registry: Pick<ECRClient, 'send'>,
+  repositoryName: string,
+): Promise<void> {
+  let token: string | undefined;
+  do {
+    const page = await registry.send(
+      new ListImagesCommand({
+        repositoryName,
+        ...(token === undefined ? {} : { nextToken: token }),
+      }),
+    );
+    const ids = page.imageIds ?? [];
+    for (let index = 0; index < ids.length; index += 100) {
+      await registry.send(
+        new BatchDeleteImageCommand({ repositoryName, imageIds: ids.slice(index, index + 100) }),
+      );
+    }
+    token = page.nextToken;
+  } while (token !== undefined);
 }
 
 /** Removes every object and every version, so the stack that owns the bucket can be deleted. */

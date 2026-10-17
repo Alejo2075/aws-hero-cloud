@@ -341,4 +341,19 @@ export const enResult: Readonly<Record<string, Message>> = {
     'Account preparation finished. Hero can now deploy with limited permissions.',
     'Bootstrap completed.',
   ),
+  'check.health.targets': tri(
+    'Your app is running and the front door can reach it.',
+    'The load balancer reports every copy of your app as healthy.',
+    'ELB DescribeTargetHealth: all targets healthy.',
+  ),
+  'check.health.targets.unhealthy': tri(
+    'Your app is not ready to receive visitors.',
+    'The load balancer does not see any healthy copy of your app yet, or sees one that is failing its health check.',
+    'ELB DescribeTargetHealth: no targets or at least one not healthy.',
+  ),
+  'check.health.targets.unavailable': tri(
+    'Hero could not ask whether your app is ready.',
+    "The load balancer could not be asked about the health of your app's copies.",
+    'ELB DescribeTargetHealth failed (denied or unreachable).',
+  ),
 };

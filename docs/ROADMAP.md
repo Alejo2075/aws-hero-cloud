@@ -210,12 +210,14 @@ _Status: implemented and tested with recorded answers and fake HTTP; no real mod
 
 ### Phase 15: Container strategy (L) → 0.8
 
-- [ ] Strategy `container`: an existing Dockerfile, or an image built with Cloud Native Buildpacks in CodeBuild when there is none.
-- [ ] ECR, and ECS Express Mode or Fargate with a load balancer (per the Phase 0 spike).
-- [ ] Relational data: RDS PostgreSQL and MySQL with backups and private networking; file-system storage on EFS.
-- [ ] Health from load balancer target health plus reachability.
+- [x] Strategy `container`: an existing Dockerfile, or an image built with Cloud Native Buildpacks in CodeBuild when there is none.
+- [x] ECR, and ECS Express Mode or Fargate with a load balancer (per the Phase 0 spike).
+- [x] Relational data: RDS PostgreSQL and MySQL with backups and private networking; file-system storage on EFS.
+- [x] Health from load balancer target health plus reachability.
 
 **Done when:** an Express app with PostgreSQL, a Django app, and a Dockerfile-only app deploy and report healthy. **Release 0.8.**
+
+_Status: implemented and tested by synthesis (cdk-nag clean), mocks, and plan snapshots; nothing has run on AWS. Deviations from the plan: plain Fargate behind a load balancer and CloudFront was built, not ECS Express Mode (no CDK construct yet); the image build is the one privileged build and says so in the plan; the CDN-to-load-balancer hop is HTTP until a domain exists; container, database and file prices are built-in reference values. The Django part of the "done when" bar waits for the Python detector in Phase 16 (until then a Python app needs a Dockerfile, `--spec`, or AI help). Release 0.8 stays open until a sandbox run._
 
 ### Phase 16: Legacy detectors and the virtual-machine strategy (L) → 0.9
 

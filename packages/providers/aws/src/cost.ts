@@ -34,6 +34,29 @@ const REQUEST_SECONDS = { low: 0.1, high: 0.25 } as const;
 const DDB = { readsPerRequest: 2, writesPerRequest: 0.5, storageGb: 1 } as const;
 const PAGEVIEW_TO_ORIGIN = 0.1;
 
+/**
+ * Reference prices for containers, databases, and shared files, in US dollars for us-east-1 and
+ * Graviton (ARM) capacity. They are built in, not fetched, and other regions can differ, so an
+ * estimate that includes them is always marked low confidence.
+ */
+const CONTAINER_PRICES = {
+  hoursPerMonth: 730,
+  loadBalancerHour: 0.0225,
+  loadBalancerCapacityUnitHour: 0.008,
+  capacityUnits: { low: 0.5, high: 3 },
+  fargateVcpuHour: 0.03238,
+  fargateGbHour: 0.00356,
+  publicAddressHour: 0.005,
+  databaseHour: 0.016,
+  databaseStorageGbMonth: 0.115,
+  fileSystemGbMonth: 0.3,
+  fileSystemGb: { low: 1, high: 5 },
+  registryGbMonth: 0.1,
+  registryGb: { low: 0.2, high: 1 },
+  secretMonth: 0.4,
+  flowLogGb: { low: 0.1, high: 1 },
+} as const;
+
 type Level = 'low' | 'high';
 
 const over = (used: number, free: number): number => Math.max(0, used - free);
@@ -71,6 +94,8 @@ export function estimateCost({ components, prices }: CostInputs): CostEstimate {
   let functionGbSeconds: Money = zero();
   let logGb: Money = zero();
   let mau: Money = zero();
+  let containerNetwork = false;
+  let usesContainers = false;
 
   for (const component of components) {
     switch (component.kind) {
@@ -152,6 +177,81 @@ export function estimateCost({ components, prices }: CostInputs): CostEstimate {
         mau = { low: mau.low + USAGE.low.mau, high: mau.high + USAGE.high.mau };
         break;
       }
+      case 'container-service': {
+        usesContainers = true;
+        const c = CONTAINER_PRICES;
+        const vcpu = Number(component.settings.cpu ?? 256) / 1024;
+        const gb = Number(component.settings.memoryMb ?? 512) / 1024;
+        add(
+          'container-compute',
+          each(() => c.hoursPerMonth * (vcpu * c.fargateVcpuHour + gb * c.fargateGbHour)),
+        );
+        // The task has its own public address. The load balancer and its addresses are counted once.
+        add(
+          'public-addresses',
+          each(() => c.hoursPerMonth * c.publicAddressHour * (containerNetwork ? 1 : 3)),
+        );
+        if (!containerNetwork) {
+          add(
+            'load-balancer',
+            each(
+              (level) =>
+                c.hoursPerMonth *
+                (c.loadBalancerHour + c.capacityUnits[level] * c.loadBalancerCapacityUnitHour),
+            ),
+          );
+          add(
+            'secrets',
+            each(() => c.secretMonth),
+          );
+          add(
+            'cdn-delivery',
+            each(
+              (level) =>
+                over(USAGE[level].transferGb, FREE_ALLOWANCE.cloudfrontTransferGb) *
+                  p['cloudfront.transfer-gb'] +
+                over(USAGE[level].pageviews, FREE_ALLOWANCE.cloudfrontRequests) *
+                  p['cloudfront.https-request'],
+            ),
+          );
+          add(
+            'container-registry',
+            each((level) => c.registryGb[level] * c.registryGbMonth),
+          );
+        }
+        containerNetwork = true;
+        logGb = {
+          low: logGb.low + USAGE.low.logGb + c.flowLogGb.low,
+          high: logGb.high + USAGE.high.logGb + c.flowLogGb.high,
+        };
+        break;
+      }
+      case 'relational-database': {
+        usesContainers = true;
+        const c = CONTAINER_PRICES;
+        add(
+          'managed-database',
+          each(() => c.hoursPerMonth * c.databaseHour),
+        );
+        add(
+          'managed-database-storage',
+          each(() => Number(component.settings.storageGb ?? 20) * c.databaseStorageGbMonth),
+        );
+        add(
+          'secrets',
+          each(() => c.secretMonth),
+        );
+        break;
+      }
+      case 'file-system': {
+        usesContainers = true;
+        const c = CONTAINER_PRICES;
+        add(
+          'shared-files',
+          each((level) => c.fileSystemGb[level] * c.fileSystemGbMonth),
+        );
+        break;
+      }
       case 'budget-alert':
         break;
     }
@@ -208,6 +308,7 @@ export function estimateCost({ components, prices }: CostInputs): CostEstimate {
     },
     { code: 'cost.assumption.free-tier' },
     { code: 'cost.assumption.no-domain' },
+    ...(usesContainers ? [{ code: 'cost.assumption.container-prices' }] : []),
     {
       code: 'cost.assumption.region-prices',
       params: { region: prices.region, source: prices.source, asOf: prices.asOf },
@@ -218,7 +319,7 @@ export function estimateCost({ components, prices }: CostInputs): CostEstimate {
     currency: 'USD',
     monthlyLow: round(total.low),
     monthlyHigh: round(total.high),
-    confidence: prices.source === 'built-in' ? 'low' : 'medium',
+    confidence: prices.source === 'built-in' || usesContainers ? 'low' : 'medium',
     lines: costLines,
     assumptions,
     priceSource: prices.source,

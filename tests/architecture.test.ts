@@ -20,6 +20,7 @@ const ENGINE = [
   '@hero-cloud/provider-ai',
   '@hero-cloud/plugin-sdk',
   '@hero-cloud/plugin-node',
+  '@hero-cloud/plugin-container',
   '@hero-cloud/shared',
 ] as const;
 
@@ -42,6 +43,14 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
   '@hero-cloud/plugin-node': [
     '@hero-cloud/core',
     '@hero-cloud/analyzer', // development only: its tests run detectors through the analyzer
+    '@hero-cloud/plugin-sdk',
+    '@hero-cloud/specification',
+    '@hero-cloud/shared',
+  ],
+  '@hero-cloud/plugin-container': [
+    '@hero-cloud/core',
+    '@hero-cloud/analyzer', // development only: its tests run detectors through the analyzer
+    '@hero-cloud/plugin-node', // development only: tests check it next to the Node detectors
     '@hero-cloud/plugin-sdk',
     '@hero-cloud/specification',
     '@hero-cloud/shared',
@@ -77,6 +86,7 @@ const ALLOWED: Readonly<Record<string, readonly string[]>> = {
     '@hero-cloud/sources',
     '@hero-cloud/analyzer',
     '@hero-cloud/plugin-node',
+    '@hero-cloud/plugin-container',
     '@hero-cloud/plugin-sdk',
     '@hero-cloud/planner',
     '@hero-cloud/deployment',

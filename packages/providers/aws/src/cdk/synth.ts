@@ -81,7 +81,7 @@ export function synthesize(input: SynthInput, outdir?: string): Synthesized {
  * with a role that can only read its source and write its artifacts and logs.
  */
 export function synthesizeBuild(
-  input: Omit<SynthInput, 'components'>,
+  input: Omit<SynthInput, 'components'> & { readonly containers?: boolean },
   outdir?: string,
 ): Synthesized {
   const id = `${input.deploymentId}-build`;
@@ -91,6 +91,7 @@ export function synthesizeBuild(
       new BuildStack(app, id, {
         env: { account: input.accountId, region: input.region },
         deploymentId: input.deploymentId,
+        ...(input.containers === true ? { containers: true } : {}),
         synthesizer: new DefaultStackSynthesizer({ qualifier: BOOTSTRAP_QUALIFIER }),
         description: `Created by Hero Cloud to build ${input.deploymentId}. Safe to remove with hero-cloud destroy.`,
       }),

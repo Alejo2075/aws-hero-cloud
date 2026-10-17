@@ -53,30 +53,63 @@ interface Unsupported {
   readonly needs: DeploymentStrategy;
 }
 
+/** The relational engines Hero can run on a managed database, by the names applications use. */
+const RELATIONAL_ENGINES: Readonly<Record<string, 'postgres' | 'mysql'>> = {
+  postgres: 'postgres',
+  postgresql: 'postgres',
+  pg: 'postgres',
+  mysql: 'mysql',
+};
+
+/** Whether the application needs to run as a container, and why (as capabilities). */
+function containerReasons(spec: HeroSpec): string[] {
+  const reasons = new Set<string>();
+  for (const service of spec.services ?? []) {
+    if (service.type === 'http' && !NODE_RUNTIME.test(service.runtime)) reasons.add('http-service');
+  }
+  if ((spec.data ?? []).some((item) => item.type === 'relational')) reasons.add('relational-data');
+  if ((spec.storage ?? []).some((item) => item.type === 'file-system')) {
+    reasons.add('file-system-write');
+  }
+  return [...reasons].sort();
+}
+
 function unsupportedOf(spec: HeroSpec): Unsupported[] {
   const found = new Map<string, Unsupported>();
   const add = (capability: string, needs: DeploymentStrategy): void => {
     found.set(capability, { capability, needs });
   };
+  const container = containerReasons(spec).length > 0;
   for (const service of spec.services ?? []) {
+    if (service.type === 'http') continue; // a web service runs as a function or as a container
+    // Scheduled jobs run as functions; they cannot yet sit beside a container deployment.
     const supported =
-      NODE_RUNTIME.test(service.runtime) &&
-      (service.type === 'http' || service.type === 'scheduled');
-    if (!supported)
-      add(service.type === 'http' ? 'http-service' : `${service.type}-service`, 'container');
+      NODE_RUNTIME.test(service.runtime) && service.type === 'scheduled' && !container;
+    if (!supported) add(`${service.type}-service`, 'container');
+  }
+  // One public address serves one web service; routing several is not built yet.
+  if (container && (spec.services ?? []).filter((s) => s.type === 'http').length > 1) {
+    add('multiple-http-services', 'container');
   }
   for (const item of spec.data ?? []) {
-    if (item.type === 'relational') add('relational-data', 'container');
-    else if (item.type === 'document') add('document-data', 'container');
+    if (item.type === 'relational') {
+      const engine = RELATIONAL_ENGINES[(item.engine ?? '').toLowerCase()];
+      // An engine nobody named is a question to answer, not a limit of Hero.
+      if (engine === undefined && item.engine !== undefined) add('relational-data', 'container');
+    } else if (item.type === 'document') add('document-data', 'container');
     else if (item.type === 'cache') add('cache', 'container');
     else if (item.type === 'search') add('search', 'container');
   }
-  if ((spec.storage ?? []).some((item) => item.type === 'file-system'))
+  if (
+    (spec.storage ?? []).some((item) => item.type === 'file-system') &&
+    (spec.services ?? []).filter((s) => s.type === 'http').length === 0
+  ) {
     add('file-system-write', 'container');
+  }
   return [...found.values()].sort((a, b) => (a.capability < b.capability ? -1 : 1));
 }
 
-function componentsOf(spec: HeroSpec, analysis: Analysis): Component[] {
+function componentsOf(spec: HeroSpec, analysis: Analysis, container: boolean): Component[] {
   const components: Component[] = [];
   if (spec.frontend !== undefined) {
     const staticOutput = (spec.extensions?.['x-static'] as { outputDirectory?: string } | undefined)
@@ -93,8 +126,27 @@ function componentsOf(spec: HeroSpec, analysis: Analysis): Component[] {
       rationale: [rationale(analysis, 'frontend.static-site', 'web-frontend')],
     });
   }
+  const dockerfile = (spec.extensions?.['x-container'] as { dockerfile?: string } | undefined)
+    ?.dockerfile;
   for (const service of spec.services ?? []) {
-    if (service.type === 'http') {
+    if (service.type === 'http' && container) {
+      components.push({
+        id: service.id,
+        kind: 'container-service',
+        capability: 'http-service',
+        settings: {
+          runtime: service.runtime,
+          port: service.port ?? DEFAULT_PORT,
+          build: dockerfile === undefined ? 'buildpack' : 'dockerfile',
+          ...(dockerfile === undefined ? {} : { dockerfile }),
+          cpu: 256,
+          memoryMb: 512,
+          ...(service.start === undefined ? {} : { startCommand: service.start.command }),
+          ...(service.healthPath === undefined ? {} : { healthPath: service.healthPath }),
+        },
+        rationale: [rationale(analysis, 'service.http.container', 'http-service')],
+      });
+    } else if (service.type === 'http') {
       components.push({
         id: service.id,
         kind: 'http-service',
@@ -124,6 +176,24 @@ function componentsOf(spec: HeroSpec, analysis: Analysis): Component[] {
     }
   }
   for (const item of spec.data ?? []) {
+    if (item.type === 'relational') {
+      const engine = RELATIONAL_ENGINES[(item.engine ?? '').toLowerCase()];
+      if (engine !== undefined) {
+        components.push({
+          id: item.id,
+          kind: 'relational-database',
+          capability: 'relational-data',
+          settings: {
+            engine,
+            instanceClass: 'db.t4g.micro',
+            storageGb: 20,
+            backupDays: 7,
+            multiAz: false,
+          },
+          rationale: [rationale(analysis, 'data.relational.managed', 'relational-data')],
+        });
+      }
+    }
     if (item.type === 'key-value') {
       components.push({
         id: item.id,
@@ -147,6 +217,15 @@ function componentsOf(spec: HeroSpec, analysis: Analysis): Component[] {
     }
   }
   for (const item of spec.storage ?? []) {
+    if (item.type === 'file-system') {
+      components.push({
+        id: item.id,
+        kind: 'file-system',
+        capability: 'file-system-write',
+        settings: { mountPath: '/data' },
+        rationale: [rationale(analysis, 'storage.file-system.shared', 'file-system-write')],
+      });
+    }
     if (item.type === 'object') {
       components.push({
         id: item.id,
@@ -171,6 +250,7 @@ function componentsOf(spec: HeroSpec, analysis: Analysis): Component[] {
 
 /** Guardrails (the budget alert) protect a deployment but never decide how it runs. */
 function strategyFor(components: readonly Component[]): DeploymentStrategy {
+  if (components.some((c) => c.kind === 'container-service')) return 'container';
   return components
     .filter((component) => component.kind !== 'budget-alert')
     .every((component) => component.kind === 'static-site')
@@ -231,7 +311,9 @@ export function planApplication(input: PlannerInput): PlannedApplication {
     };
   }
 
-  const components = componentsOf(spec, analysis);
+  const containerWhy = containerReasons(spec);
+  const container = containerWhy.length > 0;
+  const components = componentsOf(spec, analysis, container);
   if (components.length === 0) {
     warnings.push({ code: 'plan.nothing-to-deploy', severity: 'blocking' });
     return {
@@ -253,12 +335,22 @@ export function planApplication(input: PlannerInput): PlannedApplication {
   });
 
   const strategy = strategyFor(components);
-  const inputs = requiredInputs(spec.environment);
+  // Settings Hero provides to a container itself are never asked of the person.
+  const provided = new Set<string>(container ? ['PORT'] : []);
+  if (components.some((c) => c.kind === 'relational-database')) {
+    for (const name of ['HOST', 'PORT', 'NAME', 'USER', 'PASSWORD', 'SSLMODE'])
+      provided.add(`DB_${name}`);
+  }
+  if (components.some((c) => c.kind === 'file-system')) provided.add('HERO_DATA_DIR');
+  const inputs = requiredInputs((spec.environment ?? []).filter((name) => !provided.has(name)));
 
   const publicKinds = [
     ...new Set(
       components
-        .filter((c) => c.kind === 'static-site' || c.kind === 'http-service')
+        .filter(
+          (c) =>
+            c.kind === 'static-site' || c.kind === 'http-service' || c.kind === 'container-service',
+        )
         .map((c) => c.kind),
     ),
   ];
@@ -282,7 +374,12 @@ export function planApplication(input: PlannerInput): PlannedApplication {
     strategyRationale: [
       strategy === 'static'
         ? { code: 'strategy.static', evidence: evidenceFor(analysis, 'web-frontend') }
-        : { code: 'strategy.serverless', evidence: strategyEvidence(components) },
+        : strategy === 'container'
+          ? {
+              code: 'strategy.container',
+              evidence: containerWhy.map((capability) => `capability:${capability}`),
+            }
+          : { code: 'strategy.serverless', evidence: strategyEvidence(components) },
     ],
     components: components.sort(byKindThenId),
     warnings: sortWarnings(warnings),
@@ -293,8 +390,11 @@ export function planApplication(input: PlannerInput): PlannedApplication {
 const KIND_ORDER: Readonly<Record<string, number>> = {
   'static-site': 0,
   'http-service': 1,
+  'container-service': 1,
   'scheduled-job': 2,
   'key-value-table': 3,
+  'relational-database': 3,
+  'file-system': 3,
   'object-bucket': 4,
   identity: 5,
   'budget-alert': 6,

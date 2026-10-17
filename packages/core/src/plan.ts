@@ -139,6 +139,9 @@ export const planWarningCodes = [
   'plan.unsupported-schedule',
   'plan.destroy-keeps-data',
   'plan.update-unverified',
+  'plan.privileged-build',
+  'plan.cdn-origin-http',
+  'plan.single-database',
   'plan.destructive-changes',
 ] as const;
 

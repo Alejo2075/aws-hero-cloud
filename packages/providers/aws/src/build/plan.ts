@@ -14,7 +14,7 @@ export const BUILD_TIMEOUT_MINUTES = 15;
 export interface BuildJob {
   /** The component it builds for. */
   readonly id: string;
-  readonly kind: 'static' | 'function';
+  readonly kind: 'static' | 'function' | 'image';
   readonly installCommand: string;
   readonly buildCommand: string | undefined;
   /** For functions: the command that starts the program. Wrapped into `run.sh`. */
@@ -23,7 +23,16 @@ export interface BuildJob {
   readonly jobFile: string | undefined;
   /** For static sites: the folder that holds the finished site, relative to the project. */
   readonly outputDirectory: string | undefined;
+  /** For images: built from the project's own Dockerfile or with Cloud Native Buildpacks. */
+  readonly imageBuild: 'dockerfile' | 'buildpack' | undefined;
+  /** For images built from a Dockerfile: the file, relative to the project. */
+  readonly dockerfile: string | undefined;
 }
+
+/** A pinned Cloud Native Buildpacks CLI, checked against its checksum before it is used. */
+export const PACK_VERSION = '0.38.2';
+export const PACK_SHA256 = '27bdf0d2f2f0ad4212f0f2277fa3a4970d86d5848ad3deb5bc658281de2b6b26';
+export const PACK_BUILDER = 'paketobuildpacks/builder-jammy-base';
 
 /** A static site and where its finished files are: the output of a build, or a folder of the source. */
 export interface SiteFiles {
@@ -65,6 +74,14 @@ export function assertSafeCommand(command: string): string {
   return command;
 }
 
+/** A relative file inside the project, such as `docker/Dockerfile`. */
+export function assertSafeFile(file: string): string {
+  if (!/^[A-Za-z0-9_@.+-]+(?:\/[A-Za-z0-9_@.+-]+)*$/.test(file) || file.split('/').includes('..')) {
+    throw heroError('plan.invalid-answer', { question: 'dockerfile' });
+  }
+  return file;
+}
+
 /** A relative folder inside the project: no `..`, no absolute path, no odd characters. */
 export function assertSafeDirectory(directory: string): string {
   if (
@@ -103,6 +120,22 @@ export function buildPlanFor(components: readonly Component[]): BuildPlan {
         startCommand: undefined,
         jobFile: undefined,
         outputDirectory: assertSafeDirectory(text(component, 'outputDirectory') ?? '.'),
+        imageBuild: undefined,
+        dockerfile: undefined,
+      });
+    } else if (component.kind === 'container-service') {
+      const start = text(component, 'startCommand');
+      const dockerfile = text(component, 'dockerfile');
+      jobs.push({
+        id: component.id,
+        kind: 'image',
+        installCommand: '',
+        buildCommand: undefined,
+        startCommand: start === undefined ? undefined : assertSafeCommand(start),
+        jobFile: undefined,
+        outputDirectory: undefined,
+        imageBuild: text(component, 'build') === 'dockerfile' ? 'dockerfile' : 'buildpack',
+        dockerfile: dockerfile === undefined ? undefined : assertSafeFile(dockerfile),
       });
     } else if (component.kind === 'http-service' || component.kind === 'scheduled-job') {
       const build = text(component, 'buildCommand');
@@ -119,6 +152,8 @@ export function buildPlanFor(components: readonly Component[]): BuildPlan {
         jobFile:
           component.kind === 'scheduled-job' ? (text(component, 'entry') ?? 'job.mjs') : undefined,
         outputDirectory: undefined,
+        imageBuild: undefined,
+        dockerfile: undefined,
       });
     }
   }
@@ -128,6 +163,16 @@ export function buildPlanFor(components: readonly Component[]): BuildPlan {
 /** Where a job's result goes in the artifact bucket. */
 export function artifactKey(deploymentId: string, job: BuildJob, sourceHash: string): string {
   return `artifacts/${deploymentId}/${pascal(job.id)}/${sourceHash.slice(0, 16)}.zip`;
+}
+
+/** The tag of a built image: the content of the source it was built from. */
+export function imageTag(sourceHash: string): string {
+  return sourceHash.slice(0, 16);
+}
+
+/** Whether any build needs to run containers, which is the one case that needs extra privileges. */
+export function needsContainerBuild(plan: BuildPlan): boolean {
+  return plan.jobs.some((job) => job.kind === 'image');
 }
 
 /** Where the uploaded source goes. */

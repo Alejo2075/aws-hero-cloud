@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation';
 import { CloudFrontClient, CreateInvalidationCommand } from '@aws-sdk/client-cloudfront';
+import { BatchDeleteImageCommand, ECRClient, ListImagesCommand } from '@aws-sdk/client-ecr';
 import {
   DeleteObjectsCommand,
   GetObjectCommand,
@@ -17,7 +18,7 @@ import { mockClient } from 'aws-sdk-client-mock';
 import { zipSync } from 'fflate';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createAwsProvider } from '../provider.js';
-import { createApplier, contentTypeOf } from './apply.js';
+import { contentTypeOf, createApplier, emptyRepository } from './apply.js';
 import type { ToolkitPort } from './deployer.js';
 
 const roots: string[] = [];
@@ -456,5 +457,99 @@ describe('createApplier.destroy', () => {
       }),
     ).rejects.toMatchObject({ code: 'approval.plan-mismatch' });
     expect(destroys).toEqual([]);
+  });
+});
+
+describe('createApplier.apply for a container', () => {
+  it('builds the image in the privileged project, then deploys with its repository and tag', async () => {
+    const { root, plan } = await planFor([
+      component('container-service', 'api', {
+        runtime: 'python',
+        port: 8000,
+        build: 'buildpack',
+        cpu: 256,
+        memoryMb: 512,
+      }),
+    ]);
+    const s3 = mockClient(S3Client);
+    const cfn = mockClient(CloudFormationClient);
+    cfn.on(ListStackResourcesCommand).resolves({ StackResourceSummaries: [] });
+    const { toolkit, deploys } = fakeToolkit((n): Record<string, string> =>
+      n === 1
+        ? {
+            BucketName: 'build-bucket',
+            ProjectName: 'hero-shop-build',
+            ImageProjectName: 'hero-shop-image-build',
+            RepositoryName: 'hero-shop',
+            RepositoryUri: '123456789012.dkr.ecr.us-east-1.amazonaws.com/hero-shop',
+          }
+        : { ContainerServicePlatformUrl: 'https://d9.cloudfront.net' },
+    );
+    const asked: { imageProject?: string; repositoryUri?: string }[] = [];
+    try {
+      const out = await createApplier({
+        assemblyDirectory: root,
+        region: REGION,
+        toolkit: () => Promise.resolve(toolkit),
+        cloudFormation: new CloudFormationClient({ region: REGION }),
+        s3: new S3Client({ region: REGION }),
+        builder: {
+          run: (r) => {
+            asked.push({
+              ...(r.imageProject === undefined ? {} : { imageProject: r.imageProject }),
+              ...(r.repositoryUri === undefined ? {} : { repositoryUri: r.repositoryUri }),
+            });
+            return Promise.resolve({ artifacts: { api: 'abababababababab' } });
+          },
+        },
+      }).apply({
+        plan,
+        snapshot: snapshot({ 'app.py': 'x' }),
+        parameters: {},
+        deploymentId: 'hero-shop',
+        emit: () => undefined,
+      });
+      expect(asked).toEqual([
+        {
+          imageProject: 'hero-shop-image-build',
+          repositoryUri: '123456789012.dkr.ecr.us-east-1.amazonaws.com/hero-shop',
+        },
+      ]);
+      expect(deploys[1]?.parameters).toEqual({
+        ArtifactBucket: 'build-bucket',
+        ImageRepository: 'hero-shop',
+        ImageApiTag: 'abababababababab',
+      });
+      expect(out.endpoints).toEqual([
+        { kind: 'url', label: 'app', value: 'https://d9.cloudfront.net', public: true },
+      ]);
+    } finally {
+      s3.restore();
+      cfn.restore();
+    }
+  });
+});
+
+describe('emptyRepository', () => {
+  it('removes every image of the repository, a page at a time, in groups the service accepts', async () => {
+    const ecr = mockClient(ECRClient);
+    const ids = Array.from({ length: 230 }, (_, i) => ({ imageTag: `t${String(i)}` }));
+    ecr
+      .on(ListImagesCommand)
+      .resolvesOnce({ imageIds: ids.slice(0, 150), nextToken: 'more' })
+      .resolves({ imageIds: ids.slice(150) });
+    ecr.on(BatchDeleteImageCommand).resolves({});
+    try {
+      await emptyRepository(new ECRClient({ region: REGION }), 'hero-shop');
+      const sizes = ecr
+        .commandCalls(BatchDeleteImageCommand)
+        .map((c) => c.args[0].input.imageIds?.length);
+      expect(sizes).toEqual([100, 50, 80]);
+      expect(ecr.commandCalls(BatchDeleteImageCommand)[0]?.args[0].input.repositoryName).toBe(
+        'hero-shop',
+      );
+    } finally {
+      ecr.restore();
+    }
   });
 });

@@ -108,7 +108,7 @@ describe('createHero().plan', () => {
         ...analysis,
         spec: {
           ...analysis.spec,
-          data: [{ id: 'database', type: 'relational' as const, engine: 'postgres' }],
+          data: [{ id: 'documents', type: 'document' as const, engine: 'mongodb' }],
         },
       };
       const plan = await hero.plan(withDatabase, { accountId: ACCOUNT, offline: true });

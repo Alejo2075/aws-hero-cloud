@@ -73,6 +73,8 @@ export const esPlan: Readonly<Record<string, Message>> = {
   'cost.confidence.low': 'baja',
   'cost.confidence.medium': 'media',
   'cost.confidence.high': 'alta',
+  'cost.reason.container-prices':
+    'los precios de contenedores y bases de datos vienen incluidos en Hero y pueden variar en tu región',
   'cost.reason.offline': 'elegiste no usar la red',
   'cost.reason.prices-unavailable': 'no se pudo llegar a los precios de AWS',
   'column.action': 'Acción',
@@ -278,6 +280,128 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'Ejecución de build (instala y construye tu app)',
     'aws:codebuild:Build',
   ),
+  'resource.vpc': tri('Una red privada para tu app', 'Red privada virtual (VPC)', 'aws:ec2:VPC'),
+  'resource.ecs-cluster': tri('Un lugar donde corre tu app', 'Clúster de ECS', 'aws:ecs:Cluster'),
+  'resource.ecs-service': tri(
+    'Tu app, siempre en marcha',
+    'Servicio de ECS (mantiene tu contenedor en marcha)',
+    'aws:ecs:Service',
+  ),
+  'resource.ecs-task-definition': tri(
+    'La receta para ejecutar tu app',
+    'Definición de tarea de ECS (tamaño y ajustes de tu contenedor)',
+    'aws:ecs:TaskDefinition',
+  ),
+  'resource.load-balancer': tri(
+    'La puerta de entrada que envía a los visitantes a tu app',
+    'Balanceador de carga',
+    'aws:elasticloadbalancingv2:LoadBalancer',
+  ),
+  'resource.load-balancer-target-group': tri(
+    'La lista de copias de tu app en marcha',
+    'Grupo de destino del balanceador (con comprobaciones de salud)',
+    'aws:elasticloadbalancingv2:TargetGroup',
+  ),
+  'resource.rds-instance': tri(
+    'Una base de datos para tu app, con copia diaria',
+    'Base de datos administrada (RDS) con copias, cifrada y privada',
+    'aws:rds:DBInstance',
+  ),
+  'resource.efs-file-system': tri(
+    'Almacenamiento compartido para archivos que no deben perderse',
+    'Sistema de archivos compartido (EFS), cifrado y con copias',
+    'aws:efs:FileSystem',
+  ),
+  'resource.ecr-repository': tri(
+    'Un estante donde se guarda tu app ya construida',
+    'Repositorio de imágenes de contenedor (ECR), con análisis al subir',
+    'aws:ecr:Repository',
+  ),
+  'resource.secrets-manager-secret': tri(
+    'Una caja con llave para una contraseña',
+    'Secreto en Secrets Manager',
+    'aws:secretsmanager:Secret',
+  ),
+  'warning.plan.privileged-build': tri(
+    'Preparar tu app necesita un permiso extra en el servicio de construcción, pero solo dentro de tu propia cuenta.',
+    'Construir una imagen de contenedor necesita un motor de contenedores, que AWS CodeBuild solo ofrece en un modo privilegiado. Esa construcción ejecuta solo los comandos de este plan, en tu cuenta, y su rol puede subir a un repositorio de imágenes y nada más.',
+    'El proyecto de CodeBuild corre con privilegedMode=true para construir la imagen; rol limitado a subir a ECR en el repositorio de este despliegue, leer el código y escribir logs.',
+  ),
+  'warning.plan.cdn-origin-http': tri(
+    'El último tramo corto dentro de AWS no va cifrado, porque aún no tienes un nombre de dominio propio.',
+    'Los visitantes siempre usan HTTPS. Entre la CDN y el balanceador el tráfico cruza la red de AWS sin cifrar, porque un certificado necesita un dominio tuyo. El balanceador solo responde a peticiones con una cabecera secreta única de este despliegue.',
+    'El origen CloudFront a ALB usa HTTP (no hay certificado sin dominio propio); el listener del ALB reenvía solo si x-hero-origin-verify coincide con un valor de Secrets Manager; si no, 403.',
+  ),
+  'warning.plan.single-database': tri(
+    'Tu base de datos corre en un solo lugar. Tiene copia diaria, pero puede dejar de estar disponible un momento si AWS tiene un problema allí.',
+    'La base de datos es una sola instancia, no un par con respaldo, para mantener el costo bajo. Las copias diarias se guardan 7 días y se conserva una copia final si quitas la app. Pide una copia en espera si necesitas sobrevivir a una caída.',
+    'Instancia RDS en una sola AZ (db.t4g.micro), retención de backups 7 días, snapshot final al borrar, sin standby Multi-AZ.',
+  ),
+  'rationale.strategy.container': tri(
+    'Esta app debe correr como contenedor, así que Hero usa un servicio que la mantiene en marcha.',
+    'Hero eligió un contenedor porque la app necesita algo que una función no da (otro lenguaje, una base de datos relacional o archivos que deben quedarse). Corre en AWS Fargate detrás de un balanceador y una CDN.',
+    'strategy=container: servicio ECS Fargate (ARM64) tras ALB y CloudFront',
+  ),
+  'rationale.service.http.container': tri(
+    'Tu app corre como un contenedor siempre encendido.',
+    'El servicio web corre como contenedor en AWS Fargate, así que puede usar cualquier lenguaje y mantener conexiones abiertas.',
+    'Servicio ECS Fargate, 1 tarea, subredes públicas, entrada solo desde el ALB',
+  ),
+  'rationale.data.relational.managed': tri(
+    'Tus datos viven en una base de datos administrada con copias diarias.',
+    'Una base de datos relacional administrada (RDS) guarda tus datos, hace copias diarias y solo es accesible desde tu app.',
+    'RDS (PostgreSQL or MySQL) db.t4g.micro una AZ, gp3 20 GB, cifrada, retención de backups 7 días, subredes privadas',
+  ),
+  'rationale.storage.file-system.shared': tri(
+    'Los archivos que guarda tu app se conservan aunque se reinicie.',
+    'Un sistema de archivos compartido (EFS) se monta en tu app para que los archivos que escribe sobrevivan a los reinicios. Está cifrado y con copias.',
+    'EFS cifrado, backups automáticos, punto de acceso /app uid/gid 1000, montado en /data, retenido al borrar',
+  ),
+  'cost.line.load-balancer': tri(
+    'La puerta de entrada que envía visitantes a tu app',
+    'Balanceador de carga (horas y capacidad)',
+    'Application Load Balancer: hora + LCU',
+  ),
+  'cost.line.container-compute': tri(
+    'Mantener tu app en marcha todo el día',
+    'Cómputo de Fargate (vCPU y memoria)',
+    'Fargate ARM: horas de vCPU + horas de GB',
+  ),
+  'cost.line.public-addresses': tri(
+    'Direcciones de internet que AWS cobra',
+    'Direcciones IPv4 públicas (balanceador y tu app)',
+    'IPv4 públicas: 2 ALB + 1 tarea, por hora',
+  ),
+  'cost.line.managed-database': tri(
+    'La máquina de la base de datos',
+    'Horas de la instancia de base de datos',
+    'Horas de instancia RDS db.t4g.micro',
+  ),
+  'cost.line.managed-database-storage': tri(
+    'Espacio para tus datos',
+    'Almacenamiento de la base de datos',
+    'Almacenamiento RDS gp3, GB-mes',
+  ),
+  'cost.line.shared-files': tri(
+    'Espacio para archivos guardados',
+    'Almacenamiento del sistema de archivos compartido (EFS)',
+    'Almacenamiento EFS Standard, GB-mes',
+  ),
+  'cost.line.container-registry': tri(
+    'Un estante para tu app construida',
+    'Almacenamiento de imágenes de contenedor (ECR)',
+    'Almacenamiento ECR, GB-mes',
+  ),
+  'cost.line.secrets': tri(
+    'Cajas con llave para contraseñas',
+    'Secretos de Secrets Manager',
+    'Secrets Manager, por secreto al mes',
+  ),
+  'rationale.cost.assumption.container-prices': tri(
+    'Los precios de contenedores y bases de datos vienen incluidos y pueden variar en tu región.',
+    'Los precios de contenedores, bases de datos y archivos compartidos vienen incluidos en Hero (referencia de EE. UU. Este) y pueden variar en tu región, así que esta estimación es aproximada.',
+    'precios contenedor/db/efs: referencia incluida us-east-1; confianza=baja',
+  ),
   'resource.other-resource': tri('Una pieza de apoyo', 'Recurso de apoyo', 'aws:other'),
   'warning.plan.unsupported-schedule': tri(
     'Hero no pudo fijar ese horario con exactitud, así que no programó {job}.',
@@ -478,6 +602,16 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'una alerta de gasto',
     'una alerta de presupuesto',
     'cost-control',
+  ),
+  'capability.container-image': tri(
+    'una receta de contenedor ya hecha',
+    'un Dockerfile',
+    'container-image',
+  ),
+  'capability.multiple-http-services': tri(
+    'más de un servicio web en la misma app',
+    'varios servicios web',
+    'multiple-http-services',
   ),
   'capability.account-setup': tri(
     'acceso seguro para Hero',

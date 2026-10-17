@@ -23,6 +23,16 @@ const TYPE_OF: Readonly<Record<string, AwsResourceType>> = {
   'AWS::Cognito::UserPoolClient': 'cognito-user-pool-client',
   'AWS::Budgets::Budget': 'budgets-budget',
   'AWS::CodeBuild::Project': 'codebuild-project',
+  'AWS::EC2::VPC': 'vpc',
+  'AWS::ECS::Cluster': 'ecs-cluster',
+  'AWS::ECS::Service': 'ecs-service',
+  'AWS::ECS::TaskDefinition': 'ecs-task-definition',
+  'AWS::ElasticLoadBalancingV2::LoadBalancer': 'load-balancer',
+  'AWS::ElasticLoadBalancingV2::TargetGroup': 'load-balancer-target-group',
+  'AWS::RDS::DBInstance': 'rds-instance',
+  'AWS::EFS::FileSystem': 'efs-file-system',
+  'AWS::ECR::Repository': 'ecr-repository',
+  'AWS::SecretsManager::Secret': 'secrets-manager-secret',
 };
 
 /** The safeguards each kind of resource carries, as reasons a person can read. */
@@ -35,6 +45,10 @@ const GUARDRAILS: Readonly<Partial<Record<AwsResourceType, readonly string[]>>> 
   'iam-policy': ['guardrail.least-privilege'],
   'logs-log-group': ['guardrail.log-retention'],
   'dynamodb-table': ['guardrail.backups', 'guardrail.encryption'],
+  'rds-instance': ['guardrail.backups', 'guardrail.encryption', 'guardrail.private-by-default'],
+  'efs-file-system': ['guardrail.backups', 'guardrail.encryption', 'guardrail.private-by-default'],
+  'ecr-repository': ['guardrail.encryption'],
+  'load-balancer': ['guardrail.log-retention'],
 };
 
 type Record_ = Readonly<Record<string, unknown>>;
@@ -112,6 +126,29 @@ function summarize(
           .PointInTimeRecoveryEnabled,
         deletionProtection: p.DeletionProtectionEnabled,
       };
+    case 'rds-instance':
+      return {
+        engine: p.Engine,
+        instanceClass: p.DBInstanceClass,
+        storageGb: p.AllocatedStorage,
+        storageEncrypted: p.StorageEncrypted,
+        backupDays: p.BackupRetentionPeriod,
+        multiAz: p.MultiAZ,
+        publiclyAccessible: p.PubliclyAccessible,
+        deletionProtection: p.DeletionProtection,
+      };
+    case 'ecs-service':
+      return { desiredCount: p.DesiredCount, launchType: p.LaunchType, publicAddress: true };
+    case 'ecs-task-definition':
+      return {
+        cpu: p.Cpu,
+        memory: p.Memory,
+        architecture: asRecord(p.RuntimePlatform).CpuArchitecture,
+      };
+    case 'load-balancer':
+      return { scheme: p.Scheme, type: p.Type };
+    case 'efs-file-system':
+      return { encrypted: p.Encrypted };
     case 'apigatewayv2-api':
       return { protocol: p.ProtocolType };
     case 'apigatewayv2-stage':
@@ -146,7 +183,7 @@ function nameOf(entry: CfnResourceEntry, logicalId: string): string {
     .split('/')
     .slice(2)
     .filter((part) => part !== 'Resource');
-  return parts.length === 0 ? logicalId : parts.join('/');
+  return parts.length === 0 ? logicalId : parts.join('/').replace(/[{}]/g, '');
 }
 
 function metadataRationale(entry: CfnResourceEntry): Rationale[] {
@@ -188,7 +225,8 @@ export function changesFromTemplate(
       ...(versioned ? [{ code: 'guardrail.versioning' }] : []),
     ];
     const kind = type ?? 'other-resource';
-    const onDestroy = entry.DeletionPolicy === 'Retain' ? 'keep' : 'delete';
+    const onDestroy =
+      entry.DeletionPolicy === 'Retain' || entry.DeletionPolicy === 'Snapshot' ? 'keep' : 'delete';
     changes.push({
       id: `${component}:${kind}:${logicalId}`,
       action: 'create',
@@ -196,14 +234,17 @@ export function changesFromTemplate(
       resource: { provider: 'aws', type: kind, name: nameOf(entry, logicalId) },
       destructive: false,
       rationale,
-      details: {
-        cloudFormationType: entry.Type,
-        logicalId,
-        ...summarize(type, entry),
-        onDestroy,
-        region,
-        tags: { 'hero:deployment-id': deploymentId },
-      },
+      // A value a resource does not set is left out, because a plan holds only values it can seal.
+      details: JSON.parse(
+        JSON.stringify({
+          cloudFormationType: entry.Type,
+          logicalId,
+          ...summarize(type, entry),
+          onDestroy,
+          region,
+          tags: { 'hero:deployment-id': deploymentId },
+        }),
+      ) as Record<string, unknown>,
     });
   }
   return changes.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));

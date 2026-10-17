@@ -11,6 +11,7 @@
       "@hero-cloud/plugin-sdk",
       "@hero-cloud/analyzer",
       "@hero-cloud/plugin-node",
+      "@hero-cloud/plugin-container",
       "@hero-cloud/planner",
       "@hero-cloud/provider-aws",
       "@hero-cloud/provider-ai",

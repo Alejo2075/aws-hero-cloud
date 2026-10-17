@@ -7,6 +7,7 @@ export const PUBLISHED = [
   'packages/plugin-sdk',
   'packages/analyzer',
   'plugins/node',
+  'plugins/container',
   'packages/planner',
   'packages/providers/aws',
   'packages/providers/ai',

@@ -10,7 +10,7 @@ import type {
 import { canonicalJson, sha256Hex } from '@hero-cloud/shared';
 import { parameterPath } from './cdk/names.js';
 import { buildJobChanges } from './build/changes.js';
-import { buildPlanFor } from './build/plan.js';
+import { buildPlanFor, needsContainerBuild } from './build/plan.js';
 import { bundleHash, loadBundle, storeBundle } from './bundle.js';
 import { synthesize, synthesizeBuild } from './cdk/synth.js';
 import { changesFromTemplate } from './changes.js';
@@ -30,6 +30,7 @@ import { loadPriceBook } from './prices/live.js';
 import type { FetchText } from './prices/live.js';
 import type { ToolkitFactory } from './deploy/deployer.js';
 import { CloudFormationClient } from '@aws-sdk/client-cloudformation';
+import { ElasticLoadBalancingV2Client } from '@aws-sdk/client-elastic-load-balancing-v2';
 
 export interface AwsProviderOptions {
   /** Folder where downloaded prices are cached. Without one, prices are fetched each time. */
@@ -117,6 +118,10 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
           region: request.region,
           ...(options.profile === undefined ? {} : { profile: options.profile }),
         }),
+        loadBalancing: new ElasticLoadBalancingV2Client({
+          region: request.region,
+          ...(options.profile === undefined ? {} : { profile: options.profile }),
+        }),
       })(request),
     inspect: (inspectOptions) =>
       inspectSetup({
@@ -166,6 +171,7 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
               deploymentId: request.deploymentId,
               region,
               accountId: request.accountId,
+              containers: needsContainerBuild(buildPlan),
             });
       const artifactHash = bundleHash({
         appHash: assembly.hash,
@@ -221,8 +227,25 @@ export function createAwsProvider(options: AwsProviderOptions = {}): CloudProvid
         warnings.push({
           code: 'plan.cost-low-confidence',
           severity: 'info',
-          params: { reason: request.allowNetwork ? 'prices-unavailable' : 'offline', region },
+          params: {
+            reason:
+              cost.priceSource !== 'built-in'
+                ? 'container-prices'
+                : request.allowNetwork
+                  ? 'prices-unavailable'
+                  : 'offline',
+            region,
+          },
         });
+      }
+      if (request.components.some((c) => c.kind === 'container-service')) {
+        warnings.push(
+          { code: 'plan.privileged-build', severity: 'info' },
+          { code: 'plan.cdn-origin-http', severity: 'info' },
+        );
+      }
+      if (request.components.some((c) => c.kind === 'relational-database')) {
+        warnings.push({ code: 'plan.single-database', severity: 'info' });
       }
       for (const id of assembly.invalidSchedules) {
         warnings.push({

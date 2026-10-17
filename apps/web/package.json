@@ -13,7 +13,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "astro-check --root ."
+    "typecheck": "astro check"
   },
   "dependencies": {
     "@astrojs/react": "^7.0.0",

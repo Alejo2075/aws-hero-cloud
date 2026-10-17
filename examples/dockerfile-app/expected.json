@@ -1,0 +1,23 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "dockerfile-app"
+    },
+    "services": [
+      {
+        "id": "app",
+        "type": "http",
+        "runtime": "container",
+        "port": 8000
+      }
+    ],
+    "extensions": {
+      "x-container": {
+        "dockerfile": "Dockerfile"
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["container-image", "http-service"]
+}

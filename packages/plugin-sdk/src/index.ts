@@ -32,6 +32,8 @@ export const standardCapabilities = [
   'declared-spec',
   'cost-control',
   'account-setup',
+  'container-image',
+  'multiple-http-services',
 ] as const;
 
 export type StandardCapability = (typeof standardCapabilities)[number];

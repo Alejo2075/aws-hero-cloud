@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "sourceMap": false,
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [
+    {
+      "path": "../../packages/analyzer/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/core/tsconfig.build.json"
+    },
+    {
+      "path": "../node/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/plugin-sdk/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/shared/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/specification/tsconfig.build.json"
+    }
+  ]
+}

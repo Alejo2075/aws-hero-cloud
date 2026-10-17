@@ -73,6 +73,8 @@ export const enPlan: Readonly<Record<string, Message>> = {
   'cost.confidence.low': 'low',
   'cost.confidence.medium': 'medium',
   'cost.confidence.high': 'high',
+  'cost.reason.container-prices':
+    'prices for containers and databases are built into Hero and may differ in your region',
   'cost.reason.offline': 'you chose not to use the network',
   'cost.reason.prices-unavailable': 'AWS prices could not be reached',
   'column.action': 'Action',
@@ -274,6 +276,132 @@ export const enPlan: Readonly<Record<string, Message>> = {
     'Build run (installs and builds your app)',
     'aws:codebuild:Build',
   ),
+  'resource.vpc': tri(
+    'A private network for your app',
+    'Virtual private network (VPC)',
+    'aws:ec2:VPC',
+  ),
+  'resource.ecs-cluster': tri('A place where your app runs', 'ECS cluster', 'aws:ecs:Cluster'),
+  'resource.ecs-service': tri(
+    'Your app, kept running',
+    'ECS service (keeps your container running)',
+    'aws:ecs:Service',
+  ),
+  'resource.ecs-task-definition': tri(
+    'The recipe for running your app',
+    'ECS task definition (size and settings of your container)',
+    'aws:ecs:TaskDefinition',
+  ),
+  'resource.load-balancer': tri(
+    'The front door that sends visitors to your app',
+    'Load balancer',
+    'aws:elasticloadbalancingv2:LoadBalancer',
+  ),
+  'resource.load-balancer-target-group': tri(
+    'The list of running copies of your app',
+    'Load balancer target group (with health checks)',
+    'aws:elasticloadbalancingv2:TargetGroup',
+  ),
+  'resource.rds-instance': tri(
+    'A database for your app, backed up daily',
+    'Managed database (RDS) with backups, encrypted, private',
+    'aws:rds:DBInstance',
+  ),
+  'resource.efs-file-system': tri(
+    'Shared storage for files that must not disappear',
+    'Shared file system (EFS), encrypted and backed up',
+    'aws:efs:FileSystem',
+  ),
+  'resource.ecr-repository': tri(
+    'A shelf where your built app is kept',
+    'Container image repository (ECR), scanned on push',
+    'aws:ecr:Repository',
+  ),
+  'resource.secrets-manager-secret': tri(
+    'A locked box for a password',
+    'Secret in Secrets Manager',
+    'aws:secretsmanager:Secret',
+  ),
+  'warning.plan.privileged-build': tri(
+    'Preparing your app needs extra permission on the build service, but only inside your own account.',
+    'Building a container image needs a container engine, which AWS CodeBuild only offers in a privileged mode. That build runs only the commands in this plan, in your account, and its role can push to one image repository and nothing else.',
+    "CodeBuild project runs with privilegedMode=true for the image build; role limited to ECR push on this deployment's repository, source read, and logs.",
+  ),
+  'warning.plan.cdn-origin-http': tri(
+    'The last short hop inside AWS is not encrypted, because you have no domain name of your own yet.',
+    "Visitors always use HTTPS. Between the CDN and the load balancer the traffic crosses AWS's own network without encryption, because a certificate needs a domain you own. The load balancer only answers requests that carry a secret header unique to this deployment.",
+    'CloudFront to ALB origin uses HTTP (no certificate without a custom domain); ALB listener forwards only when x-hero-origin-verify matches a Secrets Manager value; otherwise 403.',
+  ),
+  'warning.plan.single-database': tri(
+    'Your database runs in one place. It is backed up every day, but it can be briefly unavailable if AWS has a problem there.',
+    'The database is a single instance, not a standby pair, to keep the cost low. Daily backups are kept for 7 days and a final snapshot is kept if you remove the app. Ask for a standby copy if you need to survive an outage.',
+    'RDS single-AZ instance (db.t4g.micro), backup retention 7 days, final snapshot on delete, no Multi-AZ standby.',
+  ),
+  'rationale.strategy.container': tri(
+    'This app needs to run as a container, so Hero uses a service that keeps it running.',
+    'Hero chose a container because the app needs something a function cannot give (another language, a relational database, or files that must stay). It runs on AWS Fargate behind a load balancer and a CDN.',
+    'strategy=container: ECS Fargate (ARM64) service behind ALB and CloudFront',
+  ),
+  'rationale.service.http.container': tri(
+    'Your app runs as a container that is always on.',
+    'The web service runs as a container on AWS Fargate, so it can use any language and keep connections open.',
+    'ECS Fargate service, 1 task, public subnets, ingress from ALB only',
+  ),
+  'rationale.data.relational.managed': tri(
+    'Your data lives in a managed database with daily backups.',
+    'A managed relational database (RDS) keeps your data, takes daily backups, and is reachable only from your app.',
+    'RDS (PostgreSQL or MySQL) db.t4g.micro single-AZ, gp3 20 GB, encrypted, backup retention 7 days, private subnets',
+  ),
+  'rationale.storage.file-system.shared': tri(
+    'Files your app saves are kept even when it restarts.',
+    'A shared file system (EFS) is mounted into your app so files it writes survive restarts. It is encrypted and backed up.',
+    'EFS encrypted, automatic backups, access point /app uid/gid 1000, mounted at /data, retained on delete',
+  ),
+  'cost.line.load-balancer': tri(
+    'The front door that sends visitors to your app',
+    'Load balancer (hours and capacity)',
+    'Application Load Balancer: hourly + LCU',
+  ),
+  'cost.line.container-compute': tri(
+    'Running your app all day',
+    'Fargate compute (vCPU and memory)',
+    'Fargate ARM: vCPU-hours + GB-hours',
+  ),
+  'cost.line.public-addresses': tri(
+    'Internet addresses AWS charges for',
+    'Public IPv4 addresses (load balancer and your app)',
+    'Public IPv4: 2 ALB + 1 task, hourly',
+  ),
+  'cost.line.managed-database': tri(
+    'The database machine',
+    'Database instance hours',
+    'RDS db.t4g.micro instance hours',
+  ),
+  'cost.line.managed-database-storage': tri(
+    'Space for your data',
+    'Database storage',
+    'RDS gp3 storage, GB-month',
+  ),
+  'cost.line.shared-files': tri(
+    'Space for saved files',
+    'Shared file system storage (EFS)',
+    'EFS Standard storage, GB-month',
+  ),
+  'cost.line.container-registry': tri(
+    'A shelf for your built app',
+    'Container image storage (ECR)',
+    'ECR storage, GB-month',
+  ),
+  'cost.line.secrets': tri(
+    'Locked boxes for passwords',
+    'Secrets Manager secrets',
+    'Secrets Manager, per secret per month',
+  ),
+  'rationale.cost.assumption.container-prices': tri(
+    'Container and database prices are built in and may differ in your region.',
+    'Prices for containers, databases, and shared files are built into Hero (US East reference prices) and can differ in your region, so this estimate is rough.',
+    'container/db/efs prices: built-in us-east-1 reference; confidence=low',
+  ),
   'resource.other-resource': tri('A supporting piece', 'Supporting resource', 'aws:other'),
   'warning.plan.unsupported-schedule': tri(
     'Hero could not set that timetable exactly, so it did not schedule {job}.',
@@ -463,6 +591,16 @@ export const enPlan: Readonly<Record<string, Message>> = {
   'evidence.capability': tri('', 'needs {value}', 'capability {value}'),
   'evidence.ai': tri('', 'suggested by an AI model ({value})', 'ai:{value}'),
   'capability.cost-control': tri('a spending alert', 'a budget alert', 'cost-control'),
+  'capability.container-image': tri(
+    'a ready-made container recipe',
+    'a Dockerfile',
+    'container-image',
+  ),
+  'capability.multiple-http-services': tri(
+    'more than one web service in the same app',
+    'several web services',
+    'multiple-http-services',
+  ),
   'capability.account-setup': tri(
     'safe access for Hero',
     'limited deployment permissions',

@@ -3,6 +3,8 @@ import {
   DescribeStacksCommand,
   DetectStackDriftCommand,
 } from '@aws-sdk/client-cloudformation';
+import { DescribeTargetHealthCommand } from '@aws-sdk/client-elastic-load-balancing-v2';
+import type { ElasticLoadBalancingV2Client } from '@aws-sdk/client-elastic-load-balancing-v2';
 import type {
   CloudProvider,
   ComponentHealth,
@@ -27,6 +29,8 @@ export interface HealthOptions {
   readonly fetch?: FetchLike;
   readonly timeoutMs?: number;
   readonly clock?: () => number;
+  /** Looks at the targets behind a load balancer. Without one, that check is skipped. */
+  readonly loadBalancing?: Pick<ElasticLoadBalancingV2Client, 'send'>;
   /** How long to wait for a drift check, in milliseconds. 0 turns drift detection off. */
   readonly driftWaitMs?: number;
   readonly sleep?: (ms: number) => Promise<void>;
@@ -182,11 +186,19 @@ export function createHealthChecker(options: HealthOptions): NonNullable<CloudPr
 
     // resource-state: the provider says the stack is finished, not failed or rolling back.
     let stackStatus: string;
+    let outputs: Record<string, string> = {};
     try {
       const result = await options.cloudFormation.send(
         new DescribeStacksCommand({ StackName: req.deploymentId }),
       );
       stackStatus = result.Stacks?.[0]?.StackStatus ?? 'UNKNOWN';
+      outputs = Object.fromEntries(
+        (result.Stacks?.[0]?.Outputs ?? []).flatMap((o) =>
+          o.OutputKey !== undefined && o.OutputValue !== undefined
+            ? [[o.OutputKey, o.OutputValue]]
+            : [],
+        ),
+      );
     } catch {
       stackStatus = 'UNREACHABLE';
     }
@@ -199,6 +211,35 @@ export function createHealthChecker(options: HealthOptions): NonNullable<CloudPr
       status: stackOk ? 'passed' : 'failed',
       target: stackStatus,
     });
+
+    // targets: the load balancer says how many copies of the application it considers healthy.
+    for (const [key, arn] of Object.entries(outputs)) {
+      if (!/^ContainerService.+TargetGroup$/.test(key) || options.loadBalancing === undefined)
+        continue;
+      let verdict: 'healthy' | 'unhealthy' | 'unavailable';
+      try {
+        const result = await options.loadBalancing.send(
+          new DescribeTargetHealthCommand({ TargetGroupArn: arn }),
+        );
+        const states = (result.TargetHealthDescriptions ?? []).map((t) => t.TargetHealth?.State);
+        verdict =
+          states.length > 0 && states.every((s) => s === 'healthy') ? 'healthy' : 'unhealthy';
+      } catch {
+        verdict = 'unavailable';
+      }
+      add('app', {
+        id: 'app.targets',
+        component: 'app',
+        kind: 'resource-state',
+        code:
+          verdict === 'healthy'
+            ? 'health.targets'
+            : verdict === 'unhealthy'
+              ? 'health.targets.unhealthy'
+              : 'health.targets.unavailable',
+        status: verdict === 'healthy' ? 'passed' : verdict === 'unhealthy' ? 'failed' : 'skipped',
+      });
+    }
 
     // drift: ask the provider whether the deployed resources still match what Hero created.
     const drift = await detectDrift(options, req.deploymentId);

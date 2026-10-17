@@ -4,6 +4,10 @@ import {
   DescribeStacksCommand,
   DetectStackDriftCommand,
 } from '@aws-sdk/client-cloudformation';
+import {
+  DescribeTargetHealthCommand,
+  ElasticLoadBalancingV2Client,
+} from '@aws-sdk/client-elastic-load-balancing-v2';
 import type { Health, ProviderHealthRequest } from '@hero-cloud/core';
 import { mockClient } from 'aws-sdk-client-mock';
 import { describe, expect, it } from 'vitest';
@@ -275,5 +279,70 @@ describe('drift', () => {
         setup.cfn.restore();
       }
     }
+  });
+});
+
+describe('target health', () => {
+  const TG = 'arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/x/abc';
+
+  async function targets(states: (string | undefined)[] | Error) {
+    const cfn = mockClient(CloudFormationClient);
+    cfn.on(DescribeStacksCommand).resolves({
+      Stacks: [
+        {
+          StackName: 'x',
+          StackStatus: 'CREATE_COMPLETE',
+          CreationTime: new Date(),
+          Outputs: [{ OutputKey: 'ContainerServiceApiTargetGroup', OutputValue: TG }],
+        },
+      ],
+    });
+    const lb = mockClient(ElasticLoadBalancingV2Client);
+    if (states instanceof Error) lb.on(DescribeTargetHealthCommand).rejects(states);
+    else {
+      lb.on(DescribeTargetHealthCommand).resolves({
+        TargetHealthDescriptions: states.map((State) => ({
+          TargetHealth: { State: State as never },
+        })),
+      });
+    }
+    try {
+      const check = createHealthChecker({
+        cloudFormation: new CloudFormationClient({ region: 'us-east-1' }),
+        loadBalancing: new ElasticLoadBalancingV2Client({ region: 'us-east-1' }),
+        fetch: reply({}),
+        driftWaitMs: 0,
+      });
+      const health = await check(base({ endpoints: [], components: [] }));
+      return {
+        health,
+        arn: lb.commandCalls(DescribeTargetHealthCommand)[0]?.args[0].input.TargetGroupArn,
+        target: health.checks.find((c) => c.id === 'app.targets'),
+      };
+    } finally {
+      cfn.restore();
+      lb.restore();
+    }
+  }
+
+  it('passes only when every target is healthy', async () => {
+    const r = await targets(['healthy', 'healthy']);
+    expect(r.arn).toBe(TG);
+    expect(r.target).toMatchObject({ code: 'health.targets', status: 'passed' });
+    expect(r.health.status).toBe('healthy');
+  });
+
+  it('fails when a target is not healthy, or when none is registered', async () => {
+    expect((await targets(['healthy', 'unhealthy'])).target).toMatchObject({
+      code: 'health.targets.unhealthy',
+      status: 'failed',
+    });
+    expect((await targets([])).target).toMatchObject({ status: 'failed' });
+    expect((await targets(['initial'])).target).toMatchObject({ status: 'failed' });
+  });
+
+  it('is skipped, not passed, when the load balancer could not be asked', async () => {
+    const r = await targets(new Error('AccessDenied'));
+    expect(r.target).toMatchObject({ code: 'health.targets.unavailable', status: 'skipped' });
   });
 });

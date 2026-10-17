@@ -90,7 +90,6 @@ describe('strategy', () => {
 
 describe('what Hero cannot do yet is a blocking warning, not a guess', () => {
   it.each([
-    [{ pg: '8' }, 'relational-data'],
     [{ mongoose: '8' }, 'document-data'],
     [{ ioredis: '5' }, 'cache'],
     [{ meilisearch: '1' }, 'search'],
@@ -111,20 +110,112 @@ describe('what Hero cannot do yet is a blocking warning, not a guess', () => {
     );
   });
 
-  it('refuses a service in another runtime', async () => {
-    const analysis = {
-      ...(await analyze(API)),
-      spec: {
-        version: '1' as const,
-        application: { name: 'py' },
-        services: [{ id: 'api', type: 'http' as const, runtime: 'python' }],
+  it('refuses what has no strategy yet: a worker, an unsupported database engine', async () => {
+    const base = await analyze(API);
+    const workers = planApplication({
+      analysis: {
+        ...base,
+        spec: {
+          version: '1' as const,
+          application: { name: 'w' },
+          services: [{ id: 'jobs', type: 'worker' as const, runtime: 'nodejs22' }],
+        },
+        openQuestions: [],
       },
-      openQuestions: [],
-    };
-    const plan = planApplication({ analysis });
-    expect(blocking(plan)).toContain(
-      'plan.unsupported-capability:{"capability":"http-service","needs":"container"}',
+    });
+    expect(blocking(workers)).toContain(
+      'plan.unsupported-capability:{"capability":"worker-service","needs":"container"}',
     );
+    const oracle = planApplication({
+      analysis: {
+        ...base,
+        spec: {
+          version: '1' as const,
+          application: { name: 'o' },
+          services: [{ id: 'api', type: 'http' as const, runtime: 'nodejs22' }],
+          data: [{ id: 'db', type: 'relational' as const, engine: 'oracle' }],
+        },
+        openQuestions: [],
+      },
+    });
+    expect(blocking(oracle)).toContain(
+      'plan.unsupported-capability:{"capability":"relational-data","needs":"container"}',
+    );
+  });
+
+  it('runs a service in another runtime as a container, built from its Dockerfile or with buildpacks', async () => {
+    const base = await analyze(API);
+    const python = (extensions?: Record<string, unknown>) =>
+      planApplication({
+        analysis: {
+          ...base,
+          spec: {
+            version: '1' as const,
+            application: { name: 'py' },
+            services: [
+              {
+                id: 'api',
+                type: 'http' as const,
+                runtime: 'python',
+                port: 8000,
+                healthPath: '/up',
+              },
+            ],
+            ...(extensions === undefined ? {} : { extensions }),
+          },
+          openQuestions: [],
+        },
+      });
+    const buildpack = python();
+    expect(buildpack.strategy).toBe('container');
+    expect(buildpack.strategyRationale[0]?.code).toBe('strategy.container');
+    expect(blocking(buildpack)).toEqual([]);
+    expect(
+      buildpack.components.find((c) => c.kind === 'container-service')?.settings,
+    ).toMatchObject({
+      runtime: 'python',
+      port: 8000,
+      healthPath: '/up',
+      build: 'buildpack',
+    });
+    const docker = python({ 'x-container': { dockerfile: 'Dockerfile' } });
+    expect(docker.components.find((c) => c.kind === 'container-service')?.settings).toMatchObject({
+      build: 'dockerfile',
+      dockerfile: 'Dockerfile',
+    });
+  });
+
+  it('gives an app with a relational database a managed database and runs it as a container', async () => {
+    const plan = planApplication({
+      analysis: await analyze({
+        'package.json': pkg({
+          dependencies: { express: '5', pg: '8' },
+          scripts: { start: 'node .' },
+        }),
+        'a.js': 'app.listen(3000)',
+      }),
+    });
+    expect(plan.strategy).toBe('container');
+    expect(blocking(plan)).toEqual([]);
+    expect(plan.components.map((c) => c.kind)).toEqual([
+      'container-service',
+      'relational-database',
+      'budget-alert',
+    ]);
+    expect(plan.components.find((c) => c.kind === 'relational-database')?.settings).toMatchObject({
+      engine: 'postgres',
+      backupDays: 7,
+      multiAz: false,
+    });
+    expect(plan.warnings.find((w) => w.code === 'plan.public-exposure')?.params).toEqual({
+      kinds: 'container-service',
+    });
+  });
+
+  it('stays serverless when nothing needs a container', async () => {
+    const plan = planApplication({ analysis: await analyze(API) });
+    expect(plan.strategy).toBe('serverless');
+    expect(plan.components.some((c) => c.kind === 'container-service')).toBe(false);
   });
 
   it('says there is nothing to deploy for an empty project', async () => {
@@ -191,8 +282,10 @@ describe('open questions', () => {
       analysis: await analyze(files),
       answers: { 'storage.uploads': 'file-system' },
     });
-    expect(blocking(disk)).toContain(
-      'plan.unsupported-capability:{"capability":"file-system-write","needs":"container"}',
+    expect(blocking(disk)).toEqual([]);
+    expect(disk.strategy).toBe('container');
+    expect(disk.components.map((c) => c.kind)).toEqual(
+      expect.arrayContaining(['container-service', 'file-system']),
     );
   });
 

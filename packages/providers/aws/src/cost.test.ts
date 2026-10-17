@@ -1,6 +1,7 @@
 import type { Component } from '@hero-cloud/core';
 import { describe, expect, it } from 'vitest';
 import { estimateCost } from './cost.js';
+import { awsCostLineCodes } from './resources.js';
 import { builtInPriceBook } from './prices/book.js';
 import type { PriceBook } from './prices/book.js';
 
@@ -137,5 +138,55 @@ describe('estimateCost', () => {
     const c = cost([component('budget-alert', 'budget')]);
     expect(c.monthlyHigh).toBe(0);
     expect(c.lines).toEqual([]);
+  });
+});
+
+describe('containers, databases, and shared files', () => {
+  const prices = builtInPriceBook('us-east-1');
+  const component = (
+    kind: Component['kind'],
+    id: string,
+    settings: Component['settings'] = {},
+  ): Component => ({
+    id,
+    kind,
+    capability: kind,
+    settings,
+    rationale: [],
+  });
+  const service = component('container-service', 'api', { cpu: 256, memoryMb: 512 });
+  const db = component('relational-database', 'db', { storageGb: 20 });
+  const files = component('file-system', 'files');
+
+  it('counts the load balancer, addresses, and sign-in secret once, however many pieces there are', () => {
+    const one = estimateCost({ components: [service], prices });
+    const lines = Object.fromEntries(one.lines.map((l) => [l.code, l]));
+    expect(lines['load-balancer']?.monthlyLow).toBeGreaterThan(15);
+    expect(lines['container-compute']?.monthlyLow).toBeCloseTo(7.21, 1);
+    expect(lines['public-addresses']?.monthlyLow).toBeCloseTo(10.95, 1);
+    expect(lines.secrets?.monthlyLow).toBe(0.4);
+    const full = estimateCost({ components: [service, db, files], prices });
+    const fullLines = Object.fromEntries(full.lines.map((l) => [l.code, l]));
+    expect(fullLines['load-balancer']).toEqual(lines['load-balancer']);
+    expect(fullLines['public-addresses']).toEqual(lines['public-addresses']);
+    expect(fullLines.secrets?.monthlyLow).toBe(0.8);
+    expect(fullLines['managed-database']?.monthlyLow).toBeCloseTo(11.68, 1);
+    expect(fullLines['managed-database-storage']?.monthlyLow).toBe(2.3);
+    expect(fullLines['shared-files']).toBeDefined();
+  });
+
+  it('is a range that costs far more than the same application as functions, and says it is a rough one', () => {
+    const container = estimateCost({ components: [service, db], prices });
+    expect(container.monthlyLow).toBeGreaterThan(40);
+    expect(container.monthlyHigh).toBeGreaterThan(container.monthlyLow);
+    expect(container.confidence).toBe('low');
+    expect(container.assumptions.map((a) => a.code)).toContain('cost.assumption.container-prices');
+    const serverless = estimateCost({ components: [component('http-service', 'api')], prices });
+    expect(serverless.monthlyHigh).toBeLessThan(container.monthlyLow);
+  });
+
+  it('only uses cost line codes it knows how to word', () => {
+    const { lines } = estimateCost({ components: [service, db, files], prices });
+    for (const l of lines) expect(awsCostLineCodes).toContain(l.code);
   });
 });

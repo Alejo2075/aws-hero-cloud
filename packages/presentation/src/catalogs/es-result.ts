@@ -341,4 +341,19 @@ export const esResult: Readonly<Record<string, Message>> = {
     'La preparación de la cuenta terminó. Hero ya puede desplegar con permisos limitados.',
     'Bootstrap completado.',
   ),
+  'check.health.targets': tri(
+    'Tu app está en marcha y la puerta de entrada puede llegar a ella.',
+    'El balanceador informa que todas las copias de tu app están sanas.',
+    'ELB DescribeTargetHealth: todos los destinos sanos.',
+  ),
+  'check.health.targets.unhealthy': tri(
+    'Tu app aún no está lista para recibir visitantes.',
+    'El balanceador no ve todavía ninguna copia sana de tu app, o ve una que falla su comprobación de salud.',
+    'ELB DescribeTargetHealth: sin destinos o al menos uno no sano.',
+  ),
+  'check.health.targets.unavailable': tri(
+    'Hero no pudo preguntar si tu app está lista.',
+    'No se pudo consultar al balanceador sobre la salud de las copias de tu app.',
+    'ELB DescribeTargetHealth falló (denegado o inalcanzable).',
+  ),
 };

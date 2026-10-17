@@ -62,16 +62,13 @@ export function retainedResources(
 ): DeployedResource[] {
   const retained = new Set(
     Object.entries(template.Resources)
-      .filter(([, entry]) => entry.DeletionPolicy === 'Retain')
+      .filter(
+        ([, entry]) => entry.DeletionPolicy === 'Retain' || entry.DeletionPolicy === 'Snapshot',
+      )
       .map(([logicalId]) => logicalId),
   );
   return deployed.filter((resource) => retained.has(resource.name));
 }
-
-const KIND_LABELS: Readonly<Record<string, string>> = {
-  StaticSite: 'website',
-  HttpService: 'api',
-};
 
 /**
  * Turns stack outputs named `<Kind><Id>Url` into the places the application can be reached. The
@@ -83,12 +80,20 @@ export function endpointsFromOutputs(
 ): Endpoint[] {
   const endpoints: Endpoint[] = [];
   for (const { id, kind } of ids) {
-    const prefix = `${kind === 'static-site' ? 'StaticSite' : 'HttpService'}${pascal(id)}`;
+    // A container deployment has one address for all of it, kept with the shared network.
+    const prefix =
+      kind === 'container-service'
+        ? 'ContainerServicePlatform'
+        : `${kind === 'static-site' ? 'StaticSite' : 'HttpService'}${pascal(id)}`;
     const url = outputs[`${prefix}Url`];
-    if (url !== undefined) {
+    if (url !== undefined && !endpoints.some((e) => e.value === url)) {
       endpoints.push({
         kind: 'url',
-        label: KIND_LABELS[prefix.startsWith('StaticSite') ? 'StaticSite' : 'HttpService'] ?? id,
+        label: prefix.startsWith('StaticSite')
+          ? 'website'
+          : prefix.startsWith('ContainerService')
+            ? 'app'
+            : 'api',
         value: url,
         public: true,
       });

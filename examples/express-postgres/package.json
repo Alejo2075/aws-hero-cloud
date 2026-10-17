@@ -1,0 +1,11 @@
+{
+  "name": "hero-example-express-postgres",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.0.0",
+    "pg": "^8.13.0"
+  }
+}

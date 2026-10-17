@@ -55,6 +55,9 @@ const SMOKE_FAILURES = [
 /** Every code a health check can carry, including why a check failed. */
 export const healthCheckCodes = [
   'health.resource-state',
+  'health.targets',
+  'health.targets.unhealthy',
+  'health.targets.unavailable',
   'health.drift',
   'health.drift.drifted',
   'health.drift.unavailable',
