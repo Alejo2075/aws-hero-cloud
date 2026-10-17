@@ -541,8 +541,17 @@ class HeroEngine implements Hero {
             },
           }),
         );
+        // The resources exist now. A health check that cannot run must not lose the deployment: it
+        // is recorded as not shown to be working (`unknown`), never as healthy.
         const health = await this.#phase('verify', () =>
-          this.#observe(context.deploymentId, plan, outputs.endpoints, context.components),
+          this.#observe(context.deploymentId, plan, outputs.endpoints, context.components).catch(
+            (): Health => ({
+              status: 'unknown',
+              checkedAt: this.#clock.now().toISOString(),
+              components: [],
+              checks: [],
+            }),
+          ),
         );
         const result: DeploymentResult = {
           deploymentId: context.deploymentId,

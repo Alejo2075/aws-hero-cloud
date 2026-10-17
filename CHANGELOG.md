@@ -40,6 +40,10 @@ All notable changes to Hero Cloud are documented here. The format follows [Keep 
 - Seven example applications used as regression fixtures.
 - Real tooling: Vitest, strict type-checked ESLint, an architecture test that enforces the package dependency table, CodeQL, dependency review, Scorecard, and actions pinned by commit SHA.
 
+### Fixed
+
+- A health check that cannot run after a successful deployment no longer loses the deployment: the result is recorded as not shown to be working instead of the run failing with nothing recorded.
+
 ### Changed
 
 - The project is a pnpm workspace of source-first packages; `typescript` is a project dependency instead of a global install.

@@ -244,6 +244,8 @@ _Status: detectors, the report, and the fixtures are done and tested; the Python
 - [ ] Documentation complete for all three audiences; translations reviewed by native speakers.
 - [ ] Every finding in [Known problems](#known-problems) closed or explicitly accepted.
 
+_Status: only the failure drills could be done here, with a fake cloud: a failed deployment leaves no result and can be retried with a new approval, expired credentials stop a deployment before anything is applied or fail it without recording a success, a health check that cannot run is recorded as not shown to be working (and no longer loses the deployment), and a failed build or toolkit error is a coded `deployment.failed` that names the step. CloudFormation rolls a failed update back by itself; Hero reports the failure and does not claim the new version. Not done, because they need people or a real account: the external security review, fuzzing of the local server (which is not built), cost accuracy against real bills, translation review by native speakers, closing every item in Known problems on a real run, and the desktop install. Release 1.0 stays open._
+
 **Done when:** a non-technical person installs the desktop app, drops in an application from the examples corpus, approves, and gets a working, healthy system they understand, and an engineer can audit every resource that was created. **Release 1.0.**
 
 ### After 1.0
