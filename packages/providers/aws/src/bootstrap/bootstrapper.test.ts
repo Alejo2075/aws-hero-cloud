@@ -40,7 +40,7 @@ describe('describeBootstrap', () => {
     const { changes, artifactHash } = describeBootstrap(target);
     expect(changes.map((c) => c.resource.name)).toEqual([
       'hero-boundary',
-      'hero-cfn-execution',
+      'hero-cfn-execution-*',
       'hero-deployer-access',
       'hero-deployer',
       'CDKToolkit-herocloud',
@@ -79,7 +79,7 @@ describe('createBootstrapper', () => {
         cloudFormation: new CloudFormationClient({ region: 'us-east-1' }),
         toolkit: factory,
       }).run(approvedRequest());
-      expect(result.executionPolicyArn).toBe(ARN);
+      expect(result.executionPolicyArns).toEqual([ARN]);
       const create = cfn.commandCalls(CreateStackCommand)[0]?.args[0].input;
       expect(create).toMatchObject({
         StackName: 'hero-prerequisites',

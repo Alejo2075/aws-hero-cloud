@@ -1,4 +1,6 @@
 import { BOOTSTRAP_QUALIFIER, BOUNDARY_POLICY_NAME } from '../cdk/names.js';
+import { asDocument, containerStatements, networkStatements } from './execution.js';
+import type { NamedPolicy } from './execution.js';
 
 /** The name of the managed policy CloudFormation uses to create a deployment's resources. */
 export const EXECUTION_POLICY_NAME = 'hero-cfn-execution';
@@ -141,7 +143,7 @@ export function boundaryPolicy(): PolicyDocument {
  * allows it, roles can only be created under the boundary, and the boundary and this policy can
  * never be changed from inside a deployment.
  */
-export function executionPolicy(): PolicyDocument {
+export function baseExecutionPolicy(): PolicyDocument {
   const boundaryArn = `${P}:iam::\${AWS::AccountId}:policy/${BOUNDARY_POLICY_NAME}`;
   return {
     Version: '2012-10-17',
@@ -336,205 +338,6 @@ export function executionPolicy(): PolicyDocument {
         Resource: `${P}:iam::\${AWS::AccountId}:role/${OWN}`,
       },
       {
-        Sid: 'Network',
-        Effect: 'Allow',
-        Action: [
-          'ec2:CreateVpc',
-          'ec2:DeleteVpc',
-          'ec2:ModifyVpcAttribute',
-          'ec2:DescribeVpcs',
-          'ec2:CreateSubnet',
-          'ec2:DeleteSubnet',
-          'ec2:ModifySubnetAttribute',
-          'ec2:DescribeSubnets',
-          'ec2:CreateRouteTable',
-          'ec2:DeleteRouteTable',
-          'ec2:CreateRoute',
-          'ec2:DeleteRoute',
-          'ec2:AssociateRouteTable',
-          'ec2:DisassociateRouteTable',
-          'ec2:DescribeRouteTables',
-          'ec2:CreateInternetGateway',
-          'ec2:DeleteInternetGateway',
-          'ec2:AttachInternetGateway',
-          'ec2:DetachInternetGateway',
-          'ec2:DescribeInternetGateways',
-          'ec2:CreateSecurityGroup',
-          'ec2:DeleteSecurityGroup',
-          'ec2:AuthorizeSecurityGroupIngress',
-          'ec2:AuthorizeSecurityGroupEgress',
-          'ec2:RevokeSecurityGroupIngress',
-          'ec2:RevokeSecurityGroupEgress',
-          'ec2:UpdateSecurityGroupRuleDescriptionsIngress',
-          'ec2:UpdateSecurityGroupRuleDescriptionsEgress',
-          'ec2:DescribeSecurityGroups',
-          'ec2:DescribeSecurityGroupRules',
-          'ec2:CreateFlowLogs',
-          'ec2:DeleteFlowLogs',
-          'ec2:DescribeFlowLogs',
-          'ec2:DescribeAvailabilityZones',
-          'ec2:DescribeNetworkInterfaces',
-          'ec2:DescribeAccountAttributes',
-          'ec2:CreateTags',
-          'ec2:DeleteTags',
-        ],
-        Resource: '*',
-      },
-      {
-        Sid: 'Containers',
-        Effect: 'Allow',
-        Action: [
-          'ecs:CreateCluster',
-          'ecs:DeleteCluster',
-          'ecs:DescribeClusters',
-          'ecs:CreateService',
-          'ecs:UpdateService',
-          'ecs:DeleteService',
-          'ecs:DescribeServices',
-          'ecs:RegisterTaskDefinition',
-          'ecs:DeregisterTaskDefinition',
-          'ecs:DescribeTaskDefinition',
-          'ecs:TagResource',
-          'ecs:UntagResource',
-          'ecs:ListTagsForResource',
-        ],
-        Resource: '*',
-      },
-      {
-        Sid: 'LoadBalancing',
-        Effect: 'Allow',
-        Action: [
-          'elasticloadbalancing:CreateLoadBalancer',
-          'elasticloadbalancing:DeleteLoadBalancer',
-          'elasticloadbalancing:ModifyLoadBalancerAttributes',
-          'elasticloadbalancing:DescribeLoadBalancers',
-          'elasticloadbalancing:DescribeLoadBalancerAttributes',
-          'elasticloadbalancing:SetSecurityGroups',
-          'elasticloadbalancing:CreateTargetGroup',
-          'elasticloadbalancing:DeleteTargetGroup',
-          'elasticloadbalancing:ModifyTargetGroupAttributes',
-          'elasticloadbalancing:DescribeTargetGroups',
-          'elasticloadbalancing:DescribeTargetGroupAttributes',
-          'elasticloadbalancing:DescribeTargetHealth',
-          'elasticloadbalancing:RegisterTargets',
-          'elasticloadbalancing:DeregisterTargets',
-          'elasticloadbalancing:CreateListener',
-          'elasticloadbalancing:DeleteListener',
-          'elasticloadbalancing:ModifyListener',
-          'elasticloadbalancing:DescribeListeners',
-          'elasticloadbalancing:CreateRule',
-          'elasticloadbalancing:DeleteRule',
-          'elasticloadbalancing:ModifyRule',
-          'elasticloadbalancing:DescribeRules',
-          'elasticloadbalancing:AddTags',
-          'elasticloadbalancing:RemoveTags',
-          'elasticloadbalancing:DescribeTags',
-        ],
-        Resource: '*',
-      },
-      {
-        Sid: 'Databases',
-        Effect: 'Allow',
-        Action: [
-          'rds:CreateDBInstance',
-          'rds:DeleteDBInstance',
-          'rds:ModifyDBInstance',
-          'rds:DescribeDBInstances',
-          'rds:CreateDBSubnetGroup',
-          'rds:DeleteDBSubnetGroup',
-          'rds:DescribeDBSubnetGroups',
-          'rds:CreateDBParameterGroup',
-          'rds:DeleteDBParameterGroup',
-          'rds:ModifyDBParameterGroup',
-          'rds:DescribeDBParameterGroups',
-          'rds:DescribeDBParameters',
-          'rds:CreateDBSnapshot',
-          'rds:DescribeDBSnapshots',
-          'rds:AddTagsToResource',
-          'rds:RemoveTagsFromResource',
-          'rds:ListTagsForResource',
-        ],
-        Resource: '*',
-      },
-      {
-        Sid: 'SharedFiles',
-        Effect: 'Allow',
-        Action: [
-          'elasticfilesystem:CreateFileSystem',
-          'elasticfilesystem:DeleteFileSystem',
-          'elasticfilesystem:DescribeFileSystems',
-          'elasticfilesystem:CreateMountTarget',
-          'elasticfilesystem:DeleteMountTarget',
-          'elasticfilesystem:DescribeMountTargets',
-          'elasticfilesystem:DescribeMountTargetSecurityGroups',
-          'elasticfilesystem:ModifyMountTargetSecurityGroups',
-          'elasticfilesystem:CreateAccessPoint',
-          'elasticfilesystem:DeleteAccessPoint',
-          'elasticfilesystem:DescribeAccessPoints',
-          'elasticfilesystem:PutBackupPolicy',
-          'elasticfilesystem:DescribeBackupPolicy',
-          'elasticfilesystem:PutLifecycleConfiguration',
-          'elasticfilesystem:TagResource',
-          'elasticfilesystem:UntagResource',
-        ],
-        Resource: '*',
-      },
-      {
-        Sid: 'Images',
-        Effect: 'Allow',
-        Action: [
-          'ecr:CreateRepository',
-          'ecr:DeleteRepository',
-          'ecr:DescribeRepositories',
-          'ecr:PutImageScanningConfiguration',
-          'ecr:PutImageTagMutability',
-          'ecr:PutLifecyclePolicy',
-          'ecr:DeleteLifecyclePolicy',
-          'ecr:GetLifecyclePolicy',
-          'ecr:TagResource',
-          'ecr:ListTagsForResource',
-        ],
-        Resource: `${P}:ecr:*:\${AWS::AccountId}:repository/${OWN}`,
-      },
-      {
-        Sid: 'Logins',
-        Effect: 'Allow',
-        Action: [
-          'secretsmanager:CreateSecret',
-          'secretsmanager:UpdateSecret',
-          'secretsmanager:DeleteSecret',
-          'secretsmanager:DescribeSecret',
-          'secretsmanager:GetSecretValue',
-          'secretsmanager:PutSecretValue',
-          'secretsmanager:TagResource',
-          'secretsmanager:UntagResource',
-          'secretsmanager:GetResourcePolicy',
-        ],
-        Resource: `${P}:secretsmanager:*:\${AWS::AccountId}:secret:${OWN}`,
-      },
-      {
-        Sid: 'RandomPasswords',
-        Effect: 'Allow',
-        Action: ['secretsmanager:GetRandomPassword'],
-        Resource: '*',
-      },
-      {
-        Sid: 'ServiceRoles',
-        Effect: 'Allow',
-        Action: ['iam:CreateServiceLinkedRole'],
-        Resource: '*',
-        Condition: {
-          StringEquals: {
-            'iam:AWSServiceName': [
-              'ecs.amazonaws.com',
-              'elasticloadbalancing.amazonaws.com',
-              'rds.amazonaws.com',
-              'elasticfilesystem.amazonaws.com',
-            ],
-          },
-        },
-      },
-      {
         Sid: 'PassRolesToOwnServices',
         Effect: 'Allow',
         Action: ['iam:PassRole'],
@@ -563,12 +366,29 @@ export function executionPolicy(): PolicyDocument {
         ],
         Resource: [
           boundaryArn,
-          `${P}:iam::\${AWS::AccountId}:policy/${EXECUTION_POLICY_NAME}`,
+          `${P}:iam::\${AWS::AccountId}:policy/${EXECUTION_POLICY_NAME}-*`,
           `${P}:iam::\${AWS::AccountId}:role/${OWN}`,
         ],
       },
     ],
   };
+}
+
+/**
+ * The execution permissions, split into several managed policies because one policy may hold at
+ * most 6,144 characters. Together they are what CloudFormation may do while deploying Hero stacks.
+ */
+export function executionPolicies(): NamedPolicy[] {
+  return [
+    { suffix: 'base', document: baseExecutionPolicy() },
+    { suffix: 'network', document: asDocument(networkStatements()) },
+    { suffix: 'containers', document: asDocument(containerStatements()) },
+  ];
+}
+
+/** Every statement of every execution policy, for checks that do not care how they are split. */
+export function executionPolicy(): PolicyDocument {
+  return asDocument(executionPolicies().flatMap((policy) => [...policy.document.Statement]));
 }
 
 /**
@@ -703,17 +523,31 @@ export function prerequisitesTemplate(): Record<string, unknown> {
           PolicyDocument: { 'Fn::Sub': JSON.stringify(boundaryPolicy()) },
         },
       },
-      Execution: {
-        Type: 'AWS::IAM::ManagedPolicy',
-        Properties: {
-          ManagedPolicyName: EXECUTION_POLICY_NAME,
-          PolicyDocument: { 'Fn::Sub': JSON.stringify(executionPolicy()) },
-        },
-      },
+      ...Object.fromEntries(
+        executionPolicies().map((policy) => [
+          `Execution${policy.suffix.charAt(0).toUpperCase()}${policy.suffix.slice(1)}`,
+          {
+            Type: 'AWS::IAM::ManagedPolicy',
+            Properties: {
+              ManagedPolicyName: `${EXECUTION_POLICY_NAME}-${policy.suffix}`,
+              PolicyDocument: { 'Fn::Sub': JSON.stringify(policy.document) },
+            },
+          },
+        ]),
+      ),
     },
     Outputs: {
       BoundaryArn: { Value: { Ref: 'Boundary' } },
-      ExecutionPolicyArn: { Value: { Ref: 'Execution' } },
+      ...Object.fromEntries(
+        executionPolicies().map((policy) => [
+          `ExecutionPolicyArn${policy.suffix.charAt(0).toUpperCase()}${policy.suffix.slice(1)}`,
+          {
+            Value: {
+              Ref: `Execution${policy.suffix.charAt(0).toUpperCase()}${policy.suffix.slice(1)}`,
+            },
+          },
+        ]),
+      ),
       DeployerRoleArn: { Value: { 'Fn::GetAtt': ['DeployerRole', 'Arn'] } },
     },
   };

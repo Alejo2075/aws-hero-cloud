@@ -1,0 +1,19 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "go-server"
+    },
+    "services": [
+      {
+        "id": "web",
+        "type": "http",
+        "runtime": "go",
+        "port": 9000,
+        "healthPath": "/healthz"
+      }
+    ]
+  },
+  "questions": [],
+  "capabilities": ["http-service"]
+}

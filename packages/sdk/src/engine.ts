@@ -43,6 +43,7 @@ import type {
   SourceRef,
 } from '@hero-cloud/core';
 import { containerPlugin } from '@hero-cloud/plugin-container';
+import { legacyPlugin } from '@hero-cloud/plugin-legacy';
 import { nodePlugin } from '@hero-cloud/plugin-node';
 import { BUDGET_EMAIL_INPUT, planApplication } from '@hero-cloud/planner';
 import { createAwsProvider, createParameterSink } from '@hero-cloud/provider-aws';
@@ -181,7 +182,11 @@ class HeroEngine implements Hero {
     this.#loaders = new Map(
       [...defaults, ...(options.sources ?? [])].map((loader) => [loader.kind, loader]),
     );
-    this.#detectors = options.detectors ?? [...nodePlugin.detectors, ...containerPlugin.detectors];
+    this.#detectors = options.detectors ?? [
+      ...nodePlugin.detectors,
+      ...containerPlugin.detectors,
+      ...legacyPlugin.detectors,
+    ];
     this.#plans = options.plans ?? new InMemoryPlanStore();
     this.#cloud =
       options.cloud ??

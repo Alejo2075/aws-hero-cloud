@@ -1,0 +1,24 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "php-site"
+    },
+    "services": [
+      {
+        "id": "web",
+        "type": "http",
+        "runtime": "php",
+        "port": 8080,
+        "healthPath": "/"
+      }
+    ],
+    "extensions": {
+      "x-php": {
+        "kind": "php"
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["http-service"]
+}

@@ -1,0 +1,20 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "procfile-worker"
+    },
+    "services": [
+      {
+        "id": "worker",
+        "type": "worker",
+        "runtime": "unknown",
+        "start": {
+          "command": "./run-jobs.sh"
+        }
+      }
+    ]
+  },
+  "questions": [],
+  "capabilities": ["process-service"]
+}

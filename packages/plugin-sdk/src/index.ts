@@ -17,6 +17,8 @@ export const standardCapabilities = [
   'http-service',
   'scheduled-job',
   'process-service',
+  'worker-service',
+  'scheduled-service',
   'relational-data',
   'key-value-data',
   'document-data',

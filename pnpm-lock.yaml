@@ -381,6 +381,9 @@ importers:
       '@hero-cloud/plugin-container':
         specifier: workspace:*
         version: link:../../plugins/container
+      '@hero-cloud/plugin-legacy':
+        specifier: workspace:*
+        version: link:../../plugins/legacy
       '@hero-cloud/plugin-node':
         specifier: workspace:*
         version: link:../../plugins/node
@@ -460,6 +463,31 @@ importers:
       '@hero-cloud/analyzer':
         specifier: workspace:*
         version: link:../../packages/analyzer
+      '@hero-cloud/plugin-node':
+        specifier: workspace:*
+        version: link:../node
+
+  plugins/legacy:
+    dependencies:
+      '@hero-cloud/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@hero-cloud/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@hero-cloud/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@hero-cloud/specification':
+        specifier: workspace:*
+        version: link:../../packages/specification
+    devDependencies:
+      '@hero-cloud/analyzer':
+        specifier: workspace:*
+        version: link:../../packages/analyzer
+      '@hero-cloud/plugin-container':
+        specifier: workspace:*
+        version: link:../container
       '@hero-cloud/plugin-node':
         specifier: workspace:*
         version: link:../node

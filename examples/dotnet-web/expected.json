@@ -1,0 +1,18 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "dotnet-web"
+    },
+    "services": [
+      {
+        "id": "web",
+        "type": "http",
+        "runtime": "dotnet",
+        "port": 8080
+      }
+    ]
+  },
+  "questions": [],
+  "capabilities": ["http-service"]
+}

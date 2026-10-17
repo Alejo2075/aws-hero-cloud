@@ -601,6 +601,16 @@ export const enPlan: Readonly<Record<string, Message>> = {
     'several web services',
     'multiple-http-services',
   ),
+  'capability.worker-service': tri(
+    'a program that works in the background',
+    'a background worker',
+    'worker-service',
+  ),
+  'capability.scheduled-service': tri(
+    'a job that runs on a schedule outside of JavaScript',
+    'a scheduled job that cannot run as a function',
+    'scheduled-service',
+  ),
   'capability.account-setup': tri(
     'safe access for Hero',
     'limited deployment permissions',

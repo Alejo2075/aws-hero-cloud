@@ -1,0 +1,32 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "java-spring"
+    },
+    "services": [
+      {
+        "id": "web",
+        "type": "http",
+        "runtime": "java",
+        "port": 8080,
+        "healthPath": "/actuator/health"
+      }
+    ],
+    "data": [
+      {
+        "id": "database",
+        "type": "relational",
+        "engine": "postgres"
+      }
+    ],
+    "extensions": {
+      "x-java": {
+        "packaging": "jar",
+        "framework": "spring-boot"
+      }
+    }
+  },
+  "questions": [],
+  "capabilities": ["http-service", "relational-data"]
+}

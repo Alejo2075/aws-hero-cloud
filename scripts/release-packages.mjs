@@ -8,6 +8,7 @@ export const PUBLISHED = [
   'packages/analyzer',
   'plugins/node',
   'plugins/container',
+  'plugins/legacy',
   'packages/planner',
   'packages/providers/aws',
   'packages/providers/ai',

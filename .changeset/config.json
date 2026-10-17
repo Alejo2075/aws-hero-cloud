@@ -12,6 +12,7 @@
       "@hero-cloud/analyzer",
       "@hero-cloud/plugin-node",
       "@hero-cloud/plugin-container",
+      "@hero-cloud/plugin-legacy",
       "@hero-cloud/planner",
       "@hero-cloud/provider-aws",
       "@hero-cloud/provider-ai",

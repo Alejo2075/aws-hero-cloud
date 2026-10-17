@@ -18,6 +18,7 @@ const MANIFESTS = [
   'composer.json',
   'pom.xml',
   'build.gradle',
+  'mix.exs',
   'Gemfile',
   'go.mod',
   'Procfile',

@@ -17,6 +17,7 @@ import {
   PREREQUISITES_STACK,
   boundaryPolicy,
   deployerPolicy,
+  executionPolicies,
   executionPolicy,
   prerequisitesTemplate,
 } from './policies.js';
@@ -68,10 +69,14 @@ export function describeBootstrap(target: BootstrapTarget): BootstrapDescription
     change(
       'execution',
       'iam-policy',
-      EXECUTION_POLICY_NAME,
+      `${EXECUTION_POLICY_NAME}-*`,
       'account-setup',
       ['guardrail.least-privilege'],
-      { statements: execution.Statement.map((s) => s.Sid), replaces: 'AdministratorAccess' },
+      {
+        statements: execution.Statement.map((s) => s.Sid),
+        parts: executionPolicies().map((p) => p.suffix),
+        replaces: 'AdministratorAccess',
+      },
     ),
     change(
       'deployer-policy',
@@ -147,7 +152,7 @@ async function stackStatus(cfn: CloudFormationPort, name: string): Promise<strin
 /** Creates the limited policies, then the CDK toolkit stack that uses them. */
 export function createBootstrapper(options: BootstrapperOptions): {
   run(request: BootstrapRequest): Promise<{
-    readonly executionPolicyArn: string;
+    readonly executionPolicyArns: readonly string[];
     readonly deployerRoleArn: string | undefined;
   }>;
 } {
@@ -192,22 +197,23 @@ export function createBootstrapper(options: BootstrapperOptions): {
         const described = await cfn.send(
           new DescribeStacksCommand({ StackName: PREREQUISITES_STACK }),
         );
-        const output = described.Stacks?.[0]?.Outputs?.find(
-          (o) => o.OutputKey === 'ExecutionPolicyArn',
-        )?.OutputValue;
-        if (output === undefined) throw new Error('prerequisites stack has no policy output');
+        const executionArns = (described.Stacks?.[0]?.Outputs ?? [])
+          .filter((o) => o.OutputKey?.startsWith('ExecutionPolicyArn') === true)
+          .flatMap((o) => (o.OutputValue === undefined ? [] : [o.OutputValue]))
+          .sort();
+        if (executionArns.length === 0) throw new Error('prerequisites stack has no policy output');
 
         const toolkit = await (options.toolkit ?? realToolkit(options.region, options.profile))();
         await toolkit.bootstrap({
           environment: `aws://${request.accountId}/${request.region}`,
           qualifier: BOOTSTRAP_QUALIFIER,
-          executionPolicyArns: [output],
+          executionPolicyArns: executionArns,
           permissionsBoundaryName: BOUNDARY_POLICY_NAME,
         });
         const deployerRoleArn = described.Stacks?.[0]?.Outputs?.find(
           (o) => o.OutputKey === 'DeployerRoleArn',
         )?.OutputValue;
-        return { executionPolicyArn: output, deployerRoleArn };
+        return { executionPolicyArns: executionArns, deployerRoleArn };
       } catch (error) {
         if (error instanceof Error && 'code' in error) throw error;
         throw heroError('deployment.failed', { stack: TOOLKIT_STACK }, error);

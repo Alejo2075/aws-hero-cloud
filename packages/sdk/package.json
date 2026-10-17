@@ -21,6 +21,7 @@
     "@hero-cloud/core": "workspace:*",
     "@hero-cloud/planner": "workspace:*",
     "@hero-cloud/plugin-container": "workspace:*",
+    "@hero-cloud/plugin-legacy": "workspace:*",
     "@hero-cloud/plugin-node": "workspace:*",
     "@hero-cloud/plugin-sdk": "workspace:*",
     "@hero-cloud/provider-ai": "workspace:*",

@@ -25,6 +25,9 @@
       "path": "../../plugins/container/tsconfig.build.json"
     },
     {
+      "path": "../../plugins/legacy/tsconfig.build.json"
+    },
+    {
       "path": "../../plugins/node/tsconfig.build.json"
     },
     {

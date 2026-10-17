@@ -3,6 +3,7 @@ import { BOUNDARY_POLICY_NAME } from '../cdk/names.js';
 import {
   boundaryPolicy,
   deployerPolicy,
+  executionPolicies,
   executionPolicy,
   prerequisitesTemplate,
 } from './policies.js';
@@ -58,6 +59,8 @@ describe('the execution policy', () => {
 
   it('limits what it can reach to Hero-named resources where the service allows', () => {
     for (const s of allows) {
+      // A tag condition on the request or the resource limits it to this deployment.
+      if ('Condition' in s && JSON.stringify(s.Condition).includes('hero:deployment-id')) continue;
       if (
         [
           'Cdn',
@@ -70,6 +73,9 @@ describe('the execution policy', () => {
           'WebAdapterLayer',
           // Services that cannot be limited by name when something is created, or only by account.
           'Network',
+          'NetworkRead',
+          'ContainerRead',
+          'NetworkTagWhileCreating',
           'Containers',
           'LoadBalancing',
           'Databases',
@@ -82,6 +88,13 @@ describe('the execution policy', () => {
       )
         continue;
       for (const r of [s.Resource].flat()) expect(r, s.Sid).toMatch(/hero-\*/);
+    }
+  });
+
+  it('keeps every managed policy under the IAM size limit', () => {
+    for (const { suffix, document } of executionPolicies()) {
+      const size = JSON.stringify(document).replace(/\s/g, '').length;
+      expect(size, suffix).toBeLessThan(5800);
     }
   });
 
@@ -150,14 +163,18 @@ describe('the prerequisites template', () => {
     );
     expect(named.sort()).toEqual([
       'hero-boundary',
-      'hero-cfn-execution',
+      'hero-cfn-execution-base',
+      'hero-cfn-execution-containers',
+      'hero-cfn-execution-network',
       'hero-deployer',
       'hero-deployer-access',
     ]);
     expect(Object.keys(template.Outputs).sort()).toEqual([
       'BoundaryArn',
       'DeployerRoleArn',
-      'ExecutionPolicyArn',
+      'ExecutionPolicyArnBase',
+      'ExecutionPolicyArnContainers',
+      'ExecutionPolicyArnNetwork',
     ]);
     expect(JSON.stringify(template)).not.toMatch(/AdministratorAccess/);
   });

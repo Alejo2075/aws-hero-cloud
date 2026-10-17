@@ -1,0 +1,22 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "python-fastapi"
+    },
+    "services": [
+      {
+        "id": "web",
+        "type": "http",
+        "runtime": "python",
+        "start": {
+          "command": "uvicorn main:app --host 0.0.0.0 --port $PORT"
+        },
+        "port": 8000,
+        "healthPath": "/health"
+      }
+    ]
+  },
+  "questions": [],
+  "capabilities": ["http-service"]
+}

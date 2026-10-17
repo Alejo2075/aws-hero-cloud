@@ -613,6 +613,16 @@ export const esPlan: Readonly<Record<string, Message>> = {
     'varios servicios web',
     'multiple-http-services',
   ),
+  'capability.worker-service': tri(
+    'un programa que trabaja en segundo plano',
+    'un proceso de trabajo en segundo plano',
+    'worker-service',
+  ),
+  'capability.scheduled-service': tri(
+    'una tarea programada fuera de JavaScript',
+    'una tarea programada que no puede ejecutarse como función',
+    'scheduled-service',
+  ),
   'capability.account-setup': tri(
     'acceso seguro para Hero',
     'permisos de despliegue limitados',

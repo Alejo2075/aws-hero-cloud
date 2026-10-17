@@ -1,0 +1,28 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "python-django"
+    },
+    "services": [
+      {
+        "id": "web",
+        "type": "http",
+        "runtime": "python",
+        "start": {
+          "command": "gunicorn --bind 0.0.0.0:$PORT shop.wsgi:application"
+        },
+        "port": 8000
+      }
+    ],
+    "data": [
+      {
+        "id": "database",
+        "type": "relational",
+        "engine": "postgres"
+      }
+    ]
+  },
+  "questions": [],
+  "capabilities": ["http-service", "relational-data"]
+}

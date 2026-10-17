@@ -1,0 +1,26 @@
+{
+  "spec": {
+    "version": "1",
+    "application": {
+      "name": "ruby-rails"
+    },
+    "services": [
+      {
+        "id": "web",
+        "type": "http",
+        "runtime": "ruby",
+        "port": 3000,
+        "healthPath": "/up"
+      }
+    ],
+    "data": [
+      {
+        "id": "database",
+        "type": "relational",
+        "engine": "postgres"
+      }
+    ]
+  },
+  "questions": [],
+  "capabilities": ["http-service", "relational-data"]
+}
