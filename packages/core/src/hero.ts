@@ -39,6 +39,26 @@ export interface Analysis {
   readonly aiAssisted: boolean;
 }
 
+/**
+ * What an application looked like when Hero could not put it online, so a person can choose to
+ * share it. It holds structure and manifests only, redacted, and never leaves the machine unless
+ * the person sends it themselves.
+ */
+export interface UnsupportedReport {
+  readonly schema: 1;
+  readonly application: string;
+  readonly sourceHash: string;
+  /** Why this report exists: nothing was recognized, a question stayed open, or it was asked for. */
+  readonly reason: 'nothing-recognized' | 'open-questions' | 'requested';
+  readonly detected: readonly { readonly capability: string; readonly confidence: number }[];
+  readonly openQuestions: readonly string[];
+  /** Paths only, without secrets, dependencies, or build output. Capped. */
+  readonly files: readonly string[];
+  /** The start of the files that say what an application is, such as `package.json`. */
+  readonly manifests: Readonly<Record<string, string>>;
+  readonly redactions: number;
+}
+
 export interface AnalyzeOptions {
   /** Deterministic analysis only; never contact an AI provider. */
   readonly noAi?: boolean;
@@ -95,6 +115,11 @@ export interface PlanOptions {
 export interface Hero {
   analyze(source: SourceRef, options?: AnalyzeOptions): Promise<Analysis>;
   plan(analysis: Analysis, options?: PlanOptions): Promise<DeploymentPlan>;
+  /**
+   * Describes an application Hero could not handle, in a form safe to share: structure and
+   * manifests, redacted. Nothing is sent anywhere; the person decides what to do with it.
+   */
+  report(source: SourceRef, options?: AnalyzeOptions): Promise<UnsupportedReport>;
   /** Where the person stands on the way to a first deployment. Reads only. */
   inspectSetup(options?: {
     readonly region?: string;

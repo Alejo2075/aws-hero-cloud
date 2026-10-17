@@ -4,11 +4,11 @@ import { redact } from './redact.js';
 /** What the person agreed to share with the model. Each step includes the ones before it. */
 export type ConsentScope = 'file-names' | 'snippets' | 'full-files';
 
-const MAX_PATHS = 300;
-const NEVER =
+export const MAX_PATHS = 300;
+export const NEVER =
   /(?:^|\/)(?:\.env[^/]*|id_[a-z0-9]+|.*\.(?:pem|key|p12|pfx|jks|keystore|crt)|.*secrets?[^/]*|.*credentials?[^/]*)$/i;
-const NOISE = /(?:^|\/)(?:node_modules|vendor|dist|build|\.git|__pycache__)\//;
-const LOCKFILES =
+export const NOISE = /(?:^|\/)(?:node_modules|vendor|dist|build|\.git|__pycache__)\//;
+export const LOCKFILES =
   /(?:^|\/)(?:package-lock\.json|pnpm-lock\.yaml|yarn\.lock|composer\.lock|poetry\.lock|Gemfile\.lock|go\.sum)$/;
 /** Files that most often say what an application is, in the order they are looked at. */
 const MANIFESTS = [

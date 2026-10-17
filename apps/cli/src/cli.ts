@@ -474,6 +474,22 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
       spec = parsed.spec;
     }
 
+    if (args.command === 'report') {
+      // A report never uses a model and never leaves the machine: the person reads it and decides.
+      const reporter = io.createHero({ ...settings });
+      watch(reporter);
+      const report = await reporter.report(
+        { kind, location },
+        {
+          ...(args.root === undefined ? {} : { root: args.root }),
+          ...(args.name === undefined ? {} : { name: args.name }),
+        },
+      );
+      io.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      io.stderr.write(`${presenter.text('cli.report.note', render)}\n`);
+      return 0;
+    }
+
     const hero = io.createHero({ ...settings, ...(await resolveAi()) });
     watch(hero);
     const analysis = await hero.analyze(
@@ -493,6 +509,13 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
         return 0;
       }
       show(presenter.analysis(analysis, render));
+      if (
+        (analysis.spec.services ?? []).length === 0 &&
+        analysis.spec.frontend === undefined &&
+        args.specFile === undefined
+      ) {
+        io.stderr.write(`${presenter.text('cli.report.hint', render)}\n`);
+      }
       return 0;
     }
 

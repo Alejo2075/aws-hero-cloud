@@ -290,6 +290,8 @@ export interface Hero {
         readonly region?: string;
     }): Promise<DeploymentPlan>;
     planDestroy(deploymentId: string): Promise<DeploymentPlan>;
+    // Warning: (ae-forgotten-export) The symbol "UnsupportedReport" needs to be exported by the entry point index.d.ts
+    report(source: SourceRef, options?: AnalyzeOptions): Promise<UnsupportedReport>;
     requestApproval(plan: PlanRef): Promise<ApprovalChallenge>;
     // Warning: (ae-forgotten-export) The symbol "SecretLocation" needs to be exported by the entry point index.d.ts
     setSecret(deploymentId: string, name: string, value: string): Promise<SecretLocation>;

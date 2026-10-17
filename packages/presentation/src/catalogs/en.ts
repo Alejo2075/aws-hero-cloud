@@ -410,6 +410,7 @@ Usage:
   hero-cloud setup [--prepare] [--write-profile <name>]
   hero-cloud mcp [--allow <folder>]...
   hero-cloud approve <request>
+  hero-cloud report <source>
   hero-cloud outputs <deployment>
   hero-cloud secret <deployment> <NAME>
   hero-cloud destroy <deployment> [options]
@@ -481,6 +482,10 @@ Hero printed, such as hero-my-app. Exit codes: 0 ok, 1 failed, 2 wrong command, 
       'To answer a question, run the command again with --answer <question>=<answer>. Questions to answer: {ids}',
     'cli.progress.plan': 'Planning...',
     'cli.usage-hint': 'Run hero-cloud --help to see how to use it.',
+    'cli.report.hint':
+      'Hero did not recognize this application. Run hero-cloud report <source> to get a description you can read and choose to share.',
+    'cli.report.note':
+      'Nothing was sent anywhere. This holds file names and the start of manifests, with secrets removed. Read it before you share it.',
     'cli.progress.load': 'Reading your project...',
     'cli.progress.analyze': 'Working out what it needs...',
     'error.usage': tri(

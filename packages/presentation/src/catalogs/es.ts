@@ -442,6 +442,7 @@ Uso:
   hero-cloud setup [--prepare] [--write-profile <nombre>]
   hero-cloud mcp [--allow <carpeta>]...
   hero-cloud approve <solicitud>
+  hero-cloud report <fuente>
   hero-cloud outputs <despliegue>
   hero-cloud secret <despliegue> <NOMBRE>
   hero-cloud destroy <despliegue> [opciones]
@@ -513,6 +514,10 @@ que Hero mostró, como hero-mi-app. Códigos de salida: 0 bien, 1 falló, 2 coma
       'Para responder una pregunta, ejecuta el comando de nuevo con --answer <pregunta>=<respuesta>. Preguntas por responder: {ids}',
     'cli.progress.plan': 'Planificando...',
     'cli.usage-hint': 'Ejecuta hero-cloud --help para ver cómo usarlo.',
+    'cli.report.hint':
+      'Hero no reconoció esta aplicación. Ejecuta hero-cloud report <fuente> para obtener una descripción que puedes leer y decidir si compartir.',
+    'cli.report.note':
+      'No se envió nada a ningún lado. Contiene nombres de archivos y el inicio de los manifiestos, sin secretos. Léela antes de compartirla.',
     'cli.progress.load': 'Leyendo tu proyecto...',
     'cli.progress.analyze': 'Averiguando qué necesita...',
     'error.usage': tri(

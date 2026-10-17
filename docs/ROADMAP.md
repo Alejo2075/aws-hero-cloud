@@ -221,12 +221,14 @@ _Status: implemented and tested by synthesis (cdk-nag clean), mocks, and plan sn
 
 ### Phase 16: Legacy detectors and the virtual-machine strategy (L) → 0.9
 
-- [ ] Detectors: PHP (plain, Laravel, WordPress), Python (Flask, Django, FastAPI), Java (Spring Boot, WAR), .NET, Ruby (Rails), Go, static HTML, `Procfile`, and `process` services for anything else.
+- [x] Detectors: PHP (plain, Laravel, WordPress), Python (Flask, Django, FastAPI), Java (Spring Boot, WAR), .NET, Ruby (Rails), Go, static HTML, `Procfile`, and `process` services for anything else.
 - [ ] Strategy `virtual-machine` (Lightsail or EC2, decided by a spike): setup script shown in the plan and approved, 🔒 access through SSM Session Manager instead of open SSH, snapshots, a stable address.
-- [ ] Unsupported-application report: local, redacted, structure and manifests only, sent only if the user chooses.
-- [ ] Examples corpus extended with real legacy fixtures (with permission) and their expected specs.
+- [x] Unsupported-application report: local, redacted, structure and manifests only, sent only if the user chooses.
+- [x] Examples corpus extended with real legacy fixtures (with permission) and their expected specs.
 
 **Done when:** at least one app per listed stack deploys and reports healthy, and an unknown app produces a useful report instead of a wrong plan. **Release 0.9.**
+
+_Status: detectors, the report, and the fixtures are done and tested; the Python, PHP, Java, .NET, Ruby, Go and Procfile apps are planned as containers (the Phase 15 strategy) and nothing has run on AWS. The fixtures are small synthetic apps, not real legacy systems shared with permission. `hero-cloud report <source>` prints a redacted description (file names, the start of manifests, what was and was not recognized) that the person reads and chooses to share; it never contacts a model or the network. **The `virtual-machine` strategy is not built**: this roadmap asks for a spike (Lightsail or EC2) and an `rfc` issue first, and neither can be done without a real account. Until then a `worker` or `process` service is a blocking warning that says so, never a guess. Release 0.9 stays open._
 
 ### Phase 17: Desktop app and installers (M)
 

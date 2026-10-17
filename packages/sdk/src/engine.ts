@@ -40,6 +40,7 @@ import type {
   SecretSink,
   SourceLoader,
   StateStore,
+  UnsupportedReport,
   SourceRef,
 } from '@hero-cloud/core';
 import { containerPlugin } from '@hero-cloud/plugin-container';
@@ -47,7 +48,12 @@ import { legacyPlugin } from '@hero-cloud/plugin-legacy';
 import { nodePlugin } from '@hero-cloud/plugin-node';
 import { BUDGET_EMAIL_INPUT, planApplication } from '@hero-cloud/planner';
 import { createAwsProvider, createParameterSink } from '@hero-cloud/provider-aws';
-import { needsHelp, refineWithAi, withLimits } from '@hero-cloud/provider-ai';
+import {
+  buildUnsupportedReport,
+  needsHelp,
+  refineWithAi,
+  withLimits,
+} from '@hero-cloud/provider-ai';
 import type { AiLimits, ConsentScope } from '@hero-cloud/provider-ai';
 import type { DetectorPlugin } from '@hero-cloud/plugin-sdk';
 import { sha256Hex } from '@hero-cloud/shared';
@@ -284,6 +290,30 @@ class HeroEngine implements Hero {
         this.#sourceRefs.set(analysis.sourceHash, { source, root: options.root });
         return analysis;
       });
+    } finally {
+      await snapshot.dispose();
+    }
+  }
+
+  async report(source: SourceRef, options: AnalyzeOptions = {}): Promise<UnsupportedReport> {
+    const loader = this.#loaders.get(source.kind);
+    if (loader === undefined) throw heroError('source.unsupported', { kind: source.kind });
+    const snapshot = await loader.load(
+      source,
+      options.signal === undefined ? {} : { signal: options.signal },
+    );
+    try {
+      const name =
+        options.name ??
+        toApplicationName(basename(source.location.replace(/#.*$/, '').replace(/\.git$/, '')));
+      // Deterministic only: a report must never contact a model.
+      const analysis = await analyzeSnapshot(snapshot, {
+        detectors: this.#detectors,
+        name,
+        ...(options.root === undefined ? {} : { root: options.root }),
+        ...(options.signal === undefined ? {} : { signal: options.signal }),
+      });
+      return await buildUnsupportedReport(analysis, snapshot);
     } finally {
       await snapshot.dispose();
     }

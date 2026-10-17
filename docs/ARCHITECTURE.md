@@ -192,7 +192,7 @@ Warnings                    2 environment variables needed: API_SECRET, DB_NAME
 
 At `simple` each line is one sentence with no service names; at `expert` it adds resource types, settings, and evidence.
 
-`static`, `serverless`, and `container` are built; `virtual-machine` follows (see [ROADMAP.md](ROADMAP.md#milestones)) with an `rfc` issue before implementation.
+`static`, `serverless`, and `container` are built; `virtual-machine` is not (see [ROADMAP.md](ROADMAP.md#phase-16-legacy-detectors-and-the-virtual-machine-strategy-l--09)): it needs a spike in a real account and an `rfc` issue first. Applications that need it, such as a worker with no web address, get a blocking warning. `hero.report()` (and `hero-cloud report`) describes an application Hero could not handle: file names and the start of manifests, redacted, built without a model and never sent anywhere by Hero.
 
 **What the planner does and does not do.** It is a pure function from an analysis and the person's answers to a provider-neutral set of _components_ (`static-site`, `http-service`, `scheduled-job`, `key-value-table`, `object-bucket`, `identity`, `budget-alert`), a strategy with its reason, the inputs a person must supply (names only; secrets are told apart from settings), and warnings. The container strategy adds `container-service`, `relational-database`, and `file-system`. A provider then turns components into its own resources through `CloudProvider.describe`, adds the safeguards Hero always applies, estimates cost, and returns the hash of what it would apply. The engine seals all of it, including the **source hash**, so approving a plan approves exactly the code that was reviewed.
 

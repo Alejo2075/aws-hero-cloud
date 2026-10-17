@@ -399,6 +399,7 @@ export interface Hero {
         readonly region?: string;
     }): Promise<DeploymentPlan>;
     planDestroy(deploymentId: string): Promise<DeploymentPlan>;
+    report(source: SourceRef, options?: AnalyzeOptions): Promise<UnsupportedReport>;
     requestApproval(plan: PlanRef): Promise<ApprovalChallenge>;
     setSecret(deploymentId: string, name: string, value: string): Promise<SecretLocation>;
     // (undocumented)
@@ -854,6 +855,28 @@ export interface StoredChallenge {
     readonly planId: string;
     // (undocumented)
     readonly region: string;
+}
+
+// @public
+export interface UnsupportedReport {
+    // (undocumented)
+    readonly application: string;
+    // (undocumented)
+    readonly detected: readonly {
+        readonly capability: string;
+        readonly confidence: number;
+    }[];
+    readonly files: readonly string[];
+    readonly manifests: Readonly<Record<string, string>>;
+    // (undocumented)
+    readonly openQuestions: readonly string[];
+    readonly reason: 'nothing-recognized' | 'open-questions' | 'requested';
+    // (undocumented)
+    readonly redactions: number;
+    // (undocumented)
+    readonly schema: 1;
+    // (undocumented)
+    readonly sourceHash: string;
 }
 
 // (No @packageDocumentation comment for this package)

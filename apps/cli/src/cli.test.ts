@@ -474,3 +474,28 @@ describe('plan', () => {
     expect(c.out()).toContain('Tu plan para hero-example-spa');
   });
 });
+
+describe('report', () => {
+  it('prints a description of an unknown application as JSON and sends nothing', async () => {
+    const dir = await tempProject({ 'mix.exs': 'defmodule Demo.MixProject do\nend\n' });
+    const c = capture();
+    expect(await run(['report', dir], c.io)).toBe(0);
+    const report = JSON.parse(c.out()) as { schema: number; reason: string; files: string[] };
+    expect(report.schema).toBe(1);
+    expect(report.reason).toBe('nothing-recognized');
+    expect(report.files).toContain('mix.exs');
+    expect(c.err()).toContain('Nothing was sent');
+  });
+
+  it('points to the report when an application is not recognized', async () => {
+    const dir = await tempProject({ 'mix.exs': 'defmodule Demo.MixProject do\nend\n' });
+    const c = capture();
+    expect(await run(['analyze', dir], c.io)).toBe(0);
+    expect(c.err()).toContain('hero-cloud report');
+  });
+
+  it('needs exactly one source', async () => {
+    const c = capture();
+    expect(await run(['report'], c.io)).toBe(2);
+  });
+});

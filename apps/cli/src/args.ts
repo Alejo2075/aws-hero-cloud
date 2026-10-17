@@ -15,6 +15,7 @@ export type Command =
   | 'setup'
   | 'mcp'
   | 'approve'
+  | 'report'
   | 'help'
   | 'version';
 
@@ -276,7 +277,7 @@ export function parseArguments(
     }
     return { ...base, command: first, source: id, kind: undefined };
   }
-  if (first !== 'analyze' && first !== 'plan' && first !== 'deploy') {
+  if (first !== 'analyze' && first !== 'plan' && first !== 'deploy' && first !== 'report') {
     throw usageError(`unknown command "${first}"`);
   }
   if (rest.length !== 1)

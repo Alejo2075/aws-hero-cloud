@@ -37,6 +37,8 @@ export const presentationCodes = [
   'cli.prompt.secret',
   'cli.secret.stored',
   'cli.hint.answer',
+  'cli.report.hint',
+  'cli.report.note',
 ] as const;
 
 export { createPresenter } from './presenter.js';
