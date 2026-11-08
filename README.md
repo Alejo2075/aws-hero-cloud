@@ -12,7 +12,7 @@
   <a href=".github/CONTRIBUTING.md">Contributing</a>
 </p>
 
-> **Status: alpha, not yet exercised against a real AWS account.** Analysis, planning, cost estimates, safe builds, deploy, health, updates, secrets, and destroy are implemented and tested with mocks and synthesis. The run against a real sandbox account (`pnpm test:integration`) has not happened yet, so treat deploys as unproven. Studio, the MCP server, AI providers, and containers are on the [roadmap](docs/ROADMAP.md).
+> **Status: alpha, not yet exercised against a real AWS account.** Analysis, planning, cost estimates, safe builds, deploy, health, updates, secrets, and destroy are implemented and tested with mocks and synthesis. The run against a real sandbox account (`pnpm test:integration`) has not happened yet, so treat deploys as unproven. Studio (`hero-cloud studio`), the MCP server, AI providers, and containers are built and tested the same way; the virtual-machine strategy is on the [roadmap](docs/ROADMAP.md).
 
 ## Quick start
 

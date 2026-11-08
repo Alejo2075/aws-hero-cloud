@@ -1,0 +1,16 @@
+/* Studio's own rules, on top of Tailwind and the components' stylesheets. */
+.skip {
+  position: absolute;
+  left: -999px;
+}
+.skip:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  background: var(--background);
+  color: var(--foreground);
+}
+.table-scroll {
+  overflow-x: auto;
+}

@@ -1,0 +1,56 @@
+import type { StudioCode } from './studio-codes.js';
+
+export const esStudio: Readonly<Record<`studio.${StudioCode}`, string>> = {
+  'studio.title': 'Hero Cloud Studio',
+  'studio.subtitle': 'De tu aplicación a un sistema funcionando en tu propia cuenta de AWS.',
+  'studio.language': 'Idioma',
+  'studio.level': 'Nivel de detalle',
+  'studio.level.simple': 'Simple',
+  'studio.level.guided': 'Guiado',
+  'studio.level.expert': 'Experto',
+  'studio.step.choose': '1. Elegir',
+  'studio.step.review': '2. Revisar',
+  'studio.step.approve': '3. Aprobar',
+  'studio.step.progress': '4. Desplegar',
+  'studio.step.result': '5. Resultado',
+  'studio.choose.heading': '¿Qué aplicación quieres poner en línea?',
+  'studio.choose.intro':
+    'Hero lee tu proyecto sin ejecutarlo. Nada sale de este equipo hasta que apruebes un plan.',
+  'studio.choose.path': 'Carpeta o .zip en este equipo',
+  'studio.choose.path-hint': 'Por ejemplo /Users/tu/proyectos/mi-app',
+  'studio.choose.or': 'o',
+  'studio.choose.upload': 'Subir un archivo .zip',
+  'studio.choose.analyze': 'Leer mi aplicación',
+  'studio.questions.heading': 'Hero necesita un poco de ayuda',
+  'studio.questions.make-plan': 'Hacer el plan',
+  'studio.review.heading': 'El plan',
+  'studio.review.blocked':
+    'Este plan todavía no se puede aprobar. Lee las advertencias de arriba: dicen qué falta.',
+  'studio.review.preview':
+    'Esto es una vista previa: Hero no pudo confirmar en qué cuenta de AWS iniciaste sesión, así que no se puede aprobar.',
+  'studio.approve.heading': 'Tu decisión',
+  'studio.approve.statement':
+    'Solo tú puedes aprobar. Al aprobar, Hero crea exactamente los recursos del plan en tu cuenta de AWS, con el costo indicado.',
+  'studio.approve.confirm': 'Leí el plan y lo apruebo.',
+  'studio.approve.button': 'Aprobar y desplegar',
+  'studio.approve.decline': 'Ahora no',
+  'studio.approve.declined': 'No se cambió nada en tu cuenta de AWS.',
+  'studio.approve.email': 'Correo para alertas de gasto',
+  'studio.approve.email-hint': 'AWS escribirá a esta dirección si el costo supera el presupuesto.',
+  'studio.approve.secret': 'Secreto: {name}',
+  'studio.approve.secret-hint':
+    'Se guarda solo en tu propia cuenta de AWS, cifrado. Hero no lo guarda ni lo muestra.',
+  'studio.progress.heading': 'Desplegando',
+  'studio.progress.working': 'Trabajando...',
+  'studio.result.heading': 'El resultado',
+  'studio.result.check-again': 'Comprobar de nuevo',
+  'studio.result.destroy': 'Eliminar este despliegue',
+  'studio.result.destroy-note': 'Eliminar muestra primero un plan y necesita tu aprobación.',
+  'studio.result.start-over': 'Empezar de nuevo',
+  'studio.error.heading': 'Algo se detuvo',
+  'studio.error.try-again': 'Volver',
+  'studio.session.ended':
+    'Esta sesión de Studio terminó. Ejecuta hero-cloud studio otra vez para abrir una nueva.',
+  'studio.loading': 'Cargando...',
+  'studio.skip': 'Saltar al contenido',
+};

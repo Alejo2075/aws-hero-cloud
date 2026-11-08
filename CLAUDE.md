@@ -4,7 +4,7 @@ Hero takes any application, plans a deployment to the user's own AWS account, an
 
 ## Repository state
 
-Pre-alpha. Code that exists is contracts and types, with no behavior yet: `packages/core`, `packages/specification`, `packages/sdk`, `packages/presentation`, plus the public site in `apps/web`. Other packages named in the docs (`analyzer`, `planner`, `deployment`, `sources`, `providers/*`, `apps/cli`, `apps/studio`, `server`, `mcp`, ...) are planned and get created when first implemented; follow [docs/ROADMAP.md](docs/ROADMAP.md).
+Alpha. The engine is implemented and tested with mocks, synthesis, and fakes, but has not run against a real AWS account: `packages/{core,specification,shared,sources,analyzer,planner,sdk,presentation,local,mcp,server}`, `packages/providers/{aws,ai}`, `plugins/{node,container,legacy}`, `apps/cli`, `apps/studio` (the local web interface), and the public site in `apps/web`. Not built: `packages/deployment` (a stub; deploy lives in `providers/aws`), and the `virtual-machine` strategy. There is no desktop app and none is planned: Studio lives in the browser. Follow [docs/ROADMAP.md](docs/ROADMAP.md) for status per phase.
 
 ## Commands
 

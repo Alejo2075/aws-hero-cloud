@@ -1,5 +1,5 @@
 // Bundles the CLI and the workspace packages it uses into one runnable file.
-import { chmod, mkdir, readFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, readFile } from 'node:fs/promises';
 import { build } from 'esbuild';
 
 const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
@@ -27,3 +27,13 @@ await build({
   logLevel: 'warning',
 });
 await chmod(outfile, 0o755);
+
+// Studio's static files travel beside the bundle, where the local server looks for them.
+await import('../../studio/scripts/build.mjs');
+await cp(
+  new URL('../../studio/dist/', import.meta.url),
+  new URL('../dist/studio/', import.meta.url),
+  {
+    recursive: true,
+  },
+);

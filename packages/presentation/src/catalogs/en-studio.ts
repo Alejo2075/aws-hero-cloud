@@ -1,0 +1,56 @@
+import type { StudioCode } from './studio-codes.js';
+
+export const enStudio: Readonly<Record<`studio.${StudioCode}`, string>> = {
+  'studio.title': 'Hero Cloud Studio',
+  'studio.subtitle': 'From your application to a working system in your own AWS account.',
+  'studio.language': 'Language',
+  'studio.level': 'How much detail',
+  'studio.level.simple': 'Simple',
+  'studio.level.guided': 'Guided',
+  'studio.level.expert': 'Expert',
+  'studio.step.choose': '1. Choose',
+  'studio.step.review': '2. Review',
+  'studio.step.approve': '3. Approve',
+  'studio.step.progress': '4. Deploy',
+  'studio.step.result': '5. Result',
+  'studio.choose.heading': 'Which application do you want to put online?',
+  'studio.choose.intro':
+    'Hero reads your project without running it. Nothing leaves this computer until you approve a plan.',
+  'studio.choose.path': 'Folder or .zip on this computer',
+  'studio.choose.path-hint': 'For example /Users/you/projects/my-app',
+  'studio.choose.or': 'or',
+  'studio.choose.upload': 'Upload a .zip file',
+  'studio.choose.analyze': 'Read my application',
+  'studio.questions.heading': 'Hero needs a little help',
+  'studio.questions.make-plan': 'Make the plan',
+  'studio.review.heading': 'The plan',
+  'studio.review.blocked':
+    'This plan cannot be approved yet. Read the warnings above; they say what is missing.',
+  'studio.review.preview':
+    'This is a preview: Hero could not confirm which AWS account you are signed in to, so it cannot be approved.',
+  'studio.approve.heading': 'Your decision',
+  'studio.approve.statement':
+    'Only you can approve. Approving lets Hero create exactly the resources listed in the plan, in your AWS account, and they will cost the amount shown.',
+  'studio.approve.confirm': 'I read the plan and I approve it.',
+  'studio.approve.button': 'Approve and deploy',
+  'studio.approve.decline': 'Not now',
+  'studio.approve.declined': 'Nothing was changed in your AWS account.',
+  'studio.approve.email': 'Email for spending alerts',
+  'studio.approve.email-hint': 'AWS will write to this address if the cost goes above the budget.',
+  'studio.approve.secret': 'Secret: {name}',
+  'studio.approve.secret-hint':
+    'Kept only in your own AWS account, encrypted. Hero does not keep or show it.',
+  'studio.progress.heading': 'Deploying',
+  'studio.progress.working': 'Working...',
+  'studio.result.heading': 'The result',
+  'studio.result.check-again': 'Check again',
+  'studio.result.destroy': 'Remove this deployment',
+  'studio.result.destroy-note': 'Removing shows a plan first and needs your approval.',
+  'studio.result.start-over': 'Start over',
+  'studio.error.heading': 'Something stopped',
+  'studio.error.try-again': 'Go back',
+  'studio.session.ended':
+    'This Studio session ended. Run hero-cloud studio again to open a new one.',
+  'studio.loading': 'Loading...',
+  'studio.skip': 'Skip to the content',
+};

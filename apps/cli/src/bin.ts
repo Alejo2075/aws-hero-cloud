@@ -1,12 +1,15 @@
 #!/usr/bin/env node
+import { spawn } from 'node:child_process';
 import { appendFile, readFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import { homedir } from 'node:os';
 import { isatty } from 'node:tty';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { FileAiConsentStore, FileDeploymentLock, FileStateStore } from '@hero-cloud/local';
 import { FileApprovalInbox, createRootGuard, serveStdio } from '@hero-cloud/mcp';
 import { createHero } from '@hero-cloud/sdk';
+import { createLocalServer } from '@hero-cloud/server';
 import { run } from './cli.js';
 import { readHidden } from './hidden.js';
 import { cacheDirectory } from './paths.js';
@@ -45,6 +48,36 @@ const code = await run(process.argv.slice(2), {
       inbox: new FileApprovalInbox(inboxDirectory),
       version: typeof __HERO_VERSION__ === 'string' ? __HERO_VERSION__ : '0.0.0-dev',
     });
+  },
+  serveStudio: async ({ hero, roots, uploadsDirectory, open, level, locale, announce }) => {
+    const studio = await createLocalServer({
+      hero,
+      roots,
+      uploadsDirectory,
+      // The bundle sits next to the Studio files the build copied beside it.
+      assetsDirectory: join(dirname(fileURLToPath(import.meta.url)), 'studio'),
+      version: typeof __HERO_VERSION__ === 'string' ? __HERO_VERSION__ : '0.0.0-dev',
+      defaultLevel: level as 'simple' | 'guided' | 'expert',
+      defaultLocale: locale,
+      planDefaults: {},
+    });
+    announce(studio.url);
+    if (open) {
+      const [command, args]: [string, string[]] =
+        process.platform === 'darwin'
+          ? ['open', [studio.url]]
+          : process.platform === 'win32'
+            ? ['cmd', ['/c', 'start', '""', studio.url.replace(/&/g, '^&')]]
+            : ['xdg-open', [studio.url]];
+      const child = spawn(command, args, { stdio: 'ignore', detached: true });
+      child.on('error', () => undefined);
+      child.unref();
+    }
+    await new Promise<void>((done) => {
+      process.once('SIGINT', done);
+      process.once('SIGTERM', done);
+    });
+    await studio.close();
   },
   askHidden: (question) => readHidden(question, process.stdin, process.stderr),
   createHero: (settings) => {

@@ -97,15 +97,15 @@ Hero's own CLI, Studio, and MCP server are built exactly like these. See [ARCHIT
 
 One engine, many doors, all over the same SDK. They differ in how they look, not in what they can do.
 
-| Door                                         | For                                               | Status            |
-| -------------------------------------------- | ------------------------------------------------- | ----------------- |
-| SDK                                          | Developers, agents, third-party products          | Contracts defined |
-| CLI (`hero-cloud`)                           | Developers, scripts, CI                           | Planned           |
-| Studio (`hero-cloud studio`, local web)      | Beginners and mixed-skill teams                   | Planned           |
-| MCP server (`hero-cloud mcp`)                | The user's own AI assistant                       | Planned           |
-| Editor extension, CI action, desktop wrapper | Developers; pipelines; people who avoid terminals | Later             |
+| Door                                    | For                                      | Status            |
+| --------------------------------------- | ---------------------------------------- | ----------------- |
+| SDK                                     | Developers, agents, third-party products | Contracts defined |
+| CLI (`hero-cloud`)                      | Developers, scripts, CI                  | Planned           |
+| Studio (`hero-cloud studio`, local web) | Beginners and mixed-skill teams          | Planned           |
+| MCP server (`hero-cloud mcp`)           | The user's own AI assistant              | Planned           |
+| Editor extension, CI action             | Developers; pipelines                    | Later             |
 
-Reaching people who avoid terminals is staged: `npx` anywhere Node runs, then a single-file install that opens Studio, then a desktop app where you drop a folder or ZIP.
+Reaching people who avoid terminals is staged: `npx` anywhere Node runs, then a single-file install that opens Studio, where Studio opens in the browser and you choose a folder or upload a ZIP. There is no desktop app.
 
 The public site (`apps/web`) is documentation and discovery only. It never runs Hero and never asks for keys.
 
@@ -127,7 +127,7 @@ Hero is open source under **Apache 2.0**, chosen because companies are meant to 
 
 ## Scope
 
-**Hero 1.0** delivers the whole vision: any application (JavaScript/TypeScript, Python, PHP, Java, .NET, Ruby, Go, static sites, and unclassified programs) from a folder, ZIP, or Git repository; the `static`, `serverless`, `container`, and `virtual-machine` strategies; safe builds in the user's own AWS account; health, update, rollback, secrets, and destroy; all three output levels in English and Spanish; the SDK, CLI, Studio, MCP server, and a desktop app; guided AWS onboarding; and optional AI (Anthropic, OpenAI, Bedrock, Ollama, OpenAI-compatible), with `--no-ai` always available. It arrives in steps (0.1 understands, 0.3 first deployment, 0.6 for non-technical people, 0.9 legacy systems); see [ROADMAP.md](ROADMAP.md#milestones).
+**Hero 1.0** delivers the whole vision: any application (JavaScript/TypeScript, Python, PHP, Java, .NET, Ruby, Go, static sites, and unclassified programs) from a folder, ZIP, or Git repository; the `static`, `serverless`, `container`, and `virtual-machine` strategies; safe builds in the user's own AWS account; health, update, rollback, secrets, and destroy; all three output levels in English and Spanish; the SDK, CLI, Studio (in the browser), and MCP server; guided AWS onboarding; and optional AI (Anthropic, OpenAI, Bedrock, Ollama, OpenAI-compatible), with `--no-ai` always available. It arrives in steps (0.1 understands, 0.3 first deployment, 0.6 for non-technical people, 0.9 legacy systems); see [ROADMAP.md](ROADMAP.md#milestones).
 
 **Out of scope:** accounts and billing, managed AI or AWS, any hosted Hero service, Kubernetes, multi-region, multi-cloud, enterprise governance.
 

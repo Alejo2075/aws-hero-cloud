@@ -14,6 +14,7 @@ export type Command =
   | 'secret'
   | 'setup'
   | 'mcp'
+  | 'studio'
   | 'approve'
   | 'report'
   | 'help'
@@ -43,6 +44,8 @@ export interface ParsedArguments {
   readonly aiScope: string | undefined;
   /** For `mcp`: the folders an assistant may analyze. */
   readonly allow: readonly string[];
+  /** For `studio`: print the address instead of opening the browser. */
+  readonly noOpen: boolean;
   /** For `setup`: prepare the account (an approved plan of its own). */
   readonly prepare: boolean;
   /** For `setup`: add a profile with this name that assumes the deployer role. */
@@ -151,6 +154,7 @@ export function parseArguments(
         approve: { type: 'string' },
         prepare: { type: 'boolean' },
         allow: { type: 'string', multiple: true },
+        'no-open': { type: 'boolean' },
         ai: { type: 'string' },
         'ai-model': { type: 'string' },
         'ai-key-env': { type: 'string' },
@@ -218,6 +222,7 @@ export function parseArguments(
     secretName: undefined,
     prepare: values.prepare === true,
     allow: values.allow ?? [],
+    noOpen: values['no-open'] === true,
     ai: values.ai,
     aiModel: values['ai-model'],
     aiKeyEnv: values['ai-key-env'],
@@ -238,6 +243,11 @@ export function parseArguments(
     if (rest.length !== 0)
       throw usageError('mcp takes no source; use --allow <folder> to choose folders');
     return { ...base, command: 'mcp', source: undefined, kind: undefined };
+  }
+  if (first === 'studio') {
+    if (rest.length !== 0)
+      throw usageError('studio takes no source; use --allow <folder> to choose folders');
+    return { ...base, command: 'studio', source: undefined, kind: undefined };
   }
   if (first === 'approve') {
     const [id] = rest;

@@ -5,6 +5,8 @@ export { setupView } from './setup-view.js';
 export { audienceLevels, defaultAudienceLevel } from './audience.js';
 export type { AudienceLevel } from './audience.js';
 export { defaultCatalogs, en, es } from './catalogs/index.js';
+export { studioCodes } from './catalogs/studio-codes.js';
+export type { StudioCode } from './catalogs/studio-codes.js';
 export { Messages, interpolate, localeChain, placeholders } from './messages.js';
 /** Codes owned by the presentation layer itself, not by any producer. */
 export const presentationCodes = [
@@ -37,6 +39,7 @@ export const presentationCodes = [
   'cli.prompt.secret',
   'cli.secret.stored',
   'cli.hint.answer',
+  'cli.studio.listening',
   'cli.report.hint',
   'cli.report.note',
 ] as const;

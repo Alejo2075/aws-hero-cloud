@@ -1,6 +1,7 @@
 import type { MessageCatalog } from '../types.js';
 import { enPlan } from './en-plan.js';
 import { enResult } from './en-result.js';
+import { enStudio } from './en-studio.js';
 
 const tri = (simple: string, guided: string, expert: string) => ({ simple, guided, expert });
 
@@ -9,6 +10,7 @@ export const en: MessageCatalog = {
   messages: {
     ...enPlan,
     ...enResult,
+    ...enStudio,
     // ---- view labels -----------------------------------------------------------------------
     'view.analysis.title': 'What Hero understood about {name}',
     'view.section.summary': 'Summary',
@@ -408,6 +410,7 @@ Usage:
   hero-cloud deploy <source> [options]
   hero-cloud health <deployment>
   hero-cloud setup [--prepare] [--write-profile <name>]
+  hero-cloud studio [--allow <folder>]... [--no-open]
   hero-cloud mcp [--allow <folder>]...
   hero-cloud approve <request>
   hero-cloud report <source>
@@ -435,7 +438,8 @@ Options:
       --profile <name>                Use this AWS profile
       --prepare                       (setup) Prepare your AWS account once, after you approve
       --write-profile <name>          (setup) Add a profile that uses the limited deployer role
-      --allow <folder>                (mcp) A folder an assistant may analyze (can be repeated)
+      --allow <folder>                (studio, mcp) A folder that may be analyzed (can be repeated)
+      --no-open                       (studio) Print the address instead of opening the browser
       --ai <anthropic|openai|openai-compatible|ollama|bedrock>  Ask your own AI model for help with what analysis cannot tell
       --ai-model <name>               The model to use (needed with --ai)
       --ai-key-env <NAME>             Name of the environment variable that holds your key
@@ -482,6 +486,8 @@ Hero printed, such as hero-my-app. Exit codes: 0 ok, 1 failed, 2 wrong command, 
       'To answer a question, run the command again with --answer <question>=<answer>. Questions to answer: {ids}',
     'cli.progress.plan': 'Planning...',
     'cli.usage-hint': 'Run hero-cloud --help to see how to use it.',
+    'cli.studio.listening':
+      'Hero Studio is running on this computer only. Open this address (it works once): {url}\nPress Ctrl+C to stop.',
     'cli.report.hint':
       'Hero did not recognize this application. Run hero-cloud report <source> to get a description you can read and choose to share.',
     'cli.report.note':

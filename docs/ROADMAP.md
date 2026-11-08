@@ -1,6 +1,6 @@
 # Roadmap
 
-The path from today's repository (contracts and documents, no behavior) to **Hero 1.0**: the full vision in [PRODUCT.md](PRODUCT.md), working end to end. Any application in (modern, AI-generated, or legacy), deployed to the user's own AWS account after a person approves, proven healthy, and explained at the reader's level, through the SDK, CLI, Studio, MCP, and a desktop app.
+The path from today's repository (contracts and documents, no behavior) to **Hero 1.0**: the full vision in [PRODUCT.md](PRODUCT.md), working end to end. Any application in (modern, AI-generated, or legacy), deployed to the user's own AWS account after a person approves, proven healthy, and explained at the reader's level, through the SDK, CLI, Studio (in the browser), and MCP.
 
 How it is built is in [ARCHITECTURE.md](ARCHITECTURE.md). This document says **in what order**, **what "done" means**, and **which known problems each step fixes**.
 
@@ -15,20 +15,20 @@ How it is built is in [ARCHITECTURE.md](ARCHITECTURE.md). This document says **i
 
 ## Milestones
 
-| Version   | Name                     | A person can...                                                                     | Phases |
-| --------- | ------------------------ | ----------------------------------------------------------------------------------- | ------ |
-| 0.0       | Clean foundation         | Clone a healthy repository whose checks mean something                              | 0      |
-| 0.1       | Understands your app     | Run `hero-cloud analyze` on a JS/TS project and read what it needs, at three levels | 1–4    |
-| 0.2       | Plans your deployment    | Run `hero-cloud plan` and see a static or serverless AWS plan with cost             | 5      |
-| 0.3       | First real deployment    | Deploy a JS/TS app to their own AWS account, built safely, and see it is healthy    | 6–8    |
-| 0.4       | Safe to keep running     | Update, roll back, set secrets, and destroy, with guardrails                        | 9      |
-| 0.5       | Public alpha             | `npx @hero-cloud/cli`, or embed the published SDK in their own product              | 10     |
-| 0.6       | For non-technical people | Use Studio in the browser on their machine, with guided AWS onboarding              | 11–12  |
-| 0.7       | Works with your AI       | Drive Hero from their AI assistant (MCP); let a connected AI help analysis          | 13–14  |
-| 0.8       | Runs servers             | Deploy containerized and long-running apps with relational databases and storage    | 15     |
-| 0.9       | Runs legacy systems      | Deploy PHP, Python, Java, .NET, Ruby, Go, and unclassified apps, or a single VM     | 16     |
-| **1.0**   | **Hero**                 | Install a desktop app, drop in any application, approve, and get a working system   | 17–18  |
-| after 1.0 | Ecosystem                | Editor extension, CI action, stable plugin SDK, more providers                      | —      |
+| Version   | Name                     | A person can...                                                                        | Phases |
+| --------- | ------------------------ | -------------------------------------------------------------------------------------- | ------ |
+| 0.0       | Clean foundation         | Clone a healthy repository whose checks mean something                                 | 0      |
+| 0.1       | Understands your app     | Run `hero-cloud analyze` on a JS/TS project and read what it needs, at three levels    | 1–4    |
+| 0.2       | Plans your deployment    | Run `hero-cloud plan` and see a static or serverless AWS plan with cost                | 5      |
+| 0.3       | First real deployment    | Deploy a JS/TS app to their own AWS account, built safely, and see it is healthy       | 6–8    |
+| 0.4       | Safe to keep running     | Update, roll back, set secrets, and destroy, with guardrails                           | 9      |
+| 0.5       | Public alpha             | `npx @hero-cloud/cli`, or embed the published SDK in their own product                 | 10     |
+| 0.6       | For non-technical people | Use Studio in the browser on their machine, with guided AWS onboarding                 | 11–12  |
+| 0.7       | Works with your AI       | Drive Hero from their AI assistant (MCP); let a connected AI help analysis             | 13–14  |
+| 0.8       | Runs servers             | Deploy containerized and long-running apps with relational databases and storage       | 15     |
+| 0.9       | Runs legacy systems      | Deploy PHP, Python, Java, .NET, Ruby, Go, and unclassified apps, or a single VM        | 16     |
+| **1.0**   | **Hero**                 | Open Studio in the browser, drop in any application, approve, and get a working system | 17–18  |
+| after 1.0 | Ecosystem                | Editor extension, CI action, stable plugin SDK, more providers                         | —      |
 
 ## Phases
 
@@ -169,12 +169,14 @@ _Status: ready to publish but nothing has been published: that needs an npm acco
 
 ### Phase 11: Local server and Studio (L) → 0.6 (part 1)
 
-- [ ] 🔒 Local server: loopback on a random port; a one-time code in the opened URL exchanged for an `HttpOnly`, `SameSite=Strict` cookie; Host and Origin checks; CSRF protection; no wildcard CORS; server-sent events (D9).
-- [ ] 🔒 Plans and approvals cross the boundary as ids and nonces only (D2).
-- [ ] Studio (React, served by the local server): choose a folder or ZIP, review the plan at a level, approve, enter secrets, watch progress, see health.
-- [ ] Accessibility (WCAG 2.2 AA) and both languages.
+- [x] 🔒 Local server: loopback on a random port; a one-time code in the opened URL exchanged for an `HttpOnly`, `SameSite=Strict` cookie; Host and Origin checks; CSRF protection; no wildcard CORS; server-sent events (D9).
+- [x] 🔒 Plans and approvals cross the boundary as ids and nonces only (D2).
+- [x] Studio (React, served by the local server): choose a folder or ZIP, review the plan at a level, approve, enter secrets, watch progress, see health.
+- [x] Accessibility (WCAG 2.2 AA) and both languages.
 
 **Done when:** a person who never opened a terminal (after `hero-cloud studio`) deploys an example and understands the result at `simple`.
+
+_Status: implemented. `hero-cloud studio` serves Studio from `packages/server` (loopback, random port, one-time code to `HttpOnly`/`SameSite=Strict` cookie, Host/Origin/anti-forgery checks, strict CSP, no CORS, server-sent events), tested in `tests/studio-server.test.ts` and driven by hand in a real browser through analyze and plan in both languages. Studio is React 18 built with Pixelact UI (see `apps/studio/README.md`). Deviation: folders are typed or a ZIP is uploaded because a browser cannot reveal a folder path. Accessibility is built in (labels, live region, keyboard, focus, colour scheme) but has not had an automated WCAG audit or a screen-reader pass. The deploy step has run only against a fake cloud, so the "done when" bar waits for a sandbox account. Fuzzing of the server (Phase 18) is not done._
 
 ### Phase 12: Guided AWS onboarding (M) → 0.6
 
@@ -230,11 +232,11 @@ _Status: implemented and tested by synthesis (cdk-nag clean), mocks, and plan sn
 
 _Status: detectors, the report, and the fixtures are done and tested; the Python, PHP, Java, .NET, Ruby, Go and Procfile apps are planned as containers (the Phase 15 strategy) and nothing has run on AWS. The fixtures are small synthetic apps, not real legacy systems shared with permission. `hero-cloud report <source>` prints a redacted description (file names, the start of manifests, what was and was not recognized) that the person reads and chooses to share; it never contacts a model or the network. **The `virtual-machine` strategy is not built**: this roadmap asks for a spike (Lightsail or EC2) and an `rfc` issue first, and neither can be done without a real account. Until then a `worker` or `process` service is a blocking warning that says so, never a guess. Release 0.9 stays open._
 
-### Phase 17: Desktop app and installers (M)
+### Phase 17: Installers (M)
 
-- [ ] A desktop wrapper around Studio (Tauri or Electron, decided by size and security), drag and drop a folder or ZIP.
-- [ ] 🔒 Code signing and notarization (macOS), signing (Windows); auto-update with signed releases.
-- [ ] Homebrew formula and a single-file installer.
+There is no desktop app: Studio stays in the browser (owner's decision), so nothing needs platform code signing.
+
+- [ ] Homebrew formula and a single-file installer that start `hero-cloud studio`, which opens the browser.
 
 ### Phase 18: Release candidate (M) → 1.0
 
@@ -246,7 +248,7 @@ _Status: detectors, the report, and the fixtures are done and tested; the Python
 
 _Status: only the failure drills could be done here, with a fake cloud: a failed deployment leaves no result and can be retried with a new approval, expired credentials stop a deployment before anything is applied or fail it without recording a success, a health check that cannot run is recorded as not shown to be working (and no longer loses the deployment), and a failed build or toolkit error is a coded `deployment.failed` that names the step. CloudFormation rolls a failed update back by itself; Hero reports the failure and does not claim the new version. Not done, because they need people or a real account: the external security review, fuzzing of the local server (which is not built), cost accuracy against real bills, translation review by native speakers, closing every item in Known problems on a real run, and the desktop install. Release 1.0 stays open._
 
-**Done when:** a non-technical person installs the desktop app, drops in an application from the examples corpus, approves, and gets a working, healthy system they understand, and an engineer can audit every resource that was created. **Release 1.0.**
+**Done when:** a non-technical person installs Hero, opens Studio in the browser, gives it an application from the examples corpus, approves, and gets a working, healthy system they understand, and an engineer can audit every resource that was created. **Release 1.0.**
 
 ### After 1.0
 
@@ -316,7 +318,7 @@ Same philosophy, wider reach:
 - **Sources:** Local, ZIP, Git, GitHub, GitLab, Bitbucket, S3, APIs, AI agents.
 - **Frameworks (via plugins):** React, Vite, Next.js, Astro, SvelteKit, Express, FastAPI, Django, Spring, and legacy stacks.
 - **AWS capabilities:** Lambda, API Gateway, S3, CloudFront, DynamoDB, Cognito, EventBridge, SQS, SNS, Step Functions, Aurora and RDS, ECS and Fargate, and more through providers.
-- **Interfaces:** CLI, SDK, Studio, MCP, VS Code, CI, desktop, and third-party products.
+- **Interfaces:** CLI, SDK, Studio, MCP, VS Code, CI, and third-party products.
 
 The aim is not "a tool that deploys a Vite app". It is a reusable open-source engine that turns application intent into safe, reviewable cloud infrastructure, and a base for developer tools, agents, internal platforms, and commercial products.
 

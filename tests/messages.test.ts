@@ -10,7 +10,12 @@ import { nodeQuestionCodes } from '@hero-cloud/plugin-node';
 import { plannerRationaleCodes } from '@hero-cloud/planner';
 import { awsCostLineCodes, awsRationaleCodes, awsResourceTypes } from '@hero-cloud/provider-aws';
 import { evidenceKinds, standardCapabilities } from '@hero-cloud/plugin-sdk';
-import { audienceLevels, defaultCatalogs, presentationCodes } from '@hero-cloud/presentation';
+import {
+  audienceLevels,
+  defaultCatalogs,
+  presentationCodes,
+  studioCodes,
+} from '@hero-cloud/presentation';
 import type { Message } from '@hero-cloud/presentation';
 import { describe, expect, it } from 'vitest';
 
@@ -33,6 +38,7 @@ const REQUIRED: readonly (readonly [string, readonly string[]])[] = [
   ['setup.status.', ['done', 'todo', 'blocked', 'unknown']],
   ['resource.', awsResourceTypes],
   ['cost.line.', awsCostLineCodes],
+  ['studio.', studioCodes],
   ['strategy.name.', ['static', 'serverless', 'container', 'virtual-machine']],
 ];
 

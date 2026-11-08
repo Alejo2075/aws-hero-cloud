@@ -1,7 +1,13 @@
-# Local server
+# @hero-cloud/server
 
-**Status:** Planned: empty scaffold.
+The local server behind Studio. A door like the CLI: it contains no planning or AWS logic, only the SDK and `presentation`.
 
-A JSON and server-sent-events API over the SDK, bound to `127.0.0.1` only. It lets [Studio](../../apps/studio), IDE extensions, and other local tools use the engine without embedding it.
+- Listens on `127.0.0.1` only, on a random port; any other `Host` is refused (DNS rebinding).
+- The printed address carries a one-time code. Exchanging it sets an `HttpOnly`, `SameSite=Strict` cookie; the code works once and expires.
+- Every write needs the cookie, a matching anti-forgery header, and an `Origin` equal to the server's own. No CORS headers are ever sent. A strict Content-Security-Policy applies.
+- The browser sends plan ids and digests. The approval is created here, only when the page reports an explicit confirmation of the exact digest; plans the engine did not produce are refused.
+- Folders must be inside the allowed roots (symbolic links resolved); uploads must be ZIP files under a size limit and are stored privately.
+- Secret values go straight to `hero.deploy` and are never stored, logged, or returned.
+- Progress is streamed as server-sent events.
 
-It adds transport and nothing else: no planning, no AWS behavior, no accounts. Hardening requirements (loopback binding, per-session token, Host and Origin checks) are in [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md#doors).
+See `tests/studio-server.test.ts`.

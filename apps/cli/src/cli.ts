@@ -54,6 +54,19 @@ export interface CliIo {
     roots: readonly string[];
     inboxDirectory: string;
   }): Promise<void>;
+  /**
+   * Serves Studio on this computer until the person stops it. `announce` receives the address to
+   * open; the server opens the browser itself unless `open` is false.
+   */
+  serveStudio?(options: {
+    hero: Hero;
+    roots: readonly string[];
+    uploadsDirectory: string;
+    open: boolean;
+    level: string;
+    locale: string;
+    announce: (url: string) => void;
+  }): Promise<void>;
   appendFile?(path: string, text: string): Promise<void>;
   /** Asks for a secret without showing what is typed. Only used when a person is at the terminal. */
   askHidden?(question: string): Promise<string>;
@@ -336,6 +349,21 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
         hero: io.createHero(settings),
         roots: (args.allow.length > 0 ? args.allow : ['.']).map((folder) => io.resolvePath(folder)),
         inboxDirectory: join(settings.stateDirectory, 'approvals'),
+      });
+      return 0;
+    }
+    if (args.command === 'studio') {
+      if (io.serveStudio === undefined)
+        throw new HeroError('provider.unavailable', { params: { reason: 'no-studio' } });
+      await io.serveStudio({
+        hero: io.createHero(settings),
+        roots: (args.allow.length > 0 ? args.allow : ['.']).map((folder) => io.resolvePath(folder)),
+        uploadsDirectory: join(settings.stateDirectory, 'uploads'),
+        open: !args.noOpen,
+        level: args.level,
+        locale: args.locale,
+        announce: (url) =>
+          io.stderr.write(`${presenter.text('cli.studio.listening', render, { url })}\n`),
       });
       return 0;
     }

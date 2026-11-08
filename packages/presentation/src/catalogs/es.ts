@@ -1,6 +1,7 @@
 import type { MessageCatalog } from '../types.js';
 import { esPlan } from './es-plan.js';
 import { esResult } from './es-result.js';
+import { esStudio } from './es-studio.js';
 
 const tri = (simple: string, guided: string, expert: string) => ({ simple, guided, expert });
 
@@ -9,6 +10,7 @@ export const es: MessageCatalog = {
   messages: {
     ...esPlan,
     ...esResult,
+    ...esStudio,
     // ---- etiquetas de las vistas -----------------------------------------------------------
     'view.analysis.title': 'Lo que Hero entendió de {name}',
     'view.section.summary': 'Resumen',
@@ -440,6 +442,7 @@ Uso:
   hero-cloud deploy <fuente> [opciones]
   hero-cloud health <despliegue>
   hero-cloud setup [--prepare] [--write-profile <nombre>]
+  hero-cloud studio [--allow <carpeta>]... [--no-open]
   hero-cloud mcp [--allow <carpeta>]...
   hero-cloud approve <solicitud>
   hero-cloud report <fuente>
@@ -467,7 +470,8 @@ Opciones:
       --profile <nombre>              Usa este perfil de AWS
       --prepare                       (setup) Prepara tu cuenta de AWS una vez, tras tu aprobación
       --write-profile <nombre>        (setup) Agrega un perfil que usa el rol desplegador limitado
-      --allow <carpeta>               (mcp) Una carpeta que un asistente puede analizar (se puede repetir)
+      --allow <carpeta>               (studio, mcp) Una carpeta que se puede analizar (se puede repetir)
+      --no-open                       (studio) Muestra la dirección en lugar de abrir el navegador
       --ai <anthropic|openai|openai-compatible|ollama|bedrock>  Pide ayuda a tu propio modelo de IA con lo que el análisis no puede saber
       --ai-model <nombre>             El modelo a usar (obligatorio con --ai)
       --ai-key-env <NOMBRE>           Nombre de la variable de entorno que contiene tu llave
@@ -514,6 +518,8 @@ que Hero mostró, como hero-mi-app. Códigos de salida: 0 bien, 1 falló, 2 coma
       'Para responder una pregunta, ejecuta el comando de nuevo con --answer <pregunta>=<respuesta>. Preguntas por responder: {ids}',
     'cli.progress.plan': 'Planificando...',
     'cli.usage-hint': 'Ejecuta hero-cloud --help para ver cómo usarlo.',
+    'cli.studio.listening':
+      'Hero Studio funciona solo en este equipo. Abre esta dirección (sirve una vez): {url}\nPulsa Ctrl+C para detenerlo.',
     'cli.report.hint':
       'Hero no reconoció esta aplicación. Ejecuta hero-cloud report <fuente> para obtener una descripción que puedes leer y decidir si compartir.',
     'cli.report.note':

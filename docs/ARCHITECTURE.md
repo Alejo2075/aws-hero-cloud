@@ -285,7 +285,7 @@ Doors parse input, call the SDK, and render through `presentation`. They add no 
 | Studio       | `hero-cloud studio` serves a local web app on loopback: import a folder or ZIP, connect AWS, review, approve, see health. Not the public site.             |
 | Local server | JSON and server-sent events over the SDK, for Studio and editors.                                                                                          |
 | MCP server   | Tools: `hero_analyze`, `hero_plan`, `hero_explain`, `hero_request_deploy`, `hero_outputs`, `hero_health`, `hero_plan_destroy`. **No approve tool.**        |
-| Later        | Editor extension, CI action (plan on PR, deploy behind an environment approval), desktop wrapper for people who avoid terminals.                           |
+| Later        | Editor extension, CI action (plan on PR, deploy behind an environment approval).                                                                           |
 
 **CLI.** The binary is `hero-cloud`. Today it has `analyze <source>` and `plan <source>` (with `--answer question=answer`, `--region`, `--account-id`, and `--offline`); `deploy`, `health`, `outputs`, and `destroy` arrive with their phases, and later `validate`, `diff`, `doctor`, `plugins`. Every command accepts `--level simple|guided|expert` (or `HERO_LEVEL`), `--locale` (or the system language), and `--json`, which prints a stable, versioned document (`schema: 1`) to stdout. Results go to stdout; progress and errors go to stderr; exit code 0 is success, 1 is a failure, 2 is a mistake in the command line, and 3 means a plan was made but has a blocking issue, so it cannot be approved yet. Usage errors still honour the requested level and language. Technical detail (`HERO_DEBUG=1`) is opt-in, and an error's cause is never printed because it may hold secrets.
 
@@ -301,7 +301,7 @@ $ hero-cloud plan
 Deploy this plan? [y/N]
 ```
 
-**Reaching people who avoid terminals** happens in stages: `npx` anywhere Node runs, then a single-file install (Homebrew or a signed installer) that opens Studio, then a desktop wrapper around Studio where you drop a folder or ZIP. These are packaging over Studio, not new engines.
+**Reaching people who avoid terminals** happens in stages: `npx` anywhere Node runs, then a single-file install (Homebrew) that opens Studio in the browser. There is no desktop app. This is packaging over Studio, not a new engine.
 
 **Approval is the security boundary.** Only a door that shows the plan to a person may create an `Approval`: a terminal prompt, Studio, an MCP confirmation the person answers, or a host product's own UI. An AI agent, script, or tool call never approves itself, so a repository that prompt-injects an assistant still cannot trigger a deployment.
 

@@ -36,6 +36,7 @@
     "@hero-cloud/mcp": "workspace:*",
     "@hero-cloud/presentation": "workspace:*",
     "@hero-cloud/sdk": "workspace:*",
+    "@hero-cloud/server": "workspace:*",
     "esbuild": "^0.28.2"
   },
   "exports": "./src/index.ts",
