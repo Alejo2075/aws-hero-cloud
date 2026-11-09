@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./brand/hero-cloud-logo.gif" alt="Hero Cloud" width="420" />
+  <img src="./brand/hero-cloud-logo.gif" alt="Hero Cloud" width="640" />
 </p>
 
 <p align="center"><strong>Give Hero any application. Hero deploys it to your AWS account and proves it works.</strong></p>
