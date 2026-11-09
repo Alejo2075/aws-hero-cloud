@@ -53,7 +53,12 @@ export default function App() {
       <header className="site-header">
         <div className="container header-inner">
           <a className="wordmark" href="#" aria-label="Hero Cloud home">
-            <img src="/brand/hero-cloud-logo.gif" alt="Hero Cloud" width="220" height="110" />
+            <img
+              src={`${import.meta.env.BASE_URL}/brand/hero-cloud-logo.gif`}
+              alt="Hero Cloud"
+              width="220"
+              height="110"
+            />
           </a>
           <nav aria-label="Main navigation">
             <a className="how-link" href="#how-it-works">

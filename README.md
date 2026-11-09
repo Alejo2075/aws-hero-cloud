@@ -111,7 +111,7 @@ Requires Node.js 22.12+ and pnpm 9+. No AWS account or AI key is needed for most
 
 ```bash
 pnpm install
-pnpm dev            # public site at http://localhost:4321
+pnpm dev            # public site at http://localhost:4321/aws-hero-cloud/
 pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 

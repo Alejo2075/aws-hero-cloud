@@ -1,6 +1,8 @@
 ---
 import App from '../components/App';
 import '../styles/global.css';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
 <!doctype html>
@@ -20,8 +22,14 @@ import '../styles/global.css';
       property="og:description"
       content="Open source. Local first. Review the plan, approve the changes, and deploy to your own AWS account."
     />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preload" href="/fonts/press-start-2p.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <link
+      rel="preload"
+      href={`${base}/fonts/press-start-2p.ttf`}
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
   </head>
   <body><App client:load /></body>
 </html>
