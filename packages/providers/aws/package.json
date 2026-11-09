@@ -25,7 +25,7 @@
     "@aws-sdk/client-elastic-load-balancing-v2": "^3.1152.0",
     "@aws-sdk/client-s3": "^3.1152.0",
     "@aws-sdk/client-ssm": "^3.1152.0",
-    "@aws-sdk/client-sts": "^3.1152.0",
+    "@aws-sdk/client-sts": "^3.1163.0",
     "@hero-cloud/core": "workspace:*",
     "@hero-cloud/shared": "workspace:*",
     "@hero-cloud/specification": "workspace:*",
