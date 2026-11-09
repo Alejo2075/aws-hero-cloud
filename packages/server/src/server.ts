@@ -50,6 +50,7 @@ const ASSETS: Readonly<Record<string, { file: string; type: string }>> = {
   '/': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/app.js': { file: 'app.js', type: 'text/javascript; charset=utf-8' },
   '/app.css': { file: 'app.css', type: 'text/css; charset=utf-8' },
+  '/hero-cloud-logo.gif': { file: 'hero-cloud-logo.gif', type: 'image/gif' },
 };
 
 const LOCALE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;

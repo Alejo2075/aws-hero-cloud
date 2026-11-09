@@ -53,12 +53,7 @@ export default function App() {
       <header className="site-header">
         <div className="container header-inner">
           <a className="wordmark" href="#" aria-label="Hero Cloud home">
-            <Icon name="cloud" />
-            <span>
-              HERO
-              <br />
-              <span>CLOUD</span>
-            </span>
+            <img src="/brand/hero-cloud-logo.gif" alt="Hero Cloud" width="220" height="110" />
           </a>
           <nav aria-label="Main navigation">
             <a className="how-link" href="#how-it-works">
@@ -134,7 +129,7 @@ export default function App() {
                   own account. You keep control and pay AWS directly.
                 </p>
                 <p>You don’t need a Hero account. Connect locally when you’re ready to deploy.</p>
-                <a href={`${github}#quick-start`}>How to connect AWS ↗</a>
+                <a href={`${github}#install`}>How to connect AWS ↗</a>
               </article>
               <article>
                 <span className="connection-label">Your AI · Optional</span>
@@ -172,25 +167,28 @@ export default function App() {
                 needs. This first step creates nothing in AWS.
               </p>
               <Button asChild className="blue-button">
-                <a href={`${github}#quick-start`}>
+                <a href={`${github}#install`}>
                   Open the setup guide <Icon name="arrow" />
                 </a>
               </Button>
               <p className="help-note">
-                You’ll need a terminal for now. A simpler local app is on the roadmap.
+                Prefer a browser? Run “hero-cloud studio” and use Hero on your own computer.
               </p>
             </div>
             <Card font="normal" className="alpha-card">
-              <span className="alpha-flag">Still in the making</span>
+              <span className="alpha-flag">Open to contributors</span>
               <h3>
                 Try it.
                 <br />
                 Help shape it.
               </h3>
-              <p>Hero is an early alpha. Real deployments to AWS have not been validated yet.</p>
               <p>
-                For now, experiment in a separate AWS test account. You pay AWS for any resources
-                you create.
+                Hero is open source and still young. Your feedback and pull requests shape what
+                comes next.
+              </p>
+              <p>
+                A separate AWS account is a good place to start. You pay AWS for any resources you
+                create.
               </p>
               <a href={`${github}/blob/main/docs/ROADMAP.md`}>See what’s ready and what’s next ↗</a>
             </Card>

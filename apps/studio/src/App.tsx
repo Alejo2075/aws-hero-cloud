@@ -319,9 +319,9 @@ export function App() {
       </a>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Title as="h1" size="lg">
-            {t('title')}
-          </Title>
+          <h1>
+            <img src="/hero-cloud-logo.gif" alt={t('title')} width="200" height="100" />
+          </h1>
           <p className="mt-3 text-muted-foreground">{t('subtitle')}</p>
         </div>
         <div className="grid grid-cols-[auto_auto] items-center gap-x-3 gap-y-2">

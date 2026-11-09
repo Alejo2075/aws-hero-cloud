@@ -33,10 +33,10 @@
 :root {
   --radius: 0rem;
   --background: oklch(0.99 0 0);
-  --foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.92 0.03 250);
+  --foreground: #010919;
+  --primary: #fdd503;
+  --primary-foreground: #010919;
+  --secondary: #d9eeff;
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.96 0 0);
   --muted-foreground: oklch(0.45 0 0);
@@ -48,10 +48,10 @@
   --success-foreground: oklch(0.985 0 0);
   --warning: oklch(0.85 0.2 99);
   --warning-foreground: oklch(0.145 0 0);
-  --link: oklch(0.45 0.2 270);
+  --link: #0059b8;
   --border: oklch(0.8 0 0);
   --input: oklch(0.8 0 0);
-  --ring: oklch(0.45 0.2 250);
+  --ring: #0090fb;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
 }
@@ -59,9 +59,9 @@
 .dark {
   --background: oklch(0.17 0 0);
   --foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.3 0.04 250);
+  --primary: #fdd503;
+  --primary-foreground: #010919;
+  --secondary: #0b2a4d;
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.75 0 0);
@@ -73,10 +73,10 @@
   --success-foreground: oklch(0.145 0 0);
   --warning: oklch(0.82 0.17 88);
   --warning-foreground: oklch(0.145 0 0);
-  --link: oklch(0.75 0.12 280);
+  --link: #5ab4ff;
   --border: oklch(1 0 0 / 30%);
   --input: oklch(1 0 0 / 30%);
-  --ring: oklch(0.75 0.12 250);
+  --ring: #1baffc;
   --card: oklch(0.21 0 0);
   --card-foreground: oklch(0.985 0 0);
 }

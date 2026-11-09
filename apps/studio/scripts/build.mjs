@@ -40,3 +40,4 @@ const components = await readFile(`${out}app.css`, 'utf8');
 await writeFile(`${out}app.css`, `${utilities}\n${components}`);
 await rm(`${out}tailwind.css`);
 await copyFile(here('../static/index.html'), `${out}index.html`);
+await copyFile(here('../static/hero-cloud-logo.gif'), `${out}hero-cloud-logo.gif`);
