@@ -16,7 +16,7 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@astrojs/react": "^7.0.0",
+    "@astrojs/react": "^7.1.4",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "7.3.5",
     "class-variance-authority": "^0.7.1",
